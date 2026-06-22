@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   LMS Design System — Design Foundation tokens
+   =========================================================================
+   Tailwind version detected/used: v4 (CSS-first config via `@theme`, no
+   tailwind.config.{js,ts}). Tokens are mapped two ways, per the M0 spec:
+
+   1. `@theme` block below — exposes every token to Tailwind's utility engine,
+      so you get classes like `bg-bg`, `text-ink`, `border-border`,
+      `bg-primary`, `rounded-base`, `shadow-sm`, `shadow-lg`, etc.
+   2. `:root` `--ds-*` custom properties — the same raw values, referenceable
+      directly in any CSS / inline style as `var(--ds-color-primary)` etc.
+      (Tailwind v4 also auto-emits `--color-*`, `--radius-*`, `--shadow-*` vars
+      from the `@theme` block; the `--ds-*` set is the stable, design-system
+      contract that does not depend on Tailwind internals.)
+
+   System is LIGHT MODE ONLY. Font: Plus Jakarta Sans (wired via next/font in
+   app/layout.tsx; the family CSS variable is --font-plus-jakarta).
+   ========================================================================= */
+
+@theme inline {
+  /* ---- Colors ---- */
+  --color-bg: #f4f7fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef3f9;
+  --color-border: #dce5ef;
+
+  --color-ink: #11253f;
+  --color-ink-muted: #51607a;
+  --color-ink-subtle: #8a99ae;
+
+  --color-primary: #0050e6;
+  --color-primary-hover: #0040c0;
+  --color-primary-ink: #ffffff;
+  --color-primary-soft: #e5edff;
+
+  --color-accent: #c2710c;
+  --color-accent-strong: #ffb81c;
+  --color-accent-soft: #fef1d2;
+
+  --color-success: #0e8a4f;
+  --color-success-soft: #dcfae9;
+  --color-warning: #b45309;
+  --color-warning-soft: #fcefd7;
+  --color-danger: #c62828;
+  --color-danger-soft: #fbe3e3;
+  --color-info: #0050e6;
+  --color-info-soft: #e5edff;
+
+  --color-focus: #0050e6;
+
+  /* ---- Radius ---- */
+  --radius-sm: 6px;
+  --radius-base: 10px;
+  --radius-lg: 14px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 2px 8px rgba(17, 37, 63, 0.07);
+  --shadow-lg: 0 18px 40px -14px rgba(17, 37, 63, 0.2);
+
+  /* ---- Spacing base (4px) ---- */
+  --spacing: 4px;
+
+  /* ---- Font family (set by next/font in layout) ---- */
+  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Raw design-system custom properties — the canonical `--ds-*` contract.
+   Reference directly, e.g. `color: var(--ds-color-ink)`. */
+:root {
+  /* Colors */
+  --ds-color-bg: #f4f7fb;
+  --ds-color-surface: #ffffff;
+  --ds-color-surface-2: #eef3f9;
+  --ds-color-border: #dce5ef;
+
+  --ds-color-ink: #11253f;
+  --ds-color-ink-muted: #51607a;
+  --ds-color-ink-subtle: #8a99ae;
+
+  --ds-color-primary: #0050e6;
+  --ds-color-primary-hover: #0040c0;
+  --ds-color-primary-ink: #ffffff;
+  --ds-color-primary-soft: #e5edff;
+
+  --ds-color-accent: #c2710c;
+  --ds-color-accent-strong: #ffb81c;
+  --ds-color-accent-soft: #fef1d2;
+
+  --ds-color-success: #0e8a4f;
+  --ds-color-success-soft: #dcfae9;
+  --ds-color-warning: #b45309;
+  --ds-color-warning-soft: #fcefd7;
+  --ds-color-danger: #c62828;
+  --ds-color-danger-soft: #fbe3e3;
+  --ds-color-info: #0050e6;
+  --ds-color-info-soft: #e5edff;
+
+  --ds-color-focus: #0050e6;
+
+  /* Radius */
+  --ds-radius-sm: 6px;
+  --ds-radius-base: 10px;
+  --ds-radius-lg: 14px;
+
+  /* Shadows */
+  --ds-shadow-sm: 0 2px 8px rgba(17, 37, 63, 0.07);
+  --ds-shadow-lg: 0 18px 40px -14px rgba(17, 37, 63, 0.2);
+
+  /* Spacing base unit */
+  --ds-spacing-base: 4px;
+}
+
+/* Page defaults: background = bg, default text = ink, default font = Plus Jakarta Sans. */
+html,
+body {
+  background-color: var(--ds-color-bg);
+  color: var(--ds-color-ink);
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}

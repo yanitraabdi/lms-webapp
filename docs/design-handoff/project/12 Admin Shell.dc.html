@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .ad-shell{ display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .ad-prices{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .ad-side{ display:flex; }
+  @media (max-width:860px){ .ad-shell{ grid-template-columns:1fr; } .ad-side{ display:none; } .ad-prices{ grid-template-columns:1fr; } }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-success:#0E8A4F; --ds-success-soft:#DCFAE9; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink); background:var(--ds-bg);">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 12 · Admin Shell (minimal)</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Hanya 2 aksi untuk peluncuran awal: publish/unpublish modul (toggle) &amp; edit harga · manajemen kurikulum penuh menyusul</span>
+  </div>
+
+  <div class="ad-shell">
+    <!-- SIDEBAR -->
+    <aside class="ad-side" style="flex-direction:column; background:#11253F; padding:18px 14px; gap:6px;">
+      <div style="display:flex; align-items:center; gap:10px; padding:6px 8px 16px;"><span style="width:30px; height:30px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">A</span><div style="line-height:1.1;"><div style="font-weight:800; font-size:13px; color:#fff;">Academy</div><div style="font-size:10px; color:rgba(255,255,255,.55);">Admin</div></div></div>
+      <a href="#" style="display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; background:rgba(255,255,255,.12); color:#fff; text-decoration:none; font-size:13.5px; font-weight:700;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 1.5z"></path></svg>Modul</a>
+      <a href="#" style="display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color:rgba(255,255,255,.7); text-decoration:none; font-size:13.5px; font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Harga</a>
+      <div style="flex:1;"></div>
+      <div style="padding:10px 12px; border-radius:8px; background:rgba(255,255,255,.06); display:flex; align-items:center; gap:9px;"><span style="width:28px; height:28px; border-radius:50%; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">AD</span><div style="line-height:1.2;"><div style="font-size:12px; font-weight:700; color:#fff;">Admin</div><div style="font-size:10px; color:rgba(255,255,255,.5);">Keluar</div></div></div>
+    </aside>
+
+    <!-- MAIN -->
+    <div style="display:flex; flex-direction:column;">
+      <header style="background:#fff; border-bottom:1px solid var(--ds-border); height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 24px;"><span style="font-size:16px; font-weight:800;">Kelola modul</span><span style="font-size:11.5px; font-weight:700; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:6px 12px; border-radius:999px;">Mode admin minimal</span></header>
+
+      <div style="padding:24px; display:flex; flex-direction:column; gap:24px;">
+
+        <!-- PRICES -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;"><h2 style="margin:0; font-size:16px; font-weight:800;">Harga paket</h2><span style="font-size:12px; color:var(--ds-ink-subtle);">Perubahan berlaku untuk langganan baru &amp; perpanjangan.</span></div>
+          <div class="ad-prices">
+            <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:16px; display:flex; flex-direction:column; gap:9px;"><span style="font-size:12px; font-weight:700; color:#166534; background:#DCFCE7; padding:4px 10px; border-radius:999px; width:fit-content;">Beginner</span><label style="font-size:11.5px; color:var(--ds-ink-muted);">Harga / bulan (Rp)</label><input type="text" value="149.000" style="font-family:inherit; font-size:15px; font-weight:700; border:1px solid var(--ds-border); border-radius:var(--ds-radius-sm); padding:10px 12px;"></div>
+            <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:16px; display:flex; flex-direction:column; gap:9px;"><span style="font-size:12px; font-weight:700; color:#1D4ED8; background:#DBEAFE; padding:4px 10px; border-radius:999px; width:fit-content;">Intermediate</span><label style="font-size:11.5px; color:var(--ds-ink-muted);">Harga / bulan (Rp)</label><input type="text" value="249.000" style="font-family:inherit; font-size:15px; font-weight:700; border:1px solid var(--ds-primary); border-radius:var(--ds-radius-sm); padding:10px 12px; outline:3px solid var(--ds-primary-soft);"></div>
+            <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:16px; display:flex; flex-direction:column; gap:9px;"><span style="font-size:12px; font-weight:700; color:#6D28D9; background:#EDE4FF; padding:4px 10px; border-radius:999px; width:fit-content;">Advanced</span><label style="font-size:11.5px; color:var(--ds-ink-muted);">Harga / bulan (Rp)</label><input type="text" value="349.000" style="font-family:inherit; font-size:15px; font-weight:700; border:1px solid var(--ds-border); border-radius:var(--ds-radius-sm); padding:10px 12px;"></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;"><button type="button" onClick="{{ savePrices }}" style="font-family:inherit; font-size:13px; font-weight:700; color:#fff; background:var(--ds-primary); border:none; border-radius:var(--ds-radius-sm); padding:11px 20px; cursor:pointer;">Simpan harga</button><sc-if value="{{ saved }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; color:var(--ds-success);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4"><path d="m20 6-11 11-5-5"></path></svg>Harga tersimpan</span></sc-if></div>
+        </div>
+
+        <!-- MODULES TABLE -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;"><h2 style="margin:0; font-size:16px; font-weight:800;">Modul</h2><div style="position:relative;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2" style="position:absolute; left:11px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="text" placeholder="Cari modul…" style="font-family:inherit; font-size:13px; border:1px solid var(--ds-border); border-radius:var(--ds-radius-sm); padding:9px 12px 9px 34px; width:220px;"></div></div>
+          <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; min-width:640px;">
+                <thead><tr style="background:var(--ds-surface-2);"><th style="text-align:left; padding:12px 20px; font-size:12px; font-weight:700; color:var(--ds-ink-muted);">Modul</th><th style="text-align:left; padding:12px 12px; font-size:12px; font-weight:700; color:var(--ds-ink-muted);">Level</th><th style="text-align:left; padding:12px 12px; font-size:12px; font-weight:700; color:var(--ds-ink-muted);">Status</th><th style="padding:12px 20px; text-align:right; font-size:12px; font-weight:700; color:var(--ds-ink-muted);">Publikasi</th></tr></thead>
+                <tbody style="font-size:13.5px;">
+                  <sc-for list="{{ modules }}" as="m" hint-placeholder-count="5">
+                    <tr style="border-top:1px solid var(--ds-border);">
+                      <td style="padding:13px 20px; font-weight:600;">{{ m.title }}</td>
+                      <td style="padding:13px 12px;"><span style="{{ m.levelStyle }}">{{ m.level }}</span></td>
+                      <td style="padding:13px 12px;"><span style="{{ m.statusStyle }}">{{ m.statusLabel }}</span></td>
+                      <td style="padding:13px 20px;"><div style="display:flex; justify-content:flex-end;"><button type="button" onClick="{{ m.toggle }}" role="switch" aria-checked="{{ m.published }}" style="{{ m.switchStyle }}"><span style="{{ m.knobStyle }}"></span></button></div></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <span style="font-size:12px; color:var(--ds-ink-subtle);">Modul yang tidak dipublikasikan tetap tersembunyi dari katalog publik &amp; peserta.</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    saved: false,
+    modules: [
+      { id:1, title:'Apa itu AI? Penjelasan tanpa istilah rumit', level:'Basic', published:true },
+      { id:2, title:'Menulis prompt pertama Anda', level:'Basic', published:true },
+      { id:3, title:'Quick wins AI di hari pertama', level:'Basic', published:false },
+      { id:4, title:'Workflow tim dengan Claude Projects', level:'Intermediate', published:true },
+      { id:5, title:'Analisis data spreadsheet dengan AI', level:'Intermediate', published:false }
+    ]
+  };
+  renderVals(){
+    const levelColors = {
+      Basic: { color:'#166534', background:'#DCFCE7' },
+      Intermediate: { color:'#1D4ED8', background:'#DBEAFE' },
+      Advanced: { color:'#6D28D9', background:'#EDE4FF' }
+    };
+    const modules = this.state.modules.map(m => {
+      const lc = levelColors[m.level];
+      return {
+        ...m,
+        levelStyle: { fontSize:'11px', fontWeight:700, color:lc.color, background:lc.background, padding:'4px 9px', borderRadius:'5px' },
+        statusLabel: m.published ? 'Terbit' : 'Draf',
+        statusStyle: m.published
+          ? { display:'inline-flex', alignItems:'center', gap:'5px', fontSize:'11.5px', fontWeight:700, color:'#0E6B3E', background:'#DCFAE9', padding:'4px 10px', borderRadius:'999px' }
+          : { display:'inline-flex', alignItems:'center', gap:'5px', fontSize:'11.5px', fontWeight:700, color:'#57534E', background:'#F0EFEC', padding:'4px 10px', borderRadius:'999px' },
+        switchStyle: { width:'46px', height:'26px', borderRadius:'999px', border:'none', cursor:'pointer', position:'relative', background: m.published ? '#0050E6' : '#C9D4E2', transition:'background .2s' },
+        knobStyle: { position:'absolute', top:'3px', left: m.published ? '23px' : '3px', width:'20px', height:'20px', borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 2px rgba(0,0,0,.2)' },
+        toggle: () => this.setState(s => ({ modules: s.modules.map(x => x.id===m.id ? { ...x, published: !x.published } : x) }))
+      };
+    });
+    return {
+      modules,
+      saved: this.state.saved,
+      savePrices: () => { this.setState({ saved:true }); setTimeout(() => this.setState({ saved:false }), 2200); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .m-grid{ display:grid; grid-template-columns:1fr 360px; gap:32px; align-items:start; }
+  @media (max-width:900px){ .m-grid{ grid-template-columns:1fr; } }
+  @media (max-width:560px){ .m-learn{ grid-template-columns:1fr !important; } }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-accent-strong:#FFB81C; --ds-accent-soft:#FEF1D2; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); min-height:100vh; box-sizing:border-box; background:var(--ds-bg); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink);">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 06 · Module Landing (publik/SEO)</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Metadata selalu tampil untuk SEO · terkunci = "Tingkatkan untuk menonton" · entitled = "Mulai / Lanjutkan"</span>
+    <button type="button" onClick="{{ toggle }}" style="margin-left:auto; font-family:inherit; font-size:11.5px; font-weight:700; color:#11253F; background:#fff; border:none; border-radius:5px; padding:5px 12px; cursor:pointer;">Lihat: {{ toggleLabel }}</button>
+  </div>
+
+  <!-- NAV -->
+  <header style="background:#fff; border-bottom:1px solid var(--ds-border);">
+    <div style="max-width:1080px; margin:0 auto; padding:0 24px; height:62px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;"><span style="width:30px; height:30px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">A</span><span style="font-weight:800; font-size:15px;">AI Productivity Academy</span></div>
+      <div style="display:flex; align-items:center; gap:8px;"><a href="#" style="font-size:13.5px; font-weight:700; color:var(--ds-ink); text-decoration:none; padding:9px 12px;">Masuk</a><a href="#" style="font-size:13.5px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:10px 18px; border-radius:var(--ds-radius-sm);">Daftar gratis</a></div>
+    </div>
+  </header>
+
+  <div style="max-width:1080px; margin:0 auto; padding:20px 24px 64px;">
+    <!-- breadcrumb -->
+    <nav style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ds-ink-muted); margin-bottom:22px; flex-wrap:wrap;">
+      <a href="#" style="color:var(--ds-ink-muted); text-decoration:none;">Katalog</a><span style="color:var(--ds-ink-subtle);">/</span><a href="#" style="color:var(--ds-ink-muted); text-decoration:none;">Level Intermediate</a><span style="color:var(--ds-ink-subtle);">/</span><a href="#" style="color:var(--ds-ink-muted); text-decoration:none;">Track: Workflow Tim</a><span style="color:var(--ds-ink-subtle);">/</span><span style="color:var(--ds-ink); font-weight:600;">Workflow tim dengan Claude</span>
+    </nav>
+
+    <div class="m-grid">
+      <!-- MAIN -->
+      <div style="display:flex; flex-direction:column; gap:24px;">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:11.5px; font-weight:700; color:#1D4ED8; background:#DBEAFE; padding:5px 11px; border-radius:6px;">Intermediate</span>
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:5px 11px; border-radius:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-muted)" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>12 menit</span>
+            <span style="font-size:11.5px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:5px 11px; border-radius:6px;">Track: Workflow Tim</span>
+          </div>
+          <h1 style="margin:0; font-size:32px; font-weight:800; letter-spacing:-0.025em; line-height:1.15;">Membangun workflow tim dengan Claude Projects</h1>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--ds-ink-muted);">
+            <span style="display:inline-flex; align-items:center; gap:4px; color:var(--ds-accent); font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#C2710C"><path d="m12 2 3 6.3 6.9 1-5 4.8 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.8 6.9-1z"></path></svg>4,7</span>
+            <span>·</span><span>2.940 peserta</span><span>·</span><span>Diperbarui Okt 2025</span>
+          </div>
+        </div>
+
+        <!-- player/thumbnail -->
+        <div style="aspect-ratio:16/9; border-radius:var(--ds-radius-lg); overflow:hidden; position:relative; background:linear-gradient(135deg, #11253F, #1E3A5F); display:flex; align-items:center; justify-content:center; box-shadow:var(--ds-shadow);">
+          <span style="{{ playBadgeStyle }}">{{ playIcon }}</span>
+          <span style="position:absolute; bottom:12px; right:12px; font-size:12px; font-weight:600; color:#fff; background:rgba(0,0,0,.55); padding:4px 9px; border-radius:6px;">12 menit</span>
+          <span style="{{ lockTagStyle }}">{{ lockTagText }}</span>
+        </div>
+
+        <!-- description -->
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <h2 style="margin:0; font-size:19px; font-weight:800;">Tentang modul ini</h2>
+          <p style="margin:0; font-size:15px; line-height:1.7; color:var(--ds-ink-muted);">Pelajari cara mengatur pekerjaan tim Anda di satu tempat menggunakan Claude Projects. Anda akan melihat cara menyimpan konteks bersama, membuat instruksi yang konsisten untuk seluruh anggota, dan mempercepat tugas berulang seperti membuat ringkasan rapat, draf dokumen, dan balasan email — semuanya tanpa perlu kemampuan teknis.</p>
+          <p style="margin:0; font-size:15px; line-height:1.7; color:var(--ds-ink-muted);">Cocok untuk Anda yang sudah memahami dasar AI dan ingin menerapkannya secara nyata dalam pekerjaan sehari-hari bersama tim.</p>
+        </div>
+
+        <!-- what you'll learn -->
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:14px;">
+          <h2 style="margin:0; font-size:17px; font-weight:800;">Yang akan Anda pelajari</h2>
+          <div class="m-learn" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="display:flex; gap:9px; font-size:14px; color:var(--ds-ink-muted); line-height:1.5;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Menyiapkan Project untuk tim</div>
+            <div style="display:flex; gap:9px; font-size:14px; color:var(--ds-ink-muted); line-height:1.5;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Menyimpan konteks bersama</div>
+            <div style="display:flex; gap:9px; font-size:14px; color:var(--ds-ink-muted); line-height:1.5;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Instruksi konsisten antar anggota</div>
+            <div style="display:flex; gap:9px; font-size:14px; color:var(--ds-ink-muted); line-height:1.5;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Otomasi tugas berulang</div>
+          </div>
+        </div>
+
+        <!-- tags -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <span style="font-size:12.5px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:6px 13px; border-radius:999px;">#claude</span>
+          <span style="font-size:12.5px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:6px 13px; border-radius:999px;">#workflow</span>
+          <span style="font-size:12.5px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:6px 13px; border-radius:999px;">#tim</span>
+          <span style="font-size:12.5px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:6px 13px; border-radius:999px;">#produktivitas</span>
+        </div>
+      </div>
+
+      <!-- STICKY SIDEBAR CTA -->
+      <aside style="position:sticky; top:20px;">
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:22px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--ds-shadow);">
+          <div style="{{ accessBoxStyle }}">
+            <span style="{{ accessIconWrapStyle }}">{{ accessIcon }}</span>
+            <div><div style="font-size:14px; font-weight:800; color:{{ accessTitleColor }};">{{ accessTitle }}</div><div style="font-size:12.5px; color:var(--ds-ink-muted); line-height:1.45;">{{ accessSub }}</div></div>
+          </div>
+          <a href="#" style="{{ ctaStyle }}">{{ ctaContent }}</a>
+          <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+            <div style="text-align:center; font-size:12.5px; color:var(--ds-ink-muted);">Termasuk dalam paket <strong style="color:#1D4ED8;">Intermediate</strong> ke atas</div>
+          </sc-if>
+          <div style="border-top:1px solid var(--ds-surface-2); padding-top:16px; display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ds-ink-muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Durasi 12 menit</div>
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ds-ink-muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 15h2M11 15h6"></path></svg>Caption Bahasa Indonesia</div>
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ds-ink-muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>Materi unduhan tersedia</div>
+            <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ds-ink-muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-3 4 3-1-8"></path></svg>Berkontribusi ke sertifikat</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { locked: true };
+  renderVals(){
+    const locked = this.state.locked;
+    const h = React.createElement;
+    return {
+      locked,
+      toggle: () => this.setState(s => ({ locked: !s.locked })),
+      toggleLabel: locked ? 'Terkunci' : 'Entitled',
+      playIcon: locked
+        ? h('svg', { width:30, height:30, viewBox:'0 0 24 24', fill:'none', stroke:'#fff', strokeWidth:1.8 }, h('rect',{x:5,y:11,width:14,height:9,rx:2}), h('path',{d:'M8 11V8a4 4 0 0 1 8 0v3'}))
+        : h('svg', { width:30, height:30, viewBox:'0 0 24 24', fill:'#0050E6' }, h('path',{d:'M8 5v14l11-7z'})),
+      playBadgeStyle: {
+        width:'72px', height:'72px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+        background: locked ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.95)', border: locked ? '2px solid rgba(255,255,255,.5)' : 'none',
+        boxShadow: locked ? 'none' : '0 6px 20px rgba(0,0,0,.25)'
+      },
+      lockTagStyle: {
+        position:'absolute', top:'12px', left:'12px', display: locked ? 'inline-flex' : 'none', alignItems:'center', gap:'6px',
+        fontSize:'11.5px', fontWeight:700, color:'#fff', background:'rgba(0,0,0,.5)', padding:'5px 11px', borderRadius:'999px'
+      },
+      lockTagText: 'Terkunci · Pratinjau tidak tersedia',
+      accessBoxStyle: {
+        display:'flex', gap:'11px', alignItems:'flex-start', padding:'13px', borderRadius:'10px',
+        background: locked ? '#DBEAFE' : '#DCFAE9', border: locked ? '1px solid #BFDBFE' : '1px solid #B6EDD0'
+      },
+      accessIcon: locked
+        ? h('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'none', stroke:'#1D4ED8', strokeWidth:2 }, h('rect',{x:5,y:11,width:14,height:9,rx:2}), h('path',{d:'M8 11V8a4 4 0 0 1 8 0v3'}))
+        : h('svg', { width:18, height:18, viewBox:'0 0 24 24', fill:'none', stroke:'#0E8A4F', strokeWidth:2.4 }, h('path',{d:'m20 6-11 11-5-5'})),
+      accessIconWrapStyle: { width:'34px', height:'34px', borderRadius:'8px', display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:'#fff' },
+      accessTitle: locked ? 'Modul terkunci' : 'Anda punya akses',
+      accessTitleColor: locked ? '#1D4ED8' : '#0E8A4F',
+      accessSub: locked ? 'Tingkatkan paket untuk menonton & dapatkan sertifikat.' : 'Lanjutkan dari posisi terakhir Anda.',
+      ctaStyle: {
+        textDecoration:'none', textAlign:'center', fontSize:'15px', fontWeight:700, color:'#fff',
+        background: locked ? '#1D4ED8' : '#0050E6', borderRadius:'10px', padding:'14px',
+        display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'9px', boxShadow:'0 2px 8px rgba(17,37,63,.12)'
+      },
+      ctaContent: locked
+        ? [ h('svg', { key:'i', width:17, height:17, viewBox:'0 0 24 24', fill:'none', stroke:'#fff', strokeWidth:2.2 }, h('rect',{x:5,y:11,width:14,height:9,rx:2}), h('path',{d:'M8 11V8a4 4 0 0 1 8 0v3'})), 'Tingkatkan untuk menonton' ]
+        : [ h('svg', { key:'i', width:17, height:17, viewBox:'0 0 24 24', fill:'#fff' }, h('path',{d:'M8 5v14l11-7z'})), 'Lanjutkan · 38%' ]
+    };
+  }
+}
+</script>
+</body>
+</html>

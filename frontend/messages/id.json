@@ -1,0 +1,21 @@
+{
+  "app": {
+    "name": "LMS Akademi"
+  },
+  "nav": {
+    "catalog": "Katalog",
+    "pricing": "Harga",
+    "howItWorks": "Cara Kerja",
+    "forBusiness": "Untuk Bisnis",
+    "about": "Tentang"
+  },
+  "common": {
+    "signIn": "Masuk",
+    "signUpFree": "Daftar Gratis",
+    "getStarted": "Mulai Sekarang"
+  },
+  "marketing": {
+    "heroTitle": "Belajar keterampilan baru, kapan saja",
+    "heroSubtitle": "Platform pembelajaran daring untuk mengembangkan kemampuan Anda."
+  }
+}

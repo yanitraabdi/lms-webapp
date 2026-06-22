@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .sys-frames{ display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; }
+  .sys-frame{ flex:none; width:420px; }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-accent-strong:#FFB81C; --ds-accent-soft:#FEF1D2; --ds-success:#0E8A4F; --ds-danger:#C62828; --ds-danger-soft:#FBE3E3; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); min-width:100%; min-height:100vh; box-sizing:border-box; background:#E9EEF5; font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink); width:max-content; padding:0 0 56px;">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px; position:sticky; left:0;">
+    <span style="font-weight:800;">Layar 16 · Halaman Sistem</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">404 · 500 (error) · 503 (maintenance) — full-screen, dengan nav minimal &amp; CTA pemulihan</span>
+  </div>
+
+  <div style="padding:36px 32px;">
+    <div class="sys-frames">
+
+      <!-- 404 -->
+      <div class="sys-frame">
+        <div style="font-size:12px; font-weight:700; color:#51607A; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em;">16a · 404 Tidak Ditemukan</div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); overflow:hidden;">
+          <div style="border-bottom:1px solid var(--ds-border); padding:14px 20px; display:flex; align-items:center; gap:9px;"><span style="width:26px; height:26px; border-radius:7px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;">A</span><span style="font-size:13px; font-weight:800;">AI Productivity Academy</span></div>
+          <div style="padding:44px 28px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
+            <span style="font-size:64px; font-weight:800; letter-spacing:-0.03em; color:var(--ds-primary); line-height:1;">404</span>
+            <h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em;">Halaman tidak ditemukan</h2>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ds-ink-muted); max-width:300px;">Maaf, halaman yang Anda cari tidak ada atau sudah dipindahkan. Mari kembali ke jalur belajar Anda.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:4px;"><a href="#" style="font-size:14px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:12px 22px; border-radius:var(--ds-radius-sm);">Ke Dasbor</a><a href="#" style="font-size:14px; font-weight:700; color:var(--ds-ink); text-decoration:none; padding:11px 20px; border-radius:var(--ds-radius-sm); border:1.5px solid var(--ds-border);">Jelajahi katalog</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 500 ERROR -->
+      <div class="sys-frame">
+        <div style="font-size:12px; font-weight:700; color:#51607A; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em;">16b · 500 Kesalahan Server</div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); overflow:hidden;">
+          <div style="border-bottom:1px solid var(--ds-border); padding:14px 20px; display:flex; align-items:center; gap:9px;"><span style="width:26px; height:26px; border-radius:7px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;">A</span><span style="font-size:13px; font-weight:800;">AI Productivity Academy</span></div>
+          <div style="padding:44px 28px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
+            <span style="width:68px; height:68px; border-radius:50%; background:var(--ds-danger-soft); display:inline-flex; align-items:center; justify-content:center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ds-danger)" stroke-width="1.9"><path d="M12 3 2 20h20L12 3z"></path><path d="M12 10v4M12 17.5v.5"></path></svg></span>
+            <h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em;">Ada yang tidak beres</h2>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ds-ink-muted); max-width:300px;">Terjadi kesalahan di sisi kami. Tim kami sudah diberi tahu. Silakan coba lagi sebentar lagi.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:4px;"><a href="#" style="font-size:14px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:12px 22px; border-radius:var(--ds-radius-sm);">Coba lagi</a><a href="#" style="font-size:14px; font-weight:700; color:var(--ds-ink); text-decoration:none; padding:11px 20px; border-radius:var(--ds-radius-sm); border:1.5px solid var(--ds-border);">Hubungi dukungan</a></div>
+            <span style="font-size:11.5px; color:var(--ds-ink-subtle); font-family:monospace;">Kode kesalahan: 500-AIPA-X8K2</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 503 MAINTENANCE -->
+      <div class="sys-frame">
+        <div style="font-size:12px; font-weight:700; color:#51607A; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em;">16c · 503 Pemeliharaan</div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); overflow:hidden;">
+          <div style="border-bottom:1px solid var(--ds-border); padding:14px 20px; display:flex; align-items:center; gap:9px;"><span style="width:26px; height:26px; border-radius:7px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;">A</span><span style="font-size:13px; font-weight:800;">AI Productivity Academy</span></div>
+          <div style="padding:44px 28px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
+            <span style="width:68px; height:68px; border-radius:50%; background:var(--ds-accent-soft); display:inline-flex; align-items:center; justify-content:center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ds-accent)" stroke-width="1.9"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2 2.5-2.5z"></path></svg></span>
+            <h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em;">Sedang pemeliharaan</h2>
+            <p style="margin:0; font-size:14px; line-height:1.6; color:var(--ds-ink-muted); max-width:310px;">Kami sedang meningkatkan platform agar belajar Anda makin lancar. Kami akan kembali sebentar lagi.</p>
+            <div style="background:var(--ds-surface-2); border-radius:8px; padding:11px 16px; display:inline-flex; align-items:center; gap:9px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-muted)" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span style="font-size:13px; color:var(--ds-ink-muted);">Perkiraan selesai: <strong style="color:var(--ds-ink);">14:00 WIB</strong></span></div>
+            <a href="#" style="font-size:13.5px; font-weight:700; color:var(--ds-primary); text-decoration:none; margin-top:2px;">Cek status sistem →</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

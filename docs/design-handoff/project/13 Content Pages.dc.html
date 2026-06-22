@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .cp-sec{ max-width:1000px; margin:0 auto; padding-left:24px; padding-right:24px; }
+  .cp-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .cp-2{ display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+  .cp-foot{ display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:28px; }
+  @media (max-width:820px){ .cp-3{ grid-template-columns:1fr; } .cp-2{ grid-template-columns:1fr; } .cp-foot{ grid-template-columns:1fr 1fr; } }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-accent-strong:#FFB81C; --ds-accent-soft:#FEF1D2; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); min-height:100vh; box-sizing:border-box; background:var(--ds-bg); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink);">
+
+  <!-- HANDOFF BAR + page switcher -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 13 · Halaman Konten Publik</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Setiap halaman = rute publik (SEO). Pakai pemilih untuk berpindah.</span>
+    <div style="margin-left:auto; display:flex; gap:4px; flex-wrap:wrap;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6"><button type="button" onClick="{{ t.onSelect }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <header style="background:#fff; border-bottom:1px solid var(--ds-border); position:sticky; top:0; z-index:10;">
+    <div class="cp-sec" style="height:62px; display:flex; align-items:center; justify-content:space-between; max-width:1180px;">
+      <div style="display:flex; align-items:center; gap:10px;"><span style="width:30px; height:30px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">A</span><span style="font-weight:800; font-size:15px;">AI Productivity Academy</span></div>
+      <div style="display:flex; align-items:center; gap:8px;"><a href="#" style="font-size:13.5px; font-weight:700; color:var(--ds-ink); text-decoration:none; padding:9px 12px;">Masuk</a><a href="#" style="font-size:13.5px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:10px 18px; border-radius:var(--ds-radius-sm);">Daftar gratis</a></div>
+    </div>
+  </header>
+
+  <main style="padding:0 0 64px;">
+
+    <!-- ABOUT -->
+    <sc-if value="{{ isAbout }}" hint-placeholder-val="{{ true }}">
+      <section style="padding:56px 0 40px; text-align:center;"><div class="cp-sec" style="max-width:760px; display:flex; flex-direction:column; gap:16px; align-items:center;"><span style="font-size:12.5px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.09em;">Tentang kami</span><h1 style="margin:0; font-size:38px; font-weight:800; letter-spacing:-0.025em;">Membuat AI mudah diakses setiap profesional Indonesia</h1><p style="margin:0; font-size:17px; line-height:1.65; color:var(--ds-ink-muted);">Kami percaya setiap orang berhak memanfaatkan AI untuk bekerja lebih baik — tanpa harus jadi ahli teknologi. Karena itu kami membangun jalur belajar yang jelas, dalam Bahasa Indonesia, dengan sertifikat yang diakui.</p></div></section>
+      <section style="padding:24px 0;"><div class="cp-sec cp-3">
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:26px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--ds-shadow); text-align:center; align-items:center;"><span style="font-size:30px; font-weight:800; color:var(--ds-primary);">12rb+</span><span style="font-size:13.5px; color:var(--ds-ink-muted);">Profesional telah belajar</span></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:26px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--ds-shadow); text-align:center; align-items:center;"><span style="font-size:30px; font-weight:800; color:var(--ds-primary);">45+</span><span style="font-size:13.5px; color:var(--ds-ink-muted);">Modul dalam Bahasa Indonesia</span></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:26px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--ds-shadow); text-align:center; align-items:center;"><span style="font-size:30px; font-weight:800; color:var(--ds-primary);">4,8★</span><span style="font-size:13.5px; color:var(--ds-ink-muted);">Rata-rata kepuasan peserta</span></div>
+      </div></section>
+      <section style="padding:40px 0;"><div class="cp-sec" style="max-width:760px; display:flex; flex-direction:column; gap:14px;"><h2 style="margin:0; font-size:24px; font-weight:800; letter-spacing:-0.02em;">Misi kami</h2><p style="margin:0; font-size:15.5px; line-height:1.75; color:var(--ds-ink-muted);">AI berkembang sangat cepat, dan banyak profesional merasa tertinggal. Kami hadir untuk menutup kesenjangan itu — menerjemahkan teknologi yang rumit menjadi langkah-langkah praktis yang bisa langsung diterapkan di pekerjaan sehari-hari. Mulai dari menulis email, merangkum dokumen, hingga membangun workflow tim.</p></div></section>
+    </sc-if>
+
+    <!-- HOW IT WORKS -->
+    <sc-if value="{{ isHow }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:56px 0 32px; text-align:center;"><div class="cp-sec" style="max-width:720px; display:flex; flex-direction:column; gap:14px; align-items:center;"><span style="font-size:12.5px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.09em;">Cara kerja</span><h1 style="margin:0; font-size:36px; font-weight:800; letter-spacing:-0.025em;">Dari pemula menjadi bersertifikat</h1><p style="margin:0; font-size:16.5px; line-height:1.6; color:var(--ds-ink-muted);">Empat langkah sederhana untuk mulai memanfaatkan AI di pekerjaan Anda.</p></div></section>
+      <section style="padding:24px 0;"><div class="cp-sec" style="display:flex; flex-direction:column; gap:18px; max-width:760px;">
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; gap:18px; align-items:flex-start; box-shadow:var(--ds-shadow);"><span style="width:40px; height:40px; border-radius:50%; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; flex-shrink:0;">1</span><div><h3 style="margin:0 0 5px; font-size:18px; font-weight:700;">Daftar &amp; verifikasi email</h3><p style="margin:0; font-size:14.5px; line-height:1.6; color:var(--ds-ink-muted);">Buat akun gratis dengan email atau Google. Verifikasi email untuk mengamankan akun dan sertifikat Anda.</p></div></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; gap:18px; align-items:flex-start; box-shadow:var(--ds-shadow);"><span style="width:40px; height:40px; border-radius:50%; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; flex-shrink:0;">2</span><div><h3 style="margin:0 0 5px; font-size:18px; font-weight:700;">Coba modul gratis</h3><p style="margin:0; font-size:14.5px; line-height:1.6; color:var(--ds-ink-muted);">Tonton modul pratinjau tanpa bayar untuk merasakan gaya belajar kami sebelum berlangganan.</p></div></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; gap:18px; align-items:flex-start; box-shadow:var(--ds-shadow);"><span style="width:40px; height:40px; border-radius:50%; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; flex-shrink:0;">3</span><div><h3 style="margin:0 0 5px; font-size:18px; font-weight:700;">Pilih paket &amp; belajar terstruktur</h3><p style="margin:0; font-size:14.5px; line-height:1.6; color:var(--ds-ink-muted);">Berlangganan sesuai level. Progres tersimpan otomatis dan modul selesai ditandai saat Anda menonton ~90%.</p></div></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; gap:18px; align-items:flex-start; box-shadow:var(--ds-shadow);"><span style="width:40px; height:40px; border-radius:50%; background:var(--ds-success); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; flex-shrink:0;">4</span><div><h3 style="margin:0 0 5px; font-size:18px; font-weight:700;">Lulus &amp; dapatkan sertifikat</h3><p style="margin:0; font-size:14.5px; line-height:1.6; color:var(--ds-ink-muted);">Selesaikan satu level penuh untuk mendapat sertifikat dengan kode verifikasi — siap dibagikan ke LinkedIn.</p></div></div>
+      </div></section>
+    </sc-if>
+
+    <!-- FOR BUSINESS -->
+    <sc-if value="{{ isBiz }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:56px 0 32px;"><div class="cp-sec" style="max-width:1180px; display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center;" class="cp-2"><div style="display:flex; flex-direction:column; gap:16px;"><span style="font-size:12.5px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.09em;">Untuk bisnis</span><h1 style="margin:0; font-size:34px; font-weight:800; letter-spacing:-0.025em; line-height:1.15;">Tingkatkan kemampuan AI seluruh tim Anda</h1><p style="margin:0; font-size:16px; line-height:1.65; color:var(--ds-ink-muted);">Lisensi tim, laporan progres, dan penagihan terpusat. Bantu karyawan memanfaatkan AI dengan cara yang aman dan terstruktur.</p><div style="display:flex; gap:12px; flex-wrap:wrap;"><a href="#" style="font-size:15px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:14px 24px; border-radius:var(--ds-radius);">Hubungi tim sales</a><a href="#" style="font-size:15px; font-weight:700; color:var(--ds-ink); text-decoration:none; padding:13px 22px; border-radius:var(--ds-radius); border:1.5px solid var(--ds-border); background:#fff;">Unduh proposal</a></div></div><div style="background:linear-gradient(135deg, #11253F, #1E3A5F); border-radius:18px; padding:32px; color:#fff; display:flex; flex-direction:column; gap:16px;"><div style="font-size:13px; font-weight:700; color:#FFD874;">Paket Bisnis mencakup</div><div style="display:flex; align-items:center; gap:11px; font-size:14.5px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EE6A8" stroke-width="2.4"><path d="m20 6-11 11-5-5"></path></svg>Lisensi 5–500+ anggota</div><div style="display:flex; align-items:center; gap:11px; font-size:14.5px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EE6A8" stroke-width="2.4"><path d="m20 6-11 11-5-5"></path></svg>Dasbor progres tim</div><div style="display:flex; align-items:center; gap:11px; font-size:14.5px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EE6A8" stroke-width="2.4"><path d="m20 6-11 11-5-5"></path></svg>Penagihan &amp; faktur terpusat</div><div style="display:flex; align-items:center; gap:11px; font-size:14.5px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EE6A8" stroke-width="2.4"><path d="m20 6-11 11-5-5"></path></svg>Sertifikat untuk seluruh tim</div></div></div></section>
+    </sc-if>
+
+    <!-- FAQ -->
+    <sc-if value="{{ isFaq }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:56px 0 40px; text-align:center;"><div class="cp-sec" style="max-width:680px; display:flex; flex-direction:column; gap:12px; align-items:center;"><span style="font-size:12.5px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.09em;">FAQ</span><h1 style="margin:0; font-size:34px; font-weight:800; letter-spacing:-0.025em;">Pertanyaan yang sering diajukan</h1></div></section>
+      <section style="padding:0 0 24px;"><div class="cp-sec" style="max-width:760px; display:flex; flex-direction:column; gap:12px;">
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;"><span style="font-size:15px; font-weight:700;">Apakah saya perlu latar belakang teknis?</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2.2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></div>
+        <div style="background:#fff; border:1px solid var(--ds-primary); border-radius:var(--ds-radius); padding:18px 20px; display:flex; flex-direction:column; gap:10px;"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><span style="font-size:15px; font-weight:700;">Bagaimana sistem sertifikatnya?</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2.2"><path d="M5 12h14"></path></svg></div><p style="margin:0; font-size:14.5px; line-height:1.65; color:var(--ds-ink-muted);">Setiap kali Anda menyelesaikan satu level penuh, sertifikat otomatis terbit dengan kode verifikasi unik. Sertifikat bersifat permanen dan bisa diverifikasi siapa saja melalui halaman publik, serta dibagikan ke LinkedIn.</p></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;"><span style="font-size:15px; font-weight:700;">Apakah bisa belajar dari HP?</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2.2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer;"><span style="font-size:15px; font-weight:700;">Apa beda tiap paket?</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2.2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></div>
+      </div></section>
+    </sc-if>
+
+    <!-- HELP CENTER -->
+    <sc-if value="{{ isHelp }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:48px 0 32px;"><div class="cp-sec" style="max-width:760px; display:flex; flex-direction:column; gap:18px; align-items:center; text-align:center;"><h1 style="margin:0; font-size:32px; font-weight:800; letter-spacing:-0.025em;">Pusat Bantuan</h1><div style="width:100%; max-width:520px; position:relative;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2" style="position:absolute; left:15px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="text" placeholder="Cari bantuan… (mis. 'reset kata sandi')" style="font-family:inherit; font-size:15px; width:100%; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:14px 14px 14px 46px; box-shadow:var(--ds-shadow);"></div></div></section>
+      <section style="padding:24px 0;"><div class="cp-sec cp-3" style="max-width:1000px;">
+        <a href="#" style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:9px; box-shadow:var(--ds-shadow); text-decoration:none;"><span style="width:42px; height:42px; border-radius:11px; background:var(--ds-primary-soft); display:inline-flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg></span><span style="font-size:16px; font-weight:700; color:var(--ds-ink);">Memulai</span><span style="font-size:13px; color:var(--ds-ink-muted); line-height:1.5;">Daftar, verifikasi, dan modul pertama Anda.</span></a>
+        <a href="#" style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:9px; box-shadow:var(--ds-shadow); text-decoration:none;"><span style="width:42px; height:42px; border-radius:11px; background:var(--ds-accent-soft); display:inline-flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-accent)" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect></svg></span><span style="font-size:16px; font-weight:700; color:var(--ds-ink);">Tagihan &amp; langganan</span><span style="font-size:13px; color:var(--ds-ink-muted); line-height:1.5;">Upgrade, downgrade, dan invoice.</span></a>
+        <a href="#" style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:9px; box-shadow:var(--ds-shadow); text-decoration:none;"><span style="width:42px; height:42px; border-radius:11px; background:#DCFAE9; display:inline-flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-3 4 3-1-8"></path></svg></span><span style="font-size:16px; font-weight:700; color:var(--ds-ink);">Sertifikat</span><span style="font-size:13px; color:var(--ds-ink-muted); line-height:1.5;">Terbit, unduh, dan verifikasi.</span></a>
+      </div></section>
+    </sc-if>
+
+    <!-- FEEDBACK -->
+    <sc-if value="{{ isFeedback }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:56px 0;"><div class="cp-sec" style="max-width:620px; display:flex; flex-direction:column; gap:20px;"><div style="text-align:center; display:flex; flex-direction:column; gap:10px;"><h1 style="margin:0; font-size:32px; font-weight:800; letter-spacing:-0.025em;">Kirim masukan</h1><p style="margin:0; font-size:15px; line-height:1.6; color:var(--ds-ink-muted);">Kami terus memperbaiki produk berdasarkan masukan Anda.</p></div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:28px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--ds-shadow);">
+          <div style="display:flex; flex-direction:column; gap:8px;"><label style="font-size:13px; font-weight:600;">Jenis masukan</label><div style="display:flex; gap:9px; flex-wrap:wrap;"><span style="font-size:13px; font-weight:700; color:#fff; background:var(--ds-primary); padding:9px 16px; border-radius:999px;">Saran</span><span style="font-size:13px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:9px 16px; border-radius:999px;">Masalah</span><span style="font-size:13px; font-weight:600; color:var(--ds-ink-muted); background:var(--ds-surface-2); padding:9px 16px; border-radius:999px;">Pujian</span></div></div>
+          <div style="display:flex; flex-direction:column; gap:6px;"><label style="font-size:13px; font-weight:600;">Pesan Anda</label><textarea placeholder="Ceritakan pengalaman Anda…" style="font-family:inherit; font-size:14px; border:1px solid var(--ds-border); border-radius:var(--ds-radius-sm); padding:12px; min-height:120px; resize:vertical;"></textarea></div>
+          <button type="button" style="font-family:inherit; font-size:14.5px; font-weight:700; color:#fff; background:var(--ds-primary); border:none; border-radius:var(--ds-radius-sm); padding:13px; cursor:pointer;">Kirim masukan</button>
+        </div>
+      </div></section>
+    </sc-if>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer style="background:#11253F; color:#fff; padding:48px 0 26px;">
+    <div class="cp-sec cp-foot" style="max-width:1180px;">
+      <div style="display:flex; flex-direction:column; gap:12px;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:30px; height:30px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">A</span><span style="font-weight:800; font-size:15px;">AI Productivity Academy</span></div><p style="margin:0; font-size:13.5px; line-height:1.6; color:rgba(255,255,255,.62); max-width:280px;">Belajar AI praktis dalam Bahasa Indonesia.</p></div>
+      <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-size:12.5px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:0.06em;">Produk</span><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Katalog</a><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Harga</a><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Untuk Bisnis</a></div>
+      <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-size:12.5px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:0.06em;">Dukungan</span><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Pusat Bantuan</a><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">FAQ</a><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Masukan</a></div>
+      <div style="display:flex; flex-direction:column; gap:11px;"><span style="font-size:12.5px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:0.06em;">Legal</span><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Ketentuan</a><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Privasi</a><a href="#" style="font-size:13.5px; color:rgba(255,255,255,.8); text-decoration:none;">Aksesibilitas</a></div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { page: 'about' };
+  renderVals(){
+    const defs = [
+      { key:'about', label:'Tentang' },
+      { key:'how', label:'Cara Kerja' },
+      { key:'biz', label:'Bisnis' },
+      { key:'faq', label:'FAQ' },
+      { key:'help', label:'Bantuan' },
+      { key:'feedback', label:'Masukan' }
+    ];
+    const tabs = defs.map(d => ({
+      ...d,
+      onSelect: () => this.setState({ page: d.key }),
+      style: { fontFamily:'inherit', fontSize:'11px', fontWeight:700, cursor:'pointer', borderRadius:'5px', padding:'5px 10px', border:'none', background: this.state.page===d.key ? '#fff' : 'rgba(255,255,255,.14)', color: this.state.page===d.key ? '#11253F' : '#fff' }
+    }));
+    return {
+      tabs,
+      isAbout: this.state.page==='about', isHow: this.state.page==='how', isBiz: this.state.page==='biz',
+      isFaq: this.state.page==='faq', isHelp: this.state.page==='help', isFeedback: this.state.page==='feedback'
+    };
+  }
+}
+</script>
+</body>
+</html>

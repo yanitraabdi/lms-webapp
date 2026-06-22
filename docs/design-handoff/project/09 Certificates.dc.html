@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .cert-frames{ display:flex; flex-wrap:wrap; gap:32px; align-items:flex-start; }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-accent-strong:#FFB81C; --ds-accent-soft:#FEF1D2; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); min-width:100%; min-height:100vh; box-sizing:border-box; background:#E9EEF5; font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink); width:max-content; padding:0 0 56px;">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px; position:sticky; left:0;">
+    <span style="font-weight:800;">Layar 09 · Sertifikat</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Daftar sertifikat (in-app) · desain sertifikat (nama, level, tanggal, kode, QR) · halaman verifikasi publik /verify/{code} · bisa dibagikan ke LinkedIn</span>
+  </div>
+
+  <div style="padding:36px 32px;">
+    <div class="cert-frames">
+
+      <!-- ===== 9a · LIST (in-app) ===== -->
+      <div style="flex:none; width:560px;">
+        <div style="font-size:12px; font-weight:700; color:#51607A; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em;">9a · Daftar sertifikat (dalam app)</div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); overflow:hidden;">
+          <div style="padding:20px 22px; border-bottom:1px solid var(--ds-border); display:flex; flex-direction:column; gap:4px;"><h2 style="margin:0; font-size:18px; font-weight:800;">Sertifikat saya</h2><p style="margin:0; font-size:13px; color:var(--ds-ink-muted);">Sertifikat bersifat permanen dan dapat diverifikasi publik.</p></div>
+          <!-- earned -->
+          <div style="padding:18px 22px; border-bottom:1px solid var(--ds-surface-2); display:flex; gap:16px; align-items:center;">
+            <span style="width:52px; height:52px; border-radius:12px; background:var(--ds-accent-soft); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ds-accent)" stroke-width="1.9"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-3 4 3-1-8"></path></svg></span>
+            <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px;"><h3 style="margin:0; font-size:15.5px; font-weight:700;">Level Basic — AI untuk Produktivitas</h3></div><div style="font-size:12.5px; color:var(--ds-ink-muted); margin-top:2px;">Terbit 12 Okt 2025 · Kode <span style="font-family:monospace; color:var(--ds-ink); font-weight:600;">AIPA-7K2D9X</span></div></div>
+            <div style="display:flex; gap:8px; flex-shrink:0;"><button type="button" style="font-family:inherit; font-size:12.5px; font-weight:700; color:var(--ds-primary); background:#fff; border:1.5px solid var(--ds-border); border-radius:6px; padding:8px 13px; cursor:pointer;">Lihat</button><button type="button" style="display:inline-flex; align-items:center; gap:6px; font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:#0A66C2; border:none; border-radius:6px; padding:8px 13px; cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H6.5v-7H9zM7.7 8.7a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zM18 17h-2.5v-3.5c0-2-2.5-1.9-2.5 0V17H10.5v-7H13v1.1c1-1.9 5-2 5 1.8z"></path></svg>Bagikan</button></div>
+          </div>
+          <!-- in progress -->
+          <div style="padding:18px 22px; display:flex; gap:16px; align-items:center;">
+            <span style="width:52px; height:52px; border-radius:12px; background:var(--ds-surface-2); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="1.9"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-3 4 3-1-8"></path></svg></span>
+            <div style="flex:1; min-width:0;"><h3 style="margin:0; font-size:15.5px; font-weight:700; color:var(--ds-ink-muted);">Level Intermediate — Workflow AI</h3><div style="height:6px; border-radius:999px; background:var(--ds-surface-2); overflow:hidden; margin-top:8px; max-width:240px;"><div style="height:100%; width:35%; background:var(--ds-primary);"></div></div><div style="font-size:12px; color:var(--ds-ink-subtle); margin-top:6px;">Selesaikan level untuk membuka sertifikat · 35%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 9b · CERTIFICATE DESIGN ===== -->
+      <div style="flex:none; width:600px;">
+        <div style="font-size:12px; font-weight:700; color:#51607A; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em;">9b · Desain sertifikat</div>
+        <div style="background:#fff; border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow-lg); padding:14px;">
+          <div style="border:2px solid var(--ds-accent-strong); border-radius:10px; padding:36px 40px; display:flex; flex-direction:column; gap:18px; position:relative; background:linear-gradient(180deg,#fff,#FDFBF6);">
+            <div style="position:absolute; top:18px; right:20px; font-size:10px; font-weight:700; color:var(--ds-ink-subtle); letter-spacing:0.08em;">AIPA-7K2D9X</div>
+            <!-- header -->
+            <div style="display:flex; align-items:center; gap:10px;"><span style="width:34px; height:34px; border-radius:9px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">A</span><div style="line-height:1.2;"><div style="font-size:14px; font-weight:800;">AI Productivity Academy</div><div style="font-size:11px; color:var(--ds-ink-muted);">Sertifikat Kelulusan</div></div></div>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+              <span style="font-size:12.5px; color:var(--ds-ink-muted);">Dengan ini menyatakan bahwa</span>
+              <span style="font-size:30px; font-weight:800; letter-spacing:-0.02em;">Budi Santoso</span>
+              <span style="font-size:12.5px; color:var(--ds-ink-muted);">telah berhasil menyelesaikan</span>
+              <span style="font-size:18px; font-weight:700; color:var(--ds-primary);">Level Basic — AI untuk Produktivitas</span>
+            </div>
+            <!-- footer -->
+            <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; border-top:1px solid var(--ds-border); padding-top:18px; margin-top:6px;">
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; flex-direction:column; gap:1px;"><span style="font-size:11px; color:var(--ds-ink-subtle);">Tanggal terbit</span><span style="font-size:13.5px; font-weight:700;">12 Oktober 2025</span></div>
+                <div style="display:flex; flex-direction:column; gap:1px;"><span style="font-size:11px; color:var(--ds-ink-subtle);">Diverifikasi di</span><span style="font-size:12.5px; font-weight:700; color:var(--ds-primary);">academy.id/verify/AIPA-7K2D9X</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:6px;"><span style="width:74px; height:74px; background:linear-gradient(135deg,#11253F 25%,#fff 25% 50%,#11253F 50% 75%,#fff 75%); background-size:10px 10px; border-radius:6px; border:3px solid #11253F;"></span><span style="font-size:9.5px; color:var(--ds-ink-subtle);">Pindai untuk verifikasi</span></div>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; padding:14px 6px 4px;"><button type="button" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-family:inherit; font-size:13px; font-weight:700; color:var(--ds-ink); background:#fff; border:1.5px solid var(--ds-border); border-radius:8px; padding:11px; cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>Unduh PDF</button><button type="button" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-family:inherit; font-size:13px; font-weight:700; color:#fff; background:#0A66C2; border:none; border-radius:8px; padding:11px; cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H6.5v-7H9zM7.7 8.7a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zM18 17h-2.5v-3.5c0-2-2.5-1.9-2.5 0V17H10.5v-7H13v1.1c1-1.9 5-2 5 1.8z"></path></svg>Bagikan ke LinkedIn</button></div>
+        </div>
+      </div>
+
+      <!-- ===== 9c · PUBLIC VERIFY PAGE ===== -->
+      <div style="flex:none; width:440px;">
+        <div style="font-size:12px; font-weight:700; color:#51607A; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em;">9c · Halaman verifikasi publik /verify/{code}</div>
+        <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); overflow:hidden;">
+          <div style="background:#fff; border-bottom:1px solid var(--ds-border); padding:14px 20px; display:flex; align-items:center; gap:9px;"><span style="width:26px; height:26px; border-radius:7px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;">A</span><span style="font-size:13px; font-weight:800;">AI Productivity Academy</span></div>
+          <div style="padding:28px 24px; display:flex; flex-direction:column; gap:18px; align-items:center; text-align:center;">
+            <span style="width:60px; height:60px; border-radius:50%; background:#DCFAE9; display:inline-flex; align-items:center; justify-content:center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0E8A4F" stroke-width="2.4"><path d="M12 2a10 10 0 1 0 10 10"></path><path d="m8 12 2.5 2.5L22 5"></path></svg></span>
+            <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:700; color:#0E8A4F;">Sertifikat terverifikasi ✓</span><h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em;">Budi Santoso</h2><span style="font-size:14px; color:var(--ds-ink-muted);">Level Basic — AI untuk Produktivitas</span></div>
+            <div style="width:100%; background:var(--ds-surface-2); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:11px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ds-ink-muted);">Kode verifikasi</span><span style="font-weight:700; font-family:monospace;">AIPA-7K2D9X</span></div>
+              <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ds-ink-muted);">Tanggal terbit</span><span style="font-weight:700;">12 Okt 2025</span></div>
+              <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ds-ink-muted);">Status</span><span style="font-weight:700; color:#0E8A4F;">Aktif &amp; sah</span></div>
+              <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ds-ink-muted);">Penerbit</span><span style="font-weight:700;">AI Productivity Academy</span></div>
+            </div>
+            <p style="margin:0; font-size:11.5px; color:var(--ds-ink-subtle); line-height:1.5;">Halaman ini dapat dibuka siapa saja untuk memastikan keaslian sertifikat. Jika data tidak cocok, sertifikat tidak sah.</p>
+          </div>
+        </div>
+        <!-- invalid state -->
+        <div style="margin-top:16px; background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); padding:22px; display:flex; gap:13px; align-items:flex-start; border-left:3px solid var(--ds-danger);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C62828" stroke-width="2.2" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16.5v.5"></path></svg><div><div style="font-size:14px; font-weight:700; margin-bottom:3px;">Kode tidak ditemukan</div><p style="margin:0; font-size:13px; line-height:1.55; color:var(--ds-ink-muted);">Kode <span style="font-family:monospace;">XXXX-0000</span> tidak cocok dengan sertifikat mana pun. Periksa kembali kode Anda.</p></div></div>
+        <div style="margin-top:8px; font-size:11px; color:#51607A; text-align:center;">↑ state: tidak valid / tidak ditemukan</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

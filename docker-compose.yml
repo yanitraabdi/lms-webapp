@@ -1,0 +1,53 @@
+name: academy
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-academy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-academy}
+      POSTGRES_DB: ${POSTGRES_DB:-academy}
+    ports:
+      # Host port is overridable (set POSTGRES_PORT in .env) so it won't clash with
+      # another local Postgres. The API talks to 'postgres:5432' internally regardless.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-academy} -d ${POSTGRES_DB:-academy}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-academy};Username=${POSTGRES_USER:-academy};Password=${POSTGRES_PASSWORD:-academy}"
+      RunMigrations: "true"
+      SeedSampleData: "true"
+      Cors__AllowedOrigins__0: "http://localhost:${FRONTEND_PORT:-3000}"
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      NODE_ENV: production
+      # Browser → API (direct public calls: verify/forgot/reset).
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:${API_PORT:-8080}"
+      # Next BFF (server-side) → API over the compose network (login/register/refresh/logout).
+      API_INTERNAL_URL: "http://api:8080"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

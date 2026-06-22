@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .lg-body{ display:grid; grid-template-columns:230px 1fr; gap:36px; max-width:1000px; margin:0 auto; padding:0 24px; }
+  .lg-toc{ display:block; }
+  @media (max-width:800px){ .lg-body{ grid-template-columns:1fr; } .lg-toc{ display:none; } }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); min-height:100vh; box-sizing:border-box; background:var(--ds-bg); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink);">
+
+  <!-- HANDOFF BAR + switcher -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 14 · Legal &amp; Consent</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Template dokumen legal (Ketentuan/Privasi/Refund/Aksesibilitas) + banner &amp; preferensi cookie</span>
+    <div style="margin-left:auto; display:flex; gap:4px; flex-wrap:wrap;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4"><button type="button" onClick="{{ t.onSelect }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+      <button type="button" onClick="{{ showBanner }}" style="font-family:inherit; font-size:11px; font-weight:700; cursor:pointer; border-radius:5px; padding:5px 10px; border:none; background:var(--ds-accent-strong, #FFB81C); color:#11253F;">Cookie banner</button>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <header style="background:#fff; border-bottom:1px solid var(--ds-border);">
+    <div style="max-width:1180px; margin:0 auto; padding:0 24px; height:62px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;"><span style="width:30px; height:30px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">A</span><span style="font-weight:800; font-size:15px;">AI Productivity Academy</span></div>
+      <a href="#" style="font-size:13.5px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:10px 18px; border-radius:var(--ds-radius-sm);">Daftar gratis</a>
+    </div>
+  </header>
+
+  <div style="padding:36px 0 64px;">
+    <div class="lg-body">
+      <!-- TOC -->
+      <aside class="lg-toc"><div style="position:sticky; top:24px; display:flex; flex-direction:column; gap:6px;">
+        <span style="font-size:11px; font-weight:700; color:var(--ds-ink-subtle); text-transform:uppercase; letter-spacing:0.06em; padding:6px 12px;">Daftar isi</span>
+        <sc-for list="{{ toc }}" as="i" hint-placeholder-count="5"><a href="#" style="{{ i.style }}">{{ i.label }}</a></sc-for>
+      </div></aside>
+
+      <!-- DOC -->
+      <article style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); padding:40px;">
+        <div style="display:flex; flex-direction:column; gap:6px; border-bottom:1px solid var(--ds-surface-2); padding-bottom:22px; margin-bottom:26px;">
+          <span style="font-size:12px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.08em;">Legal</span>
+          <h1 style="margin:0; font-size:30px; font-weight:800; letter-spacing:-0.02em;">{{ docTitle }}</h1>
+          <span style="font-size:12.5px; color:var(--ds-ink-subtle);">Terakhir diperbarui: 1 Oktober 2025</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:22px;">
+          <sc-for list="{{ sections }}" as="s" hint-placeholder-count="4">
+            <section style="display:flex; flex-direction:column; gap:9px;">
+              <h2 style="margin:0; font-size:17px; font-weight:700;">{{ s.heading }}</h2>
+              <p style="margin:0; font-size:14.5px; line-height:1.75; color:var(--ds-ink-muted);">{{ s.body }}</p>
+            </section>
+          </sc-for>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <!-- COOKIE BANNER -->
+  <sc-if value="{{ bannerOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed; left:0; right:0; bottom:0; z-index:40; padding:16px 24px; display:flex; justify-content:center;">
+      <div style="width:100%; max-width:980px; background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow-lg); padding:20px 22px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:240px;"><div style="font-size:15px; font-weight:800; margin-bottom:4px;">Kami menggunakan cookie 🍪</div><p style="margin:0; font-size:13px; line-height:1.55; color:var(--ds-ink-muted);">Cookie membantu kami menjaga sesi login, mengingat preferensi, dan memahami penggunaan agar produk makin baik. Anda bisa mengatur pilihan kapan saja. <a href="#" style="color:var(--ds-primary); font-weight:600; text-decoration:none;">Kebijakan Cookie</a>.</p></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;"><button type="button" onClick="{{ openPrefs }}" style="font-family:inherit; font-size:13px; font-weight:700; color:var(--ds-ink); background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-sm); padding:11px 16px; cursor:pointer;">Atur preferensi</button><button type="button" onClick="{{ closeBanner }}" style="font-family:inherit; font-size:13px; font-weight:700; color:var(--ds-ink); background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-sm); padding:11px 16px; cursor:pointer;">Tolak opsional</button><button type="button" onClick="{{ closeBanner }}" style="font-family:inherit; font-size:13px; font-weight:700; color:#fff; background:var(--ds-primary); border:none; border-radius:var(--ds-radius-sm); padding:11px 20px; cursor:pointer;">Terima semua</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- COOKIE PREFERENCES MODAL -->
+  <sc-if value="{{ prefsOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(17,37,63,.45); display:flex; align-items:center; justify-content:center; padding:24px; z-index:50;">
+      <div style="width:100%; max-width:460px; background:#fff; border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow-lg); padding:26px; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><h3 style="margin:0; font-size:19px; font-weight:800;">Preferensi cookie</h3><button type="button" onClick="{{ closePrefs }}" style="background:transparent; border:none; cursor:pointer; color:var(--ds-ink-subtle);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:14px;"><div><div style="font-size:13.5px; font-weight:700;">Wajib</div><div style="font-size:12px; color:var(--ds-ink-muted); line-height:1.45;">Diperlukan agar situs berfungsi (login, keamanan).</div></div><span style="font-size:11.5px; font-weight:700; color:var(--ds-ink-subtle);">Selalu aktif</span></div>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:14px;"><div><div style="font-size:13.5px; font-weight:700;">Analitik</div><div style="font-size:12px; color:var(--ds-ink-muted); line-height:1.45;">Membantu kami memahami penggunaan.</div></div><span style="width:38px; height:22px; border-radius:999px; background:var(--ds-primary); position:relative; display:inline-block; flex-shrink:0;"><span style="position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span></div>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:14px;"><div><div style="font-size:13.5px; font-weight:700;">Pemasaran</div><div style="font-size:12px; color:var(--ds-ink-muted); line-height:1.45;">Personalisasi penawaran &amp; iklan.</div></div><span style="width:38px; height:22px; border-radius:999px; background:#C9D4E2; position:relative; display:inline-block; flex-shrink:0;"><span style="position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span></div>
+        <button type="button" onClick="{{ closePrefs }}" style="font-family:inherit; font-size:14px; font-weight:700; color:#fff; background:var(--ds-primary); border:none; border-radius:var(--ds-radius-sm); padding:12px; cursor:pointer;">Simpan preferensi</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { page: 'terms', bannerOpen: true, prefsOpen: false };
+  renderVals(){
+    const content = {
+      terms: { title:'Ketentuan Layanan', toc:['Penerimaan','Akun','Langganan','Konten','Pembatasan'],
+        sections:[
+          { heading:'1. Penerimaan ketentuan', body:'Dengan membuat akun atau menggunakan AI Productivity Academy, Anda menyetujui Ketentuan Layanan ini. Jika Anda tidak setuju, mohon untuk tidak menggunakan layanan kami.' },
+          { heading:'2. Akun Anda', body:'Anda bertanggung jawab menjaga kerahasiaan kredensial akun dan seluruh aktivitas di dalamnya. Verifikasi email diperlukan sebelum melakukan pembelian paket berbayar.' },
+          { heading:'3. Langganan & pembayaran', body:'Paket bersifat kumulatif dan berulang. Upgrade berlaku langsung dengan tagihan prorata; downgrade berlaku pada periode tagihan berikutnya. Pembatalan menghentikan perpanjangan otomatis.' },
+          { heading:'4. Konten & sertifikat', body:'Konten kursus dilindungi hak cipta dan hanya untuk penggunaan pribadi. Sertifikat yang telah terbit bersifat permanen dan tidak akan dicabut selama diperoleh secara sah.' }
+        ] },
+      privacy: { title:'Kebijakan Privasi', toc:['Data yang kami kumpulkan','Penggunaan','Berbagi','Keamanan','Hak Anda'],
+        sections:[
+          { heading:'1. Data yang kami kumpulkan', body:'Kami mengumpulkan data yang Anda berikan (nama, email), data penggunaan (progres belajar), dan data teknis (perangkat, alamat IP) untuk menjalankan layanan.' },
+          { heading:'2. Cara kami menggunakan data', body:'Data digunakan untuk menyediakan layanan, menerbitkan sertifikat, memproses pembayaran, serta meningkatkan kualitas produk. Kami tidak menjual data pribadi Anda.' },
+          { heading:'3. Berbagi data', body:'Kami hanya membagikan data dengan penyedia layanan tepercaya (mis. pemroses pembayaran) sesuai kebutuhan operasional dan ketentuan hukum yang berlaku di Indonesia.' },
+          { heading:'4. Keamanan & hak Anda', body:'Kami menerapkan langkah keamanan yang wajar untuk melindungi data Anda. Anda berhak mengakses, memperbarui, atau meminta penghapusan data pribadi Anda kapan saja.' }
+        ] },
+      refund: { title:'Kebijakan Pengembalian Dana', toc:['Kelayakan','Cara mengajukan','Proses','Pengecualian'],
+        sections:[
+          { heading:'1. Kelayakan', body:'Anda dapat mengajukan pengembalian dana dalam 7 hari sejak pembelian pertama paket berbayar, selama penggunaan konten masih wajar.' },
+          { heading:'2. Cara mengajukan', body:'Hubungi tim dukungan melalui Pusat Bantuan dengan menyertakan email akun dan nomor invoice. Kami akan meninjau permintaan dalam 3 hari kerja.' },
+          { heading:'3. Proses & waktu', body:'Pengembalian dana yang disetujui diproses ke metode pembayaran asal. Waktu masuk dana bergantung pada penyedia pembayaran Anda.' },
+          { heading:'4. Pengecualian', body:'Sertifikat yang sudah terbit dan perpanjangan setelah periode 7 hari tidak memenuhi syarat pengembalian dana.' }
+        ] },
+      a11y: { title:'Pernyataan Aksesibilitas', toc:['Komitmen','Standar','Fitur','Umpan balik'],
+        sections:[
+          { heading:'1. Komitmen kami', body:'Kami berkomitmen membuat AI Productivity Academy dapat digunakan oleh semua orang, termasuk penyandang disabilitas.' },
+          { heading:'2. Standar', body:'Kami menargetkan kesesuaian dengan WCAG 2.1 level AA: kontras warna yang cukup, navigasi keyboard penuh, dan fokus yang terlihat di seluruh antarmuka.' },
+          { heading:'3. Fitur aksesibilitas', body:'Pemutar video dilengkapi caption Bahasa Indonesia, kontrol dapat diakses keyboard, serta teks alternatif pada elemen penting.' },
+          { heading:'4. Umpan balik', body:'Jika Anda menemukan hambatan aksesibilitas, beri tahu kami melalui halaman Masukan agar dapat segera kami perbaiki.' }
+        ] }
+    };
+    const defs = [ {key:'terms',label:'Ketentuan'}, {key:'privacy',label:'Privasi'}, {key:'refund',label:'Refund'}, {key:'a11y',label:'Aksesibilitas'} ];
+    const tabs = defs.map(d => ({ ...d, onSelect: () => this.setState({ page:d.key }),
+      style:{ fontFamily:'inherit', fontSize:'11px', fontWeight:700, cursor:'pointer', borderRadius:'5px', padding:'5px 10px', border:'none', background: this.state.page===d.key ? '#fff' : 'rgba(255,255,255,.14)', color: this.state.page===d.key ? '#11253F' : '#fff' } }));
+    const c = content[this.state.page];
+    const toc = c.toc.map((label,i) => ({ label, style:{ fontSize:'13px', fontWeight: i===0?700:500, textDecoration:'none', color: i===0?'#0050E6':'#51607A', padding:'7px 12px', borderRadius:'7px', background: i===0?'#E5EDFF':'transparent' } }));
+    return {
+      tabs, toc, docTitle:c.title, sections:c.sections,
+      bannerOpen: this.state.bannerOpen, prefsOpen: this.state.prefsOpen,
+      showBanner: () => this.setState({ bannerOpen:true }),
+      closeBanner: () => this.setState({ bannerOpen:false }),
+      openPrefs: () => this.setState({ prefsOpen:true, bannerOpen:false }),
+      closePrefs: () => this.setState({ prefsOpen:false })
+    };
+  }
+}
+</script>
+</body>
+</html>

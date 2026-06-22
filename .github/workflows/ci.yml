@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: academy
+          POSTGRES_PASSWORD: academy
+          POSTGRES_DB: academy
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U academy -d academy"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      ConnectionStrings__Default: "Host=localhost;Port=5432;Database=academy;Username=academy;Password=academy"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build (warnings-as-errors)
+        run: dotnet build backend/Academy.slnx
+
+      - name: Test
+        run: dotnet test backend/Academy.slnx --no-build
+
+      - name: Install EF tools
+        run: dotnet tool install -g dotnet-ef
+
+      - name: Validate migration SQL
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef migrations script --idempotent \
+            --project backend/src/Infrastructure/Academy.Infrastructure.csproj \
+            --startup-project backend/src/Api/Academy.Api.csproj -o /tmp/schema.sql
+
+      - name: Apply migration to fresh Postgres
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef database update \
+            --project backend/src/Infrastructure/Academy.Infrastructure.csproj \
+            --startup-project backend/src/Api/Academy.Api.csproj
+
+      - name: OpenAPI → client drift check
+        run: |
+          npm ci --prefix frontend
+          ASPNETCORE_URLS=http://localhost:8080 dotnet run \
+            --project backend/src/Api/Academy.Api.csproj --no-build --no-launch-profile &
+          API_PID=$!
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8080/openapi/v1.json >/dev/null 2>&1 && break
+            sleep 1
+          done
+          npm --prefix frontend run generate:api
+          kill "$API_PID" 2>/dev/null || true
+          git diff --exit-code -- frontend/api-client/schema.ts \
+            || (echo "::error::Generated API client is stale. Run 'npm run generate:api' and commit." && exit 1)
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --prefix frontend
+      - run: npm --prefix frontend run lint
+      - run: npm --prefix frontend run build

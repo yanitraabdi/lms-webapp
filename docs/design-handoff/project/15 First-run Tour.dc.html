@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-accent-strong:#FFB81C; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); min-height:100vh; box-sizing:border-box; background:var(--ds-bg); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink);">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 15 · Tur Pertama (driver.js)</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Gaya tooltip + spotlight untuk driver.js · 5 langkah · Sebelumnya/Berikutnya/Lewati · indikator langkah</span>
+    <button type="button" onClick="{{ restart }}" style="margin-left:auto; font-family:inherit; font-size:11px; font-weight:700; color:#11253F; background:#fff; border:none; border-radius:5px; padding:5px 12px; cursor:pointer;">Ulangi tur</button>
+  </div>
+
+  <!-- MOCK DASHBOARD (tour target surface) -->
+  <div ref="{{ stageRef }}" style="position:relative; padding:20px 24px;">
+    <div style="display:grid; grid-template-columns:200px 1fr; gap:20px; max-width:1080px; margin:0 auto;">
+      <!-- sidebar -->
+      <aside style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:14px; display:flex; flex-direction:column; gap:6px; box-shadow:var(--ds-shadow);">
+        <div style="display:flex; align-items:center; gap:9px; padding:6px 8px 12px;"><span style="width:28px; height:28px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;">A</span><span style="font-weight:800; font-size:13px;">Academy</span></div>
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; background:var(--ds-primary-soft); color:var(--ds-primary); font-size:13px; font-weight:700;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>Dasbor</div>
+        <div ref="{{ t1Ref }}" style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--ds-ink-muted); font-size:13px; font-weight:600;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 1.5z"></path></svg>Katalog</div>
+        <div ref="{{ t4Ref }}" style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--ds-ink-muted); font-size:13px; font-weight:600;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-3 4 3-1-8"></path></svg>Sertifikat</div>
+      </aside>
+      <!-- main -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <h1 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em;">Selamat datang, Budi 👋</h1>
+          <span ref="{{ t5Ref }}" style="position:relative; display:inline-flex; padding:8px; border-radius:9px; background:#fff; border:1px solid var(--ds-border);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-muted)" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10 21a2 2 0 0 0 4 0"></path></svg><span style="position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:var(--ds-accent);"></span></span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 200px; gap:18px;">
+          <div ref="{{ t2Ref }}" style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:16px; display:flex; gap:14px; align-items:center; box-shadow:var(--ds-shadow);">
+            <div style="width:120px; aspect-ratio:16/9; border-radius:8px; background:linear-gradient(135deg, var(--ds-primary), #2A6BFF); flex-shrink:0; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,.95)"><path d="M8 5v14l11-7z"></path></svg></div>
+            <div style="flex:1; min-width:0;"><div style="font-size:11px; font-weight:700; color:var(--ds-ink-subtle); text-transform:uppercase;">Lanjutkan menonton</div><h3 style="margin:3px 0 8px; font-size:15px; font-weight:700;">Menulis prompt pertama Anda</h3><div style="height:5px; border-radius:999px; background:var(--ds-surface-2); overflow:hidden;"><div style="height:100%; width:38%; background:var(--ds-primary);"></div></div></div>
+          </div>
+          <div ref="{{ t3Ref }}" style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:16px; display:flex; flex-direction:column; align-items:center; gap:8px; box-shadow:var(--ds-shadow);">
+            <div style="width:84px; height:84px; border-radius:50%; background:conic-gradient(var(--ds-primary) 0 58%, var(--ds-surface-2) 58% 100%); display:flex; align-items:center; justify-content:center;"><div style="width:62px; height:62px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800;">58%</div></div>
+            <span style="font-size:12px; color:var(--ds-ink-muted);">Progres keseluruhan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY (spotlight + tooltip) -->
+    <sc-if value="{{ tourOpen }}" hint-placeholder-val="{{ true }}">
+      <!-- dim with spotlight cutout via box-shadow -->
+      <div onClick="{{ skip }}" style="{{ spotlightStyle }}"></div>
+      <!-- highlight ring -->
+      <div style="{{ ringStyle }}"></div>
+      <!-- tooltip -->
+      <div style="{{ tooltipStyle }}">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.06em;">Langkah {{ stepNum }} / {{ stepTotal }}</span>
+          <button type="button" onClick="{{ skip }}" style="background:transparent; border:none; cursor:pointer; color:var(--ds-ink-subtle); padding:2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </div>
+        <h3 style="margin:0 0 6px; font-size:16px; font-weight:800;">{{ stepTitle }}</h3>
+        <p style="margin:0 0 14px; font-size:13.5px; line-height:1.55; color:var(--ds-ink-muted);">{{ stepBody }}</p>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <div style="display:flex; gap:5px;"><sc-for list="{{ dots }}" as="d" hint-placeholder-count="5"><span style="{{ d.style }}"></span></sc-for></div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" onClick="{{ prev }}" style="{{ prevStyle }}">Sebelumnya</button>
+            <button type="button" onClick="{{ next }}" style="font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:var(--ds-primary); border:none; border-radius:6px; padding:8px 16px; cursor:pointer;">{{ nextLabel }}</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.stageRef = React.createRef();
+    this.t1Ref = React.createRef(); this.t2Ref = React.createRef(); this.t3Ref = React.createRef();
+    this.t4Ref = React.createRef(); this.t5Ref = React.createRef();
+    this.state = { step: 0, open: true, rect: null };
+    this.steps = [
+      { ref:'t1Ref', title:'Jelajahi katalog', body:'Semua modul ada di sini — dari Basic hingga Advanced. Modul terkunci tetap terlihat dengan tombol upgrade.', place:'right' },
+      { ref:'t2Ref', title:'Lanjutkan menonton', body:'Kartu ini selalu menampilkan modul terakhir Anda. Progres tersimpan otomatis.', place:'bottom' },
+      { ref:'t3Ref', title:'Pantau progres Anda', body:'Lingkaran ini menunjukkan kemajuan keseluruhan menuju sertifikat pertama Anda.', place:'bottom' },
+      { ref:'t4Ref', title:'Sertifikat Anda', body:'Setelah menyelesaikan satu level, sertifikat muncul di sini — siap dibagikan ke LinkedIn.', place:'right' },
+      { ref:'t5Ref', title:'Notifikasi', body:'Pembaruan tentang modul baru, sertifikat, dan tagihan akan muncul di lonceng ini.', place:'bottom' }
+    ];
+  }
+  componentDidMount(){ this.measure(); window.addEventListener('resize', this._m = () => this.measure()); }
+  componentWillUnmount(){ window.removeEventListener('resize', this._m); }
+  measure(){
+    const stage = this.stageRef.current; const tref = this[this.steps[this.state.step].ref];
+    if (!stage || !tref || !tref.current) return;
+    const s = stage.getBoundingClientRect(); const t = tref.current.getBoundingClientRect();
+    const rect = { top: t.top - s.top, left: t.left - s.left, width: t.width, height: t.height };
+    const prev = this.state.rect;
+    if (!prev || prev.top!==rect.top || prev.left!==rect.left || prev.width!==rect.width || prev.height!==rect.height) this.setState({ rect });
+  }
+  go(n){ this.setState({ step: n }, () => this.measure()); }
+  renderVals(){
+    const s = this.state; const cur = this.steps[s.step]; const r = s.rect; const pad = 6;
+    const ring = r ? { top:(r.top-pad)+'px', left:(r.left-pad)+'px', width:(r.width+pad*2)+'px', height:(r.height+pad*2)+'px' } : { top:'0', left:'0', width:'0', height:'0' };
+    // tooltip placement
+    let tt = { top:'0px', left:'0px' };
+    if (r){
+      if (cur.place==='right') tt = { top:(r.top-8)+'px', left:(r.left+r.width+18)+'px' };
+      else tt = { top:(r.top+r.height+16)+'px', left:Math.max(8,(r.left+r.width/2-162))+'px' };
+    }
+    const dots = this.steps.map((_,i) => ({ style:{ width:i===s.step?'18px':'7px', height:'7px', borderRadius:'999px', background: i===s.step?'#0050E6':'#C9D4E2', transition:'all .2s' } }));
+    return {
+      tourOpen: s.open,
+      stageRef: this.stageRef, t1Ref:this.t1Ref, t2Ref:this.t2Ref, t3Ref:this.t3Ref, t4Ref:this.t4Ref, t5Ref:this.t5Ref,
+      stepNum: s.step+1, stepTotal: this.steps.length, stepTitle: cur.title, stepBody: cur.body,
+      spotlightStyle: { position:'absolute', top:(r?r.top-pad:0)+'px', left:(r?r.left-pad:0)+'px', width:(r?r.width+pad*2:0)+'px', height:(r?r.height+pad*2:0)+'px', borderRadius:'10px', boxShadow:'0 0 0 9999px rgba(17,37,63,.62)', zIndex:30, transition:'all .25s ease', pointerEvents:'auto', cursor:'pointer' },
+      ringStyle: { position:'absolute', ...ring, borderRadius:'10px', border:'2px solid #0050E6', zIndex:31, pointerEvents:'none', transition:'all .25s ease' },
+      tooltipStyle: { position:'absolute', ...tt, width:'324px', background:'#fff', borderRadius:'12px', boxShadow:'0 18px 40px -14px rgba(17,37,63,.4)', padding:'18px', zIndex:32, transition:'all .25s ease' },
+      dots,
+      prevStyle: { fontFamily:'inherit', fontSize:'12.5px', fontWeight:700, cursor:'pointer', color:'#11253F', background:'#fff', border:'1px solid #DCE5EF', borderRadius:'6px', padding:'8px 14px', display: s.step===0?'none':'inline-block' },
+      nextLabel: s.step===this.steps.length-1 ? 'Selesai' : 'Berikutnya',
+      prev: () => this.go(Math.max(0, s.step-1)),
+      next: () => { if (s.step===this.steps.length-1) this.setState({ open:false }); else this.go(s.step+1); },
+      skip: () => this.setState({ open:false }),
+      restart: () => this.setState({ open:true, step:0 }, () => this.measure())
+    };
+  }
+}
+</script>
+</body>
+</html>

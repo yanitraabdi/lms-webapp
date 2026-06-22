@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .p-wrap{ --ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-hover:#0040C0; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-accent-strong:#FFB81C; --ds-accent-soft:#FEF1D2; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); }
+  .p-section{ max-width:1180px; margin:0 auto; padding-left:24px; padding-right:24px; }
+  .tier-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; align-items:start; }
+  .cmp-table{ display:block; }
+  @media (max-width:980px){ .tier-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .tier-grid{ grid-template-columns:1fr; } }
+</style>
+</helmet>
+
+<div class="p-wrap" style="background:var(--ds-bg); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink); min-height:100vh;">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 02 · Pricing</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Toggle Bulanan/Tahunan interaktif (klik) · kartu "Paling diminati" = Intermediate · pesan kumulatif di tiap kartu</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">States: loading=skeleton kartu · error=banner harga gagal dimuat</span>
+  </div>
+
+  <!-- NAV (compact) -->
+  <header style="background:#fff; border-bottom:1px solid var(--ds-border);">
+    <div class="p-section" style="height:64px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;"><span style="width:30px; height:30px; border-radius:8px; background:var(--ds-primary); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">A</span><span style="font-weight:800; font-size:15px;">AI Productivity Academy</span></div>
+      <div style="display:flex; align-items:center; gap:8px;"><a href="#" style="font-size:13.5px; font-weight:700; color:var(--ds-ink); text-decoration:none; padding:9px 12px;">Masuk</a><a href="#" style="font-size:13.5px; font-weight:700; color:#fff; background:var(--ds-primary); text-decoration:none; padding:10px 18px; border-radius:var(--ds-radius-sm);">Daftar gratis</a></div>
+    </div>
+  </header>
+
+  <!-- HEADER + TOGGLE -->
+  <section style="padding:56px 0 32px;">
+    <div class="p-section" style="text-align:center; display:flex; flex-direction:column; gap:18px; align-items:center;">
+      <span style="font-size:12.5px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.09em;">Harga</span>
+      <h1 style="margin:0; font-size:38px; font-weight:800; letter-spacing:-0.025em;">Pilih paket yang sesuai langkah Anda</h1>
+      <p style="margin:0; font-size:16.5px; line-height:1.6; color:var(--ds-ink-muted); max-width:600px;">Paket bersifat <strong style="color:var(--ds-ink);">kumulatif</strong> — setiap paket membuka semua level di bawahnya. Mulai gratis, tingkatkan kapan saja.</p>
+      <!-- toggle -->
+      <div style="display:inline-flex; align-items:center; gap:14px; margin-top:6px;">
+        <span style="font-size:14px; font-weight:700; color:{{ monthlyColor }};">Bulanan</span>
+        <button type="button" onClick="{{ toggle }}" role="switch" aria-checked="{{ annual }}" aria-label="Beralih ke tagihan tahunan" style="width:54px; height:30px; border-radius:999px; background:{{ trackColor }}; border:none; position:relative; cursor:pointer; transition:background .2s;"><span style="position:absolute; top:3px; left:{{ knobLeft }}; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .2s;"></span></button>
+        <span style="font-size:14px; font-weight:700; color:{{ annualColor }};">Tahunan</span>
+        <span style="font-size:12px; font-weight:700; color:var(--ds-success); background:#DCFAE9; padding:5px 11px; border-radius:999px;">Hemat 2 bulan</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIERS -->
+  <section style="padding:8px 0 56px;">
+    <div class="p-section tier-grid">
+
+      <!-- FREE -->
+      <article style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--ds-shadow);">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:12.5px; font-weight:700; color:#57534E; background:#F0EFEC; border:1px solid #E2E0DB; padding:5px 11px; border-radius:999px; width:fit-content;">Gratis</span>
+          <h3 style="margin:0; font-size:20px; font-weight:800;">Pratinjau</h3>
+          <p style="margin:0; font-size:13px; line-height:1.5; color:var(--ds-ink-muted); min-height:38px;">Coba dulu sebelum berlangganan.</p>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-size:34px; font-weight:800; letter-spacing:-0.02em;">Rp 0</span><span style="font-size:13px; color:var(--ds-ink-muted);">/ selamanya</span></div>
+        <a href="#" style="text-align:center; font-size:14px; font-weight:700; color:var(--ds-primary); background:#fff; border:1.5px solid var(--ds-primary); border-radius:var(--ds-radius-sm); padding:12px; text-decoration:none;">Daftar gratis</a>
+        <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:11px;">
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Modul pratinjau gratis terpilih</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Akses katalog penuh (lihat)</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-subtle); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-ink-subtle)" stroke-width="2.2" style="flex-shrink:0; margin-top:1px;"><path d="M18 6 6 18M6 6l12 12"></path></svg>Tanpa sertifikat</li>
+        </ul>
+      </article>
+
+      <!-- BEGINNER -->
+      <article style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--ds-shadow);">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:12.5px; font-weight:700; color:#166534; background:#DCFCE7; border:1px solid #BBF7D0; padding:5px 11px; border-radius:999px; width:fit-content;">Beginner</span>
+          <h3 style="margin:0; font-size:20px; font-weight:800;">Beginner</h3>
+          <p style="margin:0; font-size:13px; line-height:1.5; color:var(--ds-ink-muted); min-height:38px;">Fondasi AI untuk pekerjaan harian.</p>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-size:34px; font-weight:800; letter-spacing:-0.02em;">{{ beginnerPrice }}</span><span style="font-size:13px; color:var(--ds-ink-muted);">{{ per }}</span></div>
+        <a href="#" style="text-align:center; font-size:14px; font-weight:700; color:#fff; background:var(--ds-primary); border-radius:var(--ds-radius-sm); padding:12px; text-decoration:none;">Pilih Beginner</a>
+        <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:11px;">
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink); font-weight:600; line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Semua modul Level Basic</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Sertifikat Level Basic</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Materi unduhan</li>
+        </ul>
+      </article>
+
+      <!-- INTERMEDIATE (popular) -->
+      <article style="background:#fff; border:2px solid var(--ds-primary); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--ds-shadow-lg); position:relative;">
+        <span style="position:absolute; top:-13px; left:50%; transform:translateX(-50%); display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:800; color:#11253F; background:var(--ds-accent-strong); padding:5px 13px; border-radius:999px; white-space:nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#11253F"><path d="m12 2 3 6.3 6.9 1-5 4.8 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.8 6.9-1z"></path></svg>Paling diminati</span>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:12.5px; font-weight:700; color:#1D4ED8; background:#DBEAFE; border:1px solid #BFDBFE; padding:5px 11px; border-radius:999px; width:fit-content;">Intermediate</span>
+          <h3 style="margin:0; font-size:20px; font-weight:800;">Intermediate</h3>
+          <p style="margin:0; font-size:13px; line-height:1.5; color:var(--ds-ink-muted); min-height:38px;">Workflow &amp; tools AI tingkat lanjut.</p>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-size:34px; font-weight:800; letter-spacing:-0.02em;">{{ intermediatePrice }}</span><span style="font-size:13px; color:var(--ds-ink-muted);">{{ per }}</span></div>
+        <a href="#" style="text-align:center; font-size:14px; font-weight:700; color:#fff; background:var(--ds-primary); border-radius:var(--ds-radius-sm); padding:12px; text-decoration:none; box-shadow:var(--ds-shadow);">Pilih Intermediate</a>
+        <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:11px;">
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-primary); font-weight:700; line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Semua di Beginner, plus:</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink); font-weight:600; line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Semua modul Level Intermediate</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>2 sertifikat (Basic + Intermediate)</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Catatan &amp; bookmark berwaktu</li>
+        </ul>
+      </article>
+
+      <!-- ADVANCED -->
+      <article style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); padding:24px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--ds-shadow);">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:12.5px; font-weight:700; color:#6D28D9; background:#EDE4FF; border:1px solid #DDD0FB; padding:5px 11px; border-radius:999px; width:fit-content;">Advanced</span>
+          <h3 style="margin:0; font-size:20px; font-weight:800;">Advanced</h3>
+          <p style="margin:0; font-size:13px; line-height:1.5; color:var(--ds-ink-muted); min-height:38px;">Kuasai AI end-to-end &amp; untuk tim.</p>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:4px;"><span style="font-size:34px; font-weight:800; letter-spacing:-0.02em;">{{ advancedPrice }}</span><span style="font-size:13px; color:var(--ds-ink-muted);">{{ per }}</span></div>
+        <a href="#" style="text-align:center; font-size:14px; font-weight:700; color:#fff; background:#6D28D9; border-radius:var(--ds-radius-sm); padding:12px; text-decoration:none;">Pilih Advanced</a>
+        <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:11px;">
+          <li style="display:flex; gap:9px; font-size:13.5px; color:#6D28D9; font-weight:700; line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Semua di Intermediate, plus:</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink); font-weight:600; line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Semua modul Level Advanced</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>3 sertifikat lengkap</li>
+          <li style="display:flex; gap:9px; font-size:13.5px; color:var(--ds-ink-muted); line-height:1.45;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ds-success)" stroke-width="2.4" style="flex-shrink:0; margin-top:1px;"><path d="m20 6-11 11-5-5"></path></svg>Akses paling awal ke modul baru</li>
+        </ul>
+      </article>
+    </div>
+
+    <!-- cumulative note -->
+    <div class="p-section" style="margin-top:24px;">
+      <div style="background:var(--ds-primary-soft); border:1px solid #C9DBFF; border-radius:var(--ds-radius); padding:16px 20px; display:flex; align-items:center; gap:12px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ds-primary)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg><p style="margin:0; font-size:14px; line-height:1.55; color:var(--ds-ink);"><strong>Kumulatif:</strong> memilih paket lebih tinggi otomatis membuka semua level di bawahnya. Sudah berlangganan? Tingkatkan kapan saja — perubahan langsung aktif dan tagihan disesuaikan secara prorata.</p></div>
+    </div>
+  </section>
+
+  <!-- COMPARISON TABLE -->
+  <section style="padding:0 0 64px;">
+    <div class="p-section" style="display:flex; flex-direction:column; gap:20px;">
+      <h2 style="margin:0; font-size:24px; font-weight:800; letter-spacing:-0.02em; text-align:center;">Perbandingan lengkap</h2>
+      <div style="overflow-x:auto; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); background:#fff;">
+        <table style="width:100%; border-collapse:collapse; min-width:680px;">
+          <thead>
+            <tr style="background:var(--ds-surface-2);">
+              <th style="text-align:left; padding:14px 18px; font-size:13px; font-weight:700; color:var(--ds-ink-muted);">Fitur</th>
+              <th style="padding:14px 12px; font-size:13px; font-weight:700;">Gratis</th>
+              <th style="padding:14px 12px; font-size:13px; font-weight:700;">Beginner</th>
+              <th style="padding:14px 12px; font-size:13px; font-weight:700; color:var(--ds-primary);">Intermediate</th>
+              <th style="padding:14px 12px; font-size:13px; font-weight:700;">Advanced</th>
+            </tr>
+          </thead>
+          <tbody style="font-size:13.5px;">
+            <tr style="border-top:1px solid var(--ds-border);"><td style="padding:13px 18px; color:var(--ds-ink-muted);">Modul Level Basic</td><td style="text-align:center; color:var(--ds-ink-subtle);">Pratinjau</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+            <tr style="border-top:1px solid var(--ds-border); background:#FBFCFE;"><td style="padding:13px 18px; color:var(--ds-ink-muted);">Modul Level Intermediate</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+            <tr style="border-top:1px solid var(--ds-border);"><td style="padding:13px 18px; color:var(--ds-ink-muted);">Modul Level Advanced</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center;">✓</td></tr>
+            <tr style="border-top:1px solid var(--ds-border); background:#FBFCFE;"><td style="padding:13px 18px; color:var(--ds-ink-muted);">Sertifikat kelulusan</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">3</td></tr>
+            <tr style="border-top:1px solid var(--ds-border);"><td style="padding:13px 18px; color:var(--ds-ink-muted);">Materi unduhan</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+            <tr style="border-top:1px solid var(--ds-border); background:#FBFCFE;"><td style="padding:13px 18px; color:var(--ds-ink-muted);">Catatan &amp; bookmark berwaktu</td><td style="text-align:center; color:var(--ds-ink-subtle);">—</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ mini -->
+  <section style="background:#fff; border-top:1px solid var(--ds-border); padding:56px 0;">
+    <div class="p-section" style="max-width:760px; display:flex; flex-direction:column; gap:14px;">
+      <h2 style="margin:0 0 8px; font-size:24px; font-weight:800; letter-spacing:-0.02em; text-align:center;">Pertanyaan umum</h2>
+      <div style="border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:18px 20px; background:#fff;"><div style="font-size:15px; font-weight:700; margin-bottom:6px;">Apakah bisa upgrade di tengah jalan?</div><p style="margin:0; font-size:14px; line-height:1.6; color:var(--ds-ink-muted);">Bisa. Upgrade langsung aktif dan biaya dihitung prorata. Downgrade berlaku pada periode tagihan berikutnya.</p></div>
+      <div style="border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:18px 20px; background:#fff;"><div style="font-size:15px; font-weight:700; margin-bottom:6px;">Apakah perlu kartu kredit untuk coba gratis?</div><p style="margin:0; font-size:14px; line-height:1.6; color:var(--ds-ink-muted);">Tidak. Daftar gratis dan tonton modul pratinjau tanpa memasukkan metode pembayaran.</p></div>
+      <div style="border:1px solid var(--ds-border); border-radius:var(--ds-radius); padding:18px 20px; background:#fff;"><div style="font-size:15px; font-weight:700; margin-bottom:6px;">Apakah sertifikat saya tetap berlaku jika berhenti berlangganan?</div><p style="margin:0; font-size:14px; line-height:1.6; color:var(--ds-ink-muted);">Ya. Sertifikat yang sudah terbit bersifat permanen dan tetap dapat diverifikasi lewat halaman publik.</p></div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { annual: false };
+  fmt(n){ return 'Rp ' + n.toLocaleString('id-ID'); }
+  renderVals(){
+    const a = this.state.annual;
+    return {
+      annual: a,
+      toggle: () => this.setState(s => ({ annual: !s.annual })),
+      per: a ? '/ bulan, ditagih tahunan' : '/ bulan',
+      beginnerPrice: a ? this.fmt(124000) : this.fmt(149000),
+      intermediatePrice: a ? this.fmt(207000) : this.fmt(249000),
+      advancedPrice: a ? this.fmt(290000) : this.fmt(349000),
+      trackColor: a ? '#0050E6' : '#C9D4E2',
+      knobLeft: a ? '27px' : '3px',
+      monthlyColor: a ? '#8A99AE' : '#11253F',
+      annualColor: a ? '#11253F' : '#8A99AE'
+    };
+  }
+}
+</script>
+</body>
+</html>

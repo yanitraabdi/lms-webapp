@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain: pure C#. Depends on NOTHING (no EF, no HTTP, no packages). -->
+
+</Project>

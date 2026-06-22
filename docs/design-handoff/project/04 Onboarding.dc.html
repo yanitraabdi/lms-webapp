@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .o-opts{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .o-tools{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:560px){ .o-opts{ grid-template-columns:1fr; } .o-tools{ grid-template-columns:1fr 1fr; } }
+</style>
+</helmet>
+
+<div style="--ds-bg:#F4F7FB; --ds-surface:#FFFFFF; --ds-surface-2:#EEF3F9; --ds-border:#DCE5EF; --ds-ink:#11253F; --ds-ink-muted:#51607A; --ds-ink-subtle:#8A99AE; --ds-primary:#0050E6; --ds-primary-soft:#E5EDFF; --ds-accent:#C2710C; --ds-success:#0E8A4F; --ds-radius-sm:6px; --ds-radius:10px; --ds-radius-lg:14px; --ds-shadow:0 2px 8px rgba(17,37,63,.07); --ds-shadow-lg:0 18px 40px -14px rgba(17,37,63,.20); min-height:100vh; box-sizing:border-box; background:var(--ds-bg); font-family:'Plus Jakarta Sans', system-ui, sans-serif; color:var(--ds-ink);">
+
+  <!-- HANDOFF BAR -->
+  <div style="background:#11253F; color:#fff; padding:9px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; font-size:11.5px;">
+    <span style="font-weight:800;">Layar 04 · Onboarding survey</span><span style="opacity:.5;">|</span>
+    <span style="opacity:.85;">Singkat (3 langkah) &amp; bisa dilewati di tiap langkah · pilihan interaktif (klik untuk pilih) · multi-select pada tools</span>
+  </div>
+
+  <div style="max-width:600px; margin:0 auto; padding:40px 24px 64px; display:flex; flex-direction:column; gap:24px;">
+    <!-- progress + skip -->
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+      <div style="display:flex; align-items:center; gap:10px; flex:1;">
+        <span style="font-size:12.5px; font-weight:700; color:var(--ds-ink-muted); white-space:nowrap;">Langkah {{ step }}/3</span>
+        <div style="flex:1; height:7px; border-radius:999px; background:var(--ds-surface-2); overflow:hidden;"><div style="height:100%; width:100%; transform-origin:left; transform:scaleX({{ scale }}); background:var(--ds-primary); border-radius:999px; transition:transform .25s;"></div></div>
+      </div>
+      <button type="button" onClick="{{ skipAll }}" style="font-family:inherit; font-size:13px; font-weight:700; color:var(--ds-ink-muted); background:transparent; border:none; cursor:pointer; padding:6px 8px;">Lewati</button>
+    </div>
+
+    <div style="background:#fff; border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); box-shadow:var(--ds-shadow); padding:32px; display:flex; flex-direction:column; gap:22px;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-size:12px; font-weight:700; color:var(--ds-primary); text-transform:uppercase; letter-spacing:0.08em;">{{ eyebrow }}</span>
+        <h1 style="margin:0; font-size:25px; font-weight:800; letter-spacing:-0.02em;">{{ title }}</h1>
+        <p style="margin:0; font-size:14.5px; line-height:1.55; color:var(--ds-ink-muted);">{{ subtitle }}</p>
+      </div>
+
+      <!-- STEP 1: ROLE (single) -->
+      <sc-if value="{{ isRole }}" hint-placeholder-val="{{ true }}">
+        <div class="o-opts">
+          <sc-for list="{{ roles }}" as="opt" hint-placeholder-count="6">
+            <button type="button" onClick="{{ opt.onSelect }}" style="{{ opt.style }}"><span style="font-size:22px;">{{ opt.emoji }}</span><span style="font-size:14px; font-weight:700;">{{ opt.label }}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- STEP 2: GOALS (single) -->
+      <sc-if value="{{ isGoal }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ goals }}" as="opt" hint-placeholder-count="5">
+            <button type="button" onClick="{{ opt.onSelect }}" style="{{ opt.rowStyle }}"><span style="display:inline-flex; align-items:center; gap:12px;"><span style="font-size:20px;">{{ opt.emoji }}</span><span style="font-size:14.5px; font-weight:600; text-align:left;">{{ opt.label }}</span></span><span style="{{ opt.checkStyle }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- STEP 3: TOOLS (multi) -->
+      <sc-if value="{{ isTools }}" hint-placeholder-val="{{ true }}">
+        <div class="o-tools">
+          <sc-for list="{{ tools }}" as="opt" hint-placeholder-count="6">
+            <button type="button" onClick="{{ opt.onToggle }}" style="{{ opt.style }}"><span style="font-size:22px;">{{ opt.emoji }}</span><span style="font-size:13px; font-weight:700;">{{ opt.label }}</span></button>
+          </sc-for>
+        </div>
+        <p style="margin:0; font-size:12.5px; color:var(--ds-ink-subtle);">Pilih satu atau lebih · membantu kami merekomendasikan modul.</p>
+      </sc-if>
+
+      <!-- nav buttons -->
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid var(--ds-surface-2); padding-top:18px;">
+        <button type="button" onClick="{{ back }}" style="{{ backStyle }}">Kembali</button>
+        <button type="button" onClick="{{ next }}" style="font-family:inherit; font-size:14px; font-weight:700; color:#fff; background:var(--ds-primary); border:none; border-radius:var(--ds-radius-sm); padding:12px 24px; cursor:pointer;">{{ nextLabel }}</button>
+      </div>
+    </div>
+
+    <p style="margin:0; text-align:center; font-size:12.5px; color:var(--ds-ink-subtle);">Anda bisa mengubah preferensi ini kapan saja di Pengaturan.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { step: 1, role: null, goal: null, tools: [], done: false };
+  renderVals(){
+    const s = this.state;
+    const optBtn = (sel) => ({
+      fontFamily:'inherit', display:'flex', flexDirection:'column', alignItems:'center', gap:'8px',
+      padding:'18px 12px', borderRadius:'10px', cursor:'pointer', background: sel ? '#E5EDFF' : '#fff',
+      border: sel ? '2px solid #0050E6' : '1.5px solid #DCE5EF', color:'#11253F', textAlign:'center'
+    });
+    const rowBtn = (sel) => ({
+      fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'space-between',
+      padding:'14px 16px', borderRadius:'10px', cursor:'pointer', background: sel ? '#E5EDFF' : '#fff',
+      border: sel ? '2px solid #0050E6' : '1.5px solid #DCE5EF', color:'#11253F'
+    });
+    const checkBox = (sel) => ({
+      width:'22px', height:'22px', borderRadius:'50%', display:'inline-flex', alignItems:'center',
+      justifyContent:'center', background: sel ? '#0050E6' : 'transparent', border: sel ? 'none' : '2px solid #C9D4E2'
+    });
+
+    const roles = [
+      { key:'staff', emoji:'💼', label:'Staf / Karyawan' },
+      { key:'manager', emoji:'📊', label:'Manajer / Lead' },
+      { key:'business', emoji:'🏢', label:'Pebisnis / Owner' },
+      { key:'tech', emoji:'💻', label:'Developer / Teknis' },
+      { key:'student', emoji:'🎓', label:'Pelajar / Fresh grad' },
+      { key:'other', emoji:'✨', label:'Lainnya' }
+    ].map(r => ({ ...r, style: optBtn(s.role===r.key), onSelect: () => this.setState({ role:r.key }) }));
+
+    const goals = [
+      { key:'productive', emoji:'⚡', label:'Lebih produktif di pekerjaan harian' },
+      { key:'career', emoji:'📈', label:'Tingkatkan karier & nilai jual' },
+      { key:'cert', emoji:'🏅', label:'Dapatkan sertifikat untuk atasan' },
+      { key:'team', emoji:'🤝', label:'Terapkan AI untuk tim saya' },
+      { key:'curious', emoji:'🔍', label:'Sekadar ingin tahu soal AI' }
+    ].map(g => ({ ...g, rowStyle: rowBtn(s.goal===g.key), checkStyle: checkBox(s.goal===g.key), onSelect: () => this.setState({ goal:g.key }) }));
+
+    const tools = [
+      { key:'chatgpt', emoji:'🤖', label:'ChatGPT' },
+      { key:'gemini', emoji:'✦', label:'Gemini' },
+      { key:'claude', emoji:'🧠', label:'Claude' },
+      { key:'copilot', emoji:'🪄', label:'Copilot' },
+      { key:'midjourney', emoji:'🎨', label:'Midjourney' },
+      { key:'none', emoji:'🌱', label:'Belum pernah' }
+    ].map(t => {
+      const sel = s.tools.includes(t.key);
+      return { ...t, style: optBtn(sel), onToggle: () => this.setState(st => ({ tools: st.tools.includes(t.key) ? st.tools.filter(x=>x!==t.key) : [...st.tools, t.key] })) };
+    });
+
+    const meta = {
+      1: { eyebrow:'Tentang Anda', title:'Apa peran Anda saat ini?', subtitle:'Kami sesuaikan rekomendasi modul dengan keseharian Anda.' },
+      2: { eyebrow:'Tujuan', title:'Apa yang ingin Anda capai?', subtitle:'Pilih yang paling utama bagi Anda.' },
+      3: { eyebrow:'Alat AI', title:'Alat AI apa yang pernah Anda pakai?', subtitle:'Tidak masalah jika belum pernah sama sekali.' }
+    }[s.step];
+
+    return {
+      step: s.step, scale: s.step/3,
+      isRole: s.step===1, isGoal: s.step===2, isTools: s.step===3,
+      eyebrow: meta.eyebrow, title: meta.title, subtitle: meta.subtitle,
+      roles, goals, tools,
+      nextLabel: s.step===3 ? 'Selesai & mulai belajar' : 'Lanjut',
+      backStyle: s.step===1
+        ? { fontFamily:'inherit', fontSize:'14px', fontWeight:700, color:'#8A99AE', background:'transparent', border:'none', padding:'12px 4px', cursor:'not-allowed', visibility:'hidden' }
+        : { fontFamily:'inherit', fontSize:'14px', fontWeight:700, color:'#11253F', background:'#fff', border:'1px solid #DCE5EF', borderRadius:'6px', padding:'12px 20px', cursor:'pointer' },
+      back: () => this.setState(st => ({ step: Math.max(1, st.step-1) })),
+      next: () => this.setState(st => ({ step: Math.min(3, st.step+1), done: st.step===3 ? true : st.done })),
+      skipAll: () => this.setState({ done:true })
+    };
+  }
+}
+</script>
+</body>
+</html>

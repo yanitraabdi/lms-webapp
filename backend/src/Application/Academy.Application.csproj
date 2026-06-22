@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Application: use-cases + interface ports. Depends on Domain only. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\Academy.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
+</Project>
