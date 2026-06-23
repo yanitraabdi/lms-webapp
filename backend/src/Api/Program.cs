@@ -7,7 +7,9 @@ using Academy.Api.Endpoints;
 using Academy.Application.Auth;
 using Academy.Infrastructure;
 using Academy.Infrastructure.Auth;
+using Academy.Infrastructure.Billing;
 using Academy.Infrastructure.Catalog;
+using Academy.Infrastructure.Engagement;
 using Academy.Infrastructure.Persistence;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -81,8 +83,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization(options =>
+{
     options.AddPolicy("EmailVerified", policy =>
-        policy.RequireAuthenticatedUser().RequireClaim("email_verified", "true")));
+        policy.RequireAuthenticatedUser().RequireClaim("email_verified", "true"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin", "SuperAdmin"));
+    options.AddPolicy("SuperAdmin", policy => policy.RequireRole("SuperAdmin"));
+});
 
 // Data layer + auth services + provider abstractions.
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -103,6 +109,19 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapCatalogEndpoints();
+app.MapSubscriptionEndpoints();
+app.MapWebhookEndpoints();
+app.MapLearningEndpoints();
+app.MapAdminEndpoints();
+app.MapCurriculumAdminEndpoints();
+app.MapUserAdminEndpoints();
+app.MapAdminQuizEndpoints();
+app.MapEngagementEndpoints();
+app.MapNotificationEndpoints();
+app.MapLearnerEngagementEndpoints();
+// Dev-only payment simulation endpoints (active when Billing:Provider = "dev").
+if (app.Services.GetRequiredService<BillingOptions>().IsDev)
+    app.MapDevPaymentEndpoints();
 
 // Apply EF migrations on startup only when explicitly enabled (docker-compose api service).
 // Integration tests (WebApplicationFactory) leave this off, so /health needs no database.
@@ -116,7 +135,10 @@ if (app.Configuration.GetValue<bool>("RunMigrations"))
 if (app.Configuration.GetValue<bool>("SeedSampleData"))
 {
     using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<PlansSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<CatalogSeeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<DevAdminSeeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<FaqSeeder>().SeedAsync();
 }
 
 app.Run();

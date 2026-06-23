@@ -27,4 +27,35 @@ public class CapturingEmailSender : IEmailSender
         PasswordChangedCount++;
         return Task.CompletedTask;
     }
+
+    // ---- Billing (M3) ----
+    public int SubscriptionConfirmationCount { get; private set; }
+    public int PaymentFailedCount { get; private set; }
+    public int SubscriptionExpiredCount { get; private set; }
+
+    public Task SendSubscriptionConfirmationAsync(string toEmail, string name, string planName, decimal amountIdr, DateTimeOffset periodEnd, CancellationToken ct = default)
+    {
+        SubscriptionConfirmationCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task SendPaymentFailedAsync(string toEmail, string name, string planName, CancellationToken ct = default)
+    {
+        PaymentFailedCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task SendSubscriptionExpiredAsync(string toEmail, string name, string planName, CancellationToken ct = default)
+    {
+        SubscriptionExpiredCount++;
+        return Task.CompletedTask;
+    }
+
+    public int NotificationEmailCount { get; private set; }
+
+    public Task SendNotificationAsync(string toEmail, string name, string title, string body, CancellationToken ct = default)
+    {
+        NotificationEmailCount++;
+        return Task.CompletedTask;
+    }
 }

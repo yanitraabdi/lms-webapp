@@ -165,6 +165,9 @@ public class SubscriptionConfig : IEntityTypeConfiguration<Subscription>
         e.HasIndex(x => x.Status);
         e.HasOne(x => x.Plan).WithMany().HasForeignKey(x => x.PlanId)
             .OnDelete(DeleteBehavior.Restrict);
+        // Scheduled downgrade target — optional; clear the link if that plan is removed.
+        e.HasOne<Plan>().WithMany().HasForeignKey(x => x.PlannedPlanId)
+            .OnDelete(DeleteBehavior.SetNull);
         e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
     }
@@ -185,6 +188,7 @@ public class PaymentTransactionConfig : IEntityTypeConfiguration<PaymentTransact
         e.Property(x => x.XenditIds).HasColumnType("jsonb");
         e.Property(x => x.RawPayload).HasColumnType("jsonb");
         e.HasIndex(x => x.UserId);
+        e.HasIndex(x => x.ProviderRef);   // webhook → pending intent lookup
         e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
         e.HasOne<Subscription>().WithMany().HasForeignKey(x => x.SubscriptionId)

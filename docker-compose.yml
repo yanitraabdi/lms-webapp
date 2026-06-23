@@ -29,6 +29,9 @@ services:
       RunMigrations: "true"
       SeedSampleData: "true"
       Cors__AllowedOrigins__0: "http://localhost:${FRONTEND_PORT:-3000}"
+      # On-demand ISR revalidation: API → Next (over the compose network).
+      Revalidate__FrontendUrl: "http://frontend:3000"
+      Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:
@@ -44,6 +47,8 @@ services:
       NEXT_PUBLIC_API_BASE_URL: "http://localhost:${API_PORT:-8080}"
       # Next BFF (server-side) → API over the compose network (login/register/refresh/logout).
       API_INTERNAL_URL: "http://api:8080"
+      # Shared secret for the /api/revalidate route the .NET API calls on content changes.
+      REVALIDATE_SECRET: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:

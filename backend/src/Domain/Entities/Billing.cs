@@ -22,6 +22,9 @@ public class Subscription : Entity
     public Guid PlanId { get; set; }
     public Plan Plan { get; set; } = default!;
 
+    // Scheduled downgrade target: applied at the next renewal, then cleared (GR-8 / TSD §9.4).
+    public Guid? PlannedPlanId { get; set; }
+
     // Grandfathering: bill this snapshot, NOT live Plan.Price (GR-8).
     public decimal PriceLockedIdr { get; set; }
     public BillingCycle BillingCycle { get; set; }
@@ -51,8 +54,9 @@ public class PaymentTransaction : Entity
     public PaymentKind Kind { get; set; }                  // cycle | proration_upgrade
     public string? Method { get; set; }
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
+    public string? ProviderRef { get; set; }               // gateway checkout/charge ref — webhook lookup key
     public string XenditIds { get; set; } = "{}";          // jsonb
-    public string RawPayload { get; set; } = "{}";         // jsonb
+    public string RawPayload { get; set; } = "{}";         // jsonb — checkout intent / event snapshot
 }
 
 /// <summary>Idempotency ledger for ALL inbound webhooks (Xendit + Bunny). GR-2.</summary>

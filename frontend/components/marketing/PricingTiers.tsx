@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/cn";
 import { Badge, CheckIcon, XIcon } from "@/components/ui";
-import { PLANS, formatIdr } from "@/lib/pricing";
+import { PLANS, formatIdr, type PlanTier } from "@/lib/pricing";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { checkout, getPlans } from "@/lib/billing";
 
 const ctaCls: Record<"primary" | "secondary" | "advanced", string> = {
   primary: "bg-primary text-primary-ink hover:bg-primary-hover",
@@ -12,8 +15,49 @@ const ctaCls: Record<"primary" | "secondary" | "advanced", string> = {
   advanced: "bg-[#6D28D9] text-white hover:bg-[#5b21b6]",
 };
 
+const TIER_LEVEL: Record<PlanTier["key"], number> = { free: 0, beginner: 1, intermediate: 2, advanced: 3 };
+
 export function PricingTiers() {
+  const router = useRouter();
+  const { status, accessToken } = useAuth();
   const [annual, setAnnual] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // DB-backed plans give us the real plan ids (display copy stays in PLANS).
+  const { data: apiPlans } = useQuery({ queryKey: ["plans"], queryFn: getPlans, staleTime: 5 * 60 * 1000 });
+
+  function planIdFor(key: PlanTier["key"]): string | undefined {
+    return apiPlans?.find((p) => p.tierLevel === TIER_LEVEL[key])?.id;
+  }
+
+  async function onCta(plan: PlanTier) {
+    setError(null);
+    if (plan.key === "free") {
+      router.push(status === "authenticated" ? "/app/dashboard" : "/register");
+      return;
+    }
+    if (status !== "authenticated" || !accessToken) {
+      router.push(`/login?next=${encodeURIComponent("/pricing")}`);
+      return;
+    }
+    const planId = planIdFor(plan.key);
+    if (!planId) {
+      setError("Paket belum tersedia. Coba lagi sebentar lagi.");
+      return;
+    }
+    setBusy(plan.key);
+    try {
+      const session = await checkout(accessToken, planId, annual ? "Annual" : "Monthly");
+      window.location.href = session.checkoutUrl;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Gagal memulai checkout.";
+      // Already subscribed → send them to manage their plan instead.
+      if (msg.toLowerCase().includes("langganan aktif")) router.push("/app/account");
+      else setError(msg);
+      setBusy(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-10">
@@ -41,6 +85,12 @@ export function PricingTiers() {
         <span className={cn("text-sm font-bold", annual ? "text-ink" : "text-ink-subtle")}>Tahunan</span>
         <Badge tone="success">Hemat 2 bulan</Badge>
       </div>
+
+      {error && (
+        <p className="mx-auto rounded-base border border-danger/30 bg-danger-soft px-4 py-2.5 text-center text-sm text-danger">
+          {error}
+        </p>
+      )}
 
       {/* Tier cards */}
       <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -70,12 +120,17 @@ export function PricingTiers() {
                 <span className="text-[13px] text-ink-muted">{per}</span>
               </div>
 
-              <Link
-                href="/register"
-                className={cn("rounded-sm px-3 py-3 text-center text-sm font-bold transition-colors", ctaCls[plan.ctaVariant])}
+              <button
+                type="button"
+                onClick={() => onCta(plan)}
+                disabled={busy === plan.key}
+                className={cn(
+                  "rounded-sm px-3 py-3 text-center text-sm font-bold transition-colors disabled:opacity-60",
+                  ctaCls[plan.ctaVariant]
+                )}
               >
-                {plan.cta}
-              </Link>
+                {busy === plan.key ? "Memproses…" : plan.cta}
+              </button>
 
               <ul className="flex flex-col gap-2.5">
                 {plan.features.map((f) => (

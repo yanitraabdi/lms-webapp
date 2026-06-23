@@ -12,9 +12,12 @@ public class EntitlementService(AppDbContext db) : IEntitlementService
     public async Task<int?> GetActiveTierAsync(Guid userId, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
+        // Any non-expired subscription still inside its paid period grants its tier —
+        // Active, PastDue, Grace, and Canceled-until-period-end all keep access (GR-7,
+        // SubscriptionStateMachine.GrantsAccess). Only Expired loses it.
         var tiers = await db.Subscriptions
             .Where(s => s.UserId == userId
-                        && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Grace)
+                        && s.Status != SubscriptionStatus.Expired
                         && s.CurrentPeriodEnd > now)
             .Select(s => s.Plan.TierLevel)
             .ToListAsync(ct);

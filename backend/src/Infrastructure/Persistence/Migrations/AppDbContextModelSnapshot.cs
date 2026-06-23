@@ -828,6 +828,10 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("method");
 
+                    b.Property<string>("ProviderRef")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_ref");
+
                     b.Property<string>("RawPayload")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -857,6 +861,9 @@ namespace Academy.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_payment_transactions");
+
+                    b.HasIndex("ProviderRef")
+                        .HasDatabaseName("ix_payment_transactions_provider_ref");
 
                     b.HasIndex("SubscriptionId")
                         .HasDatabaseName("ix_payment_transactions_subscription_id");
@@ -1164,6 +1171,10 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("plan_id");
 
+                    b.Property<Guid?>("PlannedPlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("planned_plan_id");
+
                     b.Property<decimal>("PriceLockedIdr")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -1191,6 +1202,9 @@ namespace Academy.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PlanId")
                         .HasDatabaseName("ix_subscriptions_plan_id");
+
+                    b.HasIndex("PlannedPlanId")
+                        .HasDatabaseName("ix_subscriptions_planned_plan_id");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_subscriptions_status");
@@ -1950,6 +1964,12 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_subscriptions_plans_plan_id");
+
+                    b.HasOne("Academy.Domain.Entities.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlannedPlanId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_subscriptions_plans_planned_plan_id");
 
                     b.HasOne("Academy.Domain.Entities.User", null)
                         .WithMany()
