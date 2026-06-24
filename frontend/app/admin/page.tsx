@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Spinner, ErrorState, Button } from "@/components/ui";
 import { getAnalytics, num } from "@/lib/admin";
 
-const TIER_NAME: Record<number, string> = { 0: "Gratis", 1: "Beginner", 2: "Intermediate", 3: "Advanced" };
+const TIER_NAME: Record<number, string> = { 0: "Gratis", 1: "Basic", 2: "Intermediate", 3: "Advanced" };
 
 export default function AdminAnalyticsPage() {
   const token = useAuth().accessToken;

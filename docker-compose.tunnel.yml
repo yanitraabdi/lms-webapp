@@ -1,0 +1,81 @@
+# Tunnel-ready production-ish stack (single public hostname behind a Cloudflare tunnel).
+#
+# Same project name as docker-compose.yml ("academy") so it reuses the same images and the
+# `academy_pgdata` volume. Differences from the dev compose:
+#   • Single origin: the browser only ever talks to the FRONTEND. The frontend is built with
+#     NEXT_PUBLIC_API_BASE_URL="" (relative /api/*) and Next proxies /api/* to the API over the
+#     internal network (see frontend/next.config.ts). No public API hostname, no CORS.
+#   • Only the frontend is published to the host (for a host-level cloudflared). Postgres and the
+#     API stay internal to the compose network (a containerized cloudflared can still reach the
+#     frontend at `frontend:3000` by joining network `academy_default`).
+#   • API runs in Production mode; the admin password comes from ADMIN_PASSWORD (no well-known default).
+#
+# Run:   docker compose -f docker-compose.tunnel.yml up -d --build
+# Bind:  point your Cloudflare tunnel ingress at  http://localhost:${FRONTEND_PORT:-3001}
+#        (host cloudflared)  — or  http://frontend:3000  on network `academy_default` (container).
+
+name: academy
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-academy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-academy}
+      POSTGRES_DB: ${POSTGRES_DB:-academy}
+    # Internal only — not published to the host.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-academy} -d ${POSTGRES_DB:-academy}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-academy};Username=${POSTGRES_USER:-academy};Password=${POSTGRES_PASSWORD:-academy}"
+      RunMigrations: "true"
+      SeedSampleData: "true"
+      # Strong SuperAdmin password (no well-known default). Required — set ADMIN_PASSWORD in .env.
+      DevAdmin__Password: "${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}"
+      # On-demand ISR revalidation: API → Next over the compose network.
+      Revalidate__FrontendUrl: "http://frontend:3000"
+      Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
+    # Internal only — reached exclusively via the frontend same-origin proxy.
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Same-origin: empty base ⇒ the browser calls relative /api/*, proxied by Next to the API.
+        NEXT_PUBLIC_API_BASE_URL: ""
+        # Public origin for sitemap/robots/canonical (optional). Set PUBLIC_SITE_URL in .env.
+        NEXT_PUBLIC_SITE_URL: "${PUBLIC_SITE_URL:-}"
+        # Server-side proxy target baked into the Next rewrite.
+        API_INTERNAL_URL: "http://api:8080"
+    environment:
+      NODE_ENV: production
+      # BFF (server-side) → API, and the runtime proxy target.
+      API_INTERNAL_URL: "http://api:8080"
+      REVALIDATE_SECRET: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
+    # The ONLY service the Cloudflare tunnel binds.
+    ports:
+      - "${FRONTEND_PORT:-3001}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:

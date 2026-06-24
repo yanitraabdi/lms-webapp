@@ -26,7 +26,7 @@ const tierStyles: Record<Tier, string> = {
 };
 const tierLabels: Record<Tier, string> = {
   free: "Gratis",
-  beginner: "Beginner",
+  beginner: "Basic",
   intermediate: "Intermediate",
   advanced: "Advanced",
 };

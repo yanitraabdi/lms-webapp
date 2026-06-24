@@ -14,7 +14,7 @@ public class FaqSeeder(AppDbContext db)
         ("Apakah saya bisa mencoba gratis?",
             "Bisa. Daftar gratis dan tonton modul pratinjau terpilih tanpa memasukkan metode pembayaran."),
         ("Bagaimana paket berlangganan bekerja?",
-            "Paket bersifat kumulatif: Beginner membuka Level Basic, Intermediate menambah Level Intermediate, dan Advanced membuka seluruh kurikulum."),
+            "Paket bersifat kumulatif: Basic membuka Level Basic, Intermediate menambah Level Intermediate, dan Advanced membuka seluruh kurikulum."),
         ("Bisakah saya upgrade di tengah periode?",
             "Bisa. Upgrade langsung aktif dan ditagih secara prorata. Downgrade berlaku pada periode tagihan berikutnya."),
         ("Apakah sertifikat tetap berlaku jika saya berhenti berlangganan?",

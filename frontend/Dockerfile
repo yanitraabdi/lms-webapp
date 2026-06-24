@@ -16,6 +16,18 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build-time config. NEXT_PUBLIC_* are inlined into the client bundle by `next build`, so the
+# browser API base and site URL must be set HERE, not just at runtime.
+#  - Default NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 preserves the local dev build (browser
+#    talks to the API directly). For a single-hostname/tunnel deploy, pass "" so the browser uses
+#    same-origin /api/* and Next proxies to API_INTERNAL_URL (see next.config.ts rewrites).
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+ARG NEXT_PUBLIC_SITE_URL
+ARG API_INTERNAL_URL=http://api:8080
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 RUN npm run build
 
 # ---- runner ----

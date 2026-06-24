@@ -115,9 +115,9 @@ export function PricingTiers() {
                 <p className="min-h-[38px] text-[13px] leading-snug text-ink-muted">{plan.tagline}</p>
               </div>
 
-              <div className="flex items-baseline gap-1">
-                <span className="text-[34px] font-extrabold tracking-tight">{price}</span>
-                <span className="text-[13px] text-ink-muted">{per}</span>
+              <div className="flex flex-wrap items-baseline gap-x-1.5">
+                <span className="whitespace-nowrap text-[32px] font-extrabold leading-tight tracking-tight">{price}</span>
+                <span className="whitespace-nowrap text-[13px] text-ink-muted">{per}</span>
               </div>
 
               <button

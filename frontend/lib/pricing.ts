@@ -46,11 +46,11 @@ export const PLANS: PlanTier[] = [
   {
     key: "beginner",
     badge: "beginner",
-    name: "Beginner",
+    name: "Basic",
     tagline: "Fondasi AI untuk pekerjaan harian.",
     monthly: 149000,
     annualMonthly: 124000,
-    cta: "Pilih Beginner",
+    cta: "Pilih Basic",
     ctaVariant: "primary",
     features: [
       { text: "Semua modul Level Basic", included: true, strong: true },
@@ -69,7 +69,7 @@ export const PLANS: PlanTier[] = [
     ctaVariant: "primary",
     popular: true,
     features: [
-      { text: "Semua di Beginner, plus:", included: true, lead: true, accent: "primary" },
+      { text: "Semua di Basic, plus:", included: true, lead: true, accent: "primary" },
       { text: "Semua modul Level Intermediate", included: true, strong: true },
       { text: "2 sertifikat (Basic + Intermediate)", included: true },
       { text: "Catatan & bookmark berwaktu", included: true },

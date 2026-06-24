@@ -67,13 +67,13 @@ const featured = [
   },
   {
     kind: "locked" as const,
-    levelLabel: "Beginner",
+    levelLabel: "Basic",
     levelCls: "bg-[#DCFCE7] text-[#166534]",
     title: "Otomatiskan email harian dengan ChatGPT",
     rating: "4,8",
     learners: "5,2rb peserta",
     duration: "10 mnt",
-    cta: "Tingkatkan ke Beginner",
+    cta: "Tingkatkan ke Basic",
     ctaCls: "bg-[#DCFCE7] text-[#166534]",
   },
   {
@@ -91,7 +91,7 @@ const featured = [
 
 const previewPlans = [
   { label: "Gratis", badgeCls: "text-[#57534E] bg-[#F0EFEC] border-[#E2E0DB]", price: "Rp 0", per: "", desc: "Modul pratinjau gratis & akses lihat katalog penuh.", cta: "Daftar gratis", ctaCls: "border-[1.5px] border-primary bg-surface text-primary", popular: false },
-  { label: "Beginner", badgeCls: "text-[#166534] bg-[#DCFCE7] border-[#BBF7D0]", price: "Rp 149rb", per: "/bln", desc: "Semua modul Level Basic + sertifikat Basic.", cta: "Pilih Beginner", ctaCls: "bg-primary text-primary-ink", popular: false },
+  { label: "Basic", badgeCls: "text-[#166534] bg-[#DCFCE7] border-[#BBF7D0]", price: "Rp 149rb", per: "/bln", desc: "Semua modul Level Basic + sertifikat Basic.", cta: "Pilih Basic", ctaCls: "bg-primary text-primary-ink", popular: false },
   { label: "Intermediate", badgeCls: "text-[#1D4ED8] bg-[#DBEAFE] border-[#BFDBFE]", price: "Rp 249rb", per: "/bln", desc: "Basic + Intermediate, 2 sertifikat, catatan berwaktu.", cta: "Pilih Intermediate", ctaCls: "bg-primary text-primary-ink", popular: true },
   { label: "Advanced", badgeCls: "text-[#6D28D9] bg-[#EDE4FF] border-[#DDD0FB]", price: "Rp 349rb", per: "/bln", desc: "Seluruh level, 3 sertifikat lengkap, akses paling awal.", cta: "Pilih Advanced", ctaCls: "bg-[#6D28D9] text-white", popular: false },
 ];

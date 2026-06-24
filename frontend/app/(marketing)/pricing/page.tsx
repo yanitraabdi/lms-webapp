@@ -9,7 +9,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "Harga — AI Productivity Academy",
   description:
-    "Paket berlangganan kumulatif: Gratis, Beginner, Intermediate, Advanced. Mulai gratis, tingkatkan kapan saja.",
+    "Paket berlangganan kumulatif: Gratis, Basic, Intermediate, Advanced. Mulai gratis, tingkatkan kapan saja.",
 };
 
 const comparison: Array<{ feature: string; cells: string[] }> = [
@@ -79,7 +79,7 @@ export default function PricingPage() {
                   <tr className="bg-surface-2">
                     <th className="px-[18px] py-3.5 text-left text-[13px] font-bold text-ink-muted">Fitur</th>
                     <th className="px-3 py-3.5 text-[13px] font-bold">Gratis</th>
-                    <th className="px-3 py-3.5 text-[13px] font-bold">Beginner</th>
+                    <th className="px-3 py-3.5 text-[13px] font-bold">Basic</th>
                     <th className="px-3 py-3.5 text-[13px] font-bold text-primary">Intermediate</th>
                     <th className="px-3 py-3.5 text-[13px] font-bold">Advanced</th>
                   </tr>

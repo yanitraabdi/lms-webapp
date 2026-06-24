@@ -15,7 +15,7 @@ import {
   setUserStatus,
 } from "@/lib/admin";
 
-const TIER_NAME: Record<number, string> = { 0: "Gratis", 1: "Beginner", 2: "Intermediate", 3: "Advanced" };
+const TIER_NAME: Record<number, string> = { 0: "Gratis", 1: "Basic", 2: "Intermediate", 3: "Advanced" };
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
 export default function AdminUsersPage() {

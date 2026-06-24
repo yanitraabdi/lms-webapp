@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/app/NotificationBell";
+import { WrenchIcon } from "@/components/ui";
+import { isAdminRole } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 
 const links: Array<{ href: string; label: string; tour?: string }> = [
@@ -48,6 +50,19 @@ export function AppHeader() {
                 </Link>
               );
             })}
+            {isAdminRole(user?.role) && (
+              <Link
+                href="/admin"
+                className={cn(
+                  "ml-1 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-bold transition-colors",
+                  path.startsWith("/admin")
+                    ? "bg-ink text-white"
+                    : "bg-ink/5 text-ink hover:bg-ink/10"
+                )}
+              >
+                <WrenchIcon size={14} /> Admin
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-1.5">
