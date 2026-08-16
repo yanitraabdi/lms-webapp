@@ -2,15 +2,14 @@ import type { MetadataRoute } from "next";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001";
 
-// Public, indexable pages. Dynamic catalog/module URLs are intentionally omitted in v1.
+// Public, indexable INVERTA pages. Archived-product routes (catalog, pricing, for-business)
+// are deliberately excluded — they are unlinked and must not be indexed.
 export default function sitemap(): MetadataRoute.Sitemap {
   const paths = [
     "",
-    "/catalog",
-    "/pricing",
+    "/program/toefl-preparation",
     "/about",
     "/how-it-works",
-    "/for-business",
     "/help",
     "/contact",
     "/legal/terms",

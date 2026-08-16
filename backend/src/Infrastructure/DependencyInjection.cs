@@ -6,7 +6,11 @@ using Academy.Application.Billing;
 using Academy.Application.Catalog;
 using Academy.Application.Engagement;
 using Academy.Application.Learning;
+using Academy.Application.Assessments;
+using Academy.Application.Programs;
 using Academy.Infrastructure.Admin;
+using Academy.Infrastructure.Assessments;
+using Academy.Infrastructure.Programs;
 using Academy.Infrastructure.Engagement;
 using Academy.Infrastructure.Auth;
 using Academy.Infrastructure.Billing;
@@ -78,6 +82,33 @@ public static class DependencyInjection
         services.AddScoped<IContentService, ContentService>();
         services.AddScoped<IOnboardingService, OnboardingService>();
         services.AddScoped<FaqSeeder>();
+
+        // INVERTA (M2): programs, enrollment, the access gate, completion
+        services.AddScoped<IProgramService, ProgramService>();
+        services.AddScoped<IEnrollmentService, EnrollmentService>();
+        services.AddScoped<ISessionAccessService, SessionAccessService>();
+        services.AddScoped<ISessionCompletionService, SessionCompletionService>();
+        services.AddScoped<IProgramAdminService, ProgramAdminService>();
+        services.AddScoped<ProgramSeeder>();
+
+        // INVERTA (M3): session playback/progress + the assessment engine
+        services.AddScoped<ISessionLearningService, SessionLearningService>();
+        services.AddScoped<IAssessmentService, AssessmentService>();
+        services.AddScoped<IQuestionBankService, QuestionBankService>();
+        services.AddScoped<IAssessmentAdminService, AssessmentAdminService>();
+
+        // INVERTA (M4): sectional sitting, proctoring, ITP scoring, certificates
+        services.AddScoped<IFinalAssessmentService, FinalAssessmentService>();
+        services.AddScoped<IProctorService, ProctorService>();
+        services.AddScoped<IScoreConversionService, ScoreConversionService>();
+        services.AddScoped<IProgramCertificateService, ProgramCertificateService>();
+        services.AddScoped<IScoreBandAdminService, ScoreBandAdminService>();
+
+        // INVERTA (M5): live attendance, H-1 reminders, operational dashboards
+        services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<ILiveSessionReminder, LiveSessionReminder>();
+        services.AddScoped<IAdminOperationsService, AdminOperationsService>();
+        services.AddHostedService<LiveReminderService>();
 
         // Engagement (M7): notifications, notes, ratings, quizzes, completion gating
         services.AddScoped<INotificationSender, NotificationSender>();

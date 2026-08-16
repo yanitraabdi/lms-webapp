@@ -40,9 +40,9 @@ export function OnboardingFlow({ token }: { token: string }) {
 
   function startTour() {
     const steps = [
-      { element: '[data-tour="nav-catalog"]', title: "Jelajahi katalog", description: "Temukan semua modul pembelajaran di sini." },
-      { element: '[data-tour="nav-certificates"]', title: "Sertifikat Anda", description: "Sertifikat yang Anda peroleh tampil di sini." },
-      { element: '[data-tour="overall-progress"]', title: "Progres belajar", description: "Pantau kemajuan Anda menuju sertifikat." },
+      { element: '[data-tour="nav-program"]', title: "Program Anda", description: "Semua sesi program tampil di sini secara berurutan." },
+      { element: '[data-tour="nav-certificates"]', title: "Sertifikat prediksi", description: "Sertifikat prediksi TOEFL Anda tampil dan dapat diunduh di sini." },
+      { element: '[data-tour="overall-progress"]', title: "Progres berurutan", description: "Sesi berikutnya terbuka setelah sesi sebelumnya Anda selesaikan." },
     ].filter((s) => typeof document !== "undefined" && document.querySelector(s.element));
 
     if (steps.length === 0) {

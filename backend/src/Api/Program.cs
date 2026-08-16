@@ -11,6 +11,7 @@ using Academy.Infrastructure.Billing;
 using Academy.Infrastructure.Catalog;
 using Academy.Infrastructure.Engagement;
 using Academy.Infrastructure.Persistence;
+using Academy.Infrastructure.Programs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -119,6 +120,13 @@ app.MapAdminQuizEndpoints();
 app.MapEngagementEndpoints();
 app.MapNotificationEndpoints();
 app.MapLearnerEngagementEndpoints();
+// INVERTA (M2)
+app.MapProgramEndpoints();
+app.MapProgramAdminEndpoints();
+app.MapSessionEndpoints();
+app.MapAssessmentAdminEndpoints();
+app.MapFinalAssessmentEndpoints();
+app.MapAdminOperationsEndpoints();
 // Dev-only payment simulation endpoints (active when Billing:Provider = "dev").
 if (app.Services.GetRequiredService<BillingOptions>().IsDev)
     app.MapDevPaymentEndpoints();
@@ -139,6 +147,7 @@ if (app.Configuration.GetValue<bool>("SeedSampleData"))
     await scope.ServiceProvider.GetRequiredService<CatalogSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<DevAdminSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<FaqSeeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<ProgramSeeder>().SeedAsync();
 }
 
 app.Run();

@@ -8,6 +8,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <!-- Direct reference so the patched SSH.NET (Directory.Packages.props) wins over the
+         vulnerable version Testcontainers pulls transitively. -->
+    <PackageReference Include="SSH.NET" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="coverlet.collector" />

@@ -7,7 +7,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/app/", "/admin", "/checkout/", "/api/"],
+      // Private surfaces plus the archived-product routes, which remain reachable by URL
+      // but must not be indexed for INVERTA (KAK §9.15).
+      disallow: ["/app/", "/admin", "/checkout/", "/api/", "/catalog", "/pricing", "/for-business", "/modules/"],
     },
     sitemap: `${BASE}/sitemap.xml`,
   };

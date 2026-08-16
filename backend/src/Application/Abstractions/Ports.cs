@@ -29,6 +29,19 @@ public interface IEmailSender
 
     // Generic notification-center email (M7) — governed by user preferences.
     Task SendNotificationAsync(string toEmail, string name, string title, string body, CancellationToken ct = default);
+
+    // ---- INVERTA (M2+): one-time program enrollment ----
+    /// <summary>Receipt sent once the verified webhook has activated an enrollment (KAK §9.4 R6).</summary>
+    Task SendEnrollmentReceiptAsync(string toEmail, string name, string programName, decimal amountIdr, CancellationToken ct = default);
+
+    /// <summary>Certificate delivery after the final assessment (KAK §9.10 R4). The body must state
+    /// that the score is a prediction, not an official ETS result (GR-14).</summary>
+    Task SendCertificateAsync(string toEmail, string name, string programName, string verificationCode,
+        int? totalScore, string verifyUrl, CancellationToken ct = default);
+
+    /// <summary>H-1 reminder before a scheduled live session (KAK §9.11 R3).</summary>
+    Task SendLiveSessionReminderAsync(string toEmail, string name, string programName, string sessionTitle,
+        DateTimeOffset scheduledAt, string? joinUrl, string? location, CancellationToken ct = default);
 }
 
 /// <summary>Object storage (Cloudflare R2 adapter). Signed URLs for entitled downloads + cert PDFs/thumbnails.</summary>

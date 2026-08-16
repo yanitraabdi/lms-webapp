@@ -27,6 +27,13 @@ public class EngagementFlowTests(AuthApiFactory factory) : IClassFixture<AuthApi
         Assert.NotNull(faq);
         Assert.NotEmpty(faq!);
         Assert.All(faq, f => Assert.False(string.IsNullOrWhiteSpace(f.Question)));
+
+        // INVERTA copy must be explicit on the two things that carry legal/credibility risk:
+        // this is a one-time purchase, and the score is a prediction, not an official ETS result.
+        var all = string.Join(" ", faq!.Select(f => $"{f.Question} {f.Answer}"));
+        Assert.Contains("SEKALI BAYAR", all, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bukan skor TOEFL resmi", all, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ETS", all, StringComparison.Ordinal);
     }
 
     [Fact]

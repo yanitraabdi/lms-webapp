@@ -58,4 +58,49 @@ public class CapturingEmailSender : IEmailSender
         NotificationEmailCount++;
         return Task.CompletedTask;
     }
+
+    // ---- INVERTA (M2): enrollment receipt ----
+    public int EnrollmentReceiptCount { get; private set; }
+    public string? LastEnrollmentProgram { get; private set; }
+
+    public Task SendEnrollmentReceiptAsync(string toEmail, string name, string programName, decimal amountIdr, CancellationToken ct = default)
+    {
+        EnrollmentReceiptCount++;
+        LastEnrollmentProgram = programName;
+        return Task.CompletedTask;
+    }
+
+    // ---- INVERTA (M4): certificate delivery ----
+    public int CertificateEmailCount { get; private set; }
+    public string? LastCertificateCode { get; private set; }
+    public int? LastCertificateScore { get; private set; }
+
+    public Task SendCertificateAsync(string toEmail, string name, string programName, string verificationCode,
+        int? totalScore, string verifyUrl, CancellationToken ct = default)
+    {
+        CertificateEmailCount++;
+        LastCertificateCode = verificationCode;
+        LastCertificateScore = totalScore;
+        return Task.CompletedTask;
+    }
+
+    // ---- INVERTA (M5): live-session reminder ----
+    public int LiveReminderCount { get; private set; }
+    public string? LastLiveSessionTitle { get; private set; }
+    private readonly Dictionary<string, int> _liveRemindersByTitle = [];
+
+    /// <summary>Reminders sent for one session title. The sweep is global, so tests sharing a
+    /// database must assert per-session rather than on the total.</summary>
+    public int LiveRemindersFor(string sessionTitle)
+        => _liveRemindersByTitle.TryGetValue(sessionTitle, out var n) ? n : 0;
+
+    public Task SendLiveSessionReminderAsync(string toEmail, string name, string programName, string sessionTitle,
+        DateTimeOffset scheduledAt, string? joinUrl, string? location, CancellationToken ct = default)
+    {
+        LiveReminderCount++;
+        LastLiveSessionTitle = sessionTitle;
+        lock (_liveRemindersByTitle)
+            _liveRemindersByTitle[sessionTitle] = LiveRemindersFor(sessionTitle) + 1;
+        return Task.CompletedTask;
+    }
 }

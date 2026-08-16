@@ -48,4 +48,28 @@ public class DevEmailSender(ILogger<DevEmailSender> logger) : IEmailSender
         logger.LogInformation("[DEV EMAIL] Notifikasi → {Email}: {Title}", toEmail, title);
         return Task.CompletedTask;
     }
+
+    public Task SendEnrollmentReceiptAsync(string toEmail, string name, string programName, decimal amountIdr, CancellationToken ct = default)
+    {
+        logger.LogInformation("[DEV EMAIL] Pendaftaran {Program} berhasil → {Email}: Rp{Amount}", programName, toEmail, amountIdr);
+        return Task.CompletedTask;
+    }
+
+    public Task SendCertificateAsync(string toEmail, string name, string programName, string verificationCode,
+        int? totalScore, string verifyUrl, CancellationToken ct = default)
+    {
+        logger.LogInformation(
+            "[DEV EMAIL] Sertifikat {Program} → {Email}: prediksi {Score}, kode {Code}, {Url}",
+            programName, toEmail, totalScore, verificationCode, verifyUrl);
+        return Task.CompletedTask;
+    }
+
+    public Task SendLiveSessionReminderAsync(string toEmail, string name, string programName, string sessionTitle,
+        DateTimeOffset scheduledAt, string? joinUrl, string? location, CancellationToken ct = default)
+    {
+        logger.LogInformation(
+            "[DEV EMAIL] Pengingat sesi live '{Session}' ({Program}) → {Email}: {At:yyyy-MM-dd HH:mm} {Where}",
+            sessionTitle, programName, toEmail, scheduledAt, joinUrl ?? location ?? "-");
+        return Task.CompletedTask;
+    }
 }

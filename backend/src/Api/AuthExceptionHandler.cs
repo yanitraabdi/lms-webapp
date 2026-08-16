@@ -2,6 +2,8 @@ using Academy.Application.Admin;
 using Academy.Application.Auth;
 using Academy.Application.Billing;
 using Academy.Application.Learning;
+using Academy.Application.Assessments;
+using Academy.Application.Programs;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +30,12 @@ public class AuthExceptionHandler(IProblemDetailsService problemDetails) : IExce
                 break;
             case AdminException adm:
                 problem = new ProblemDetails { Status = adm.StatusCode, Title = adm.Message };
+                break;
+            case ProgramException pe:
+                problem = new ProblemDetails { Status = pe.StatusCode, Title = pe.Message };
+                break;
+            case AssessmentException ase:
+                problem = new ProblemDetails { Status = ase.StatusCode, Title = ase.Message };
                 break;
             case ValidationException ve:
                 problem = new ProblemDetails { Status = StatusCodes.Status400BadRequest, Title = "Validasi gagal." };

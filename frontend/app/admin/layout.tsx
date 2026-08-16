@@ -8,12 +8,15 @@ import { Spinner } from "@/components/ui";
 import { isAdminRole } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 
+// INVERTA nav. Curriculum/Modules/Pricing belong to the archived catalog product and stay
+// reachable by URL, but are unlinked here (KAK §9.15).
 const NAV = [
   { href: "/admin", label: "Analitik", exact: true },
-  { href: "/admin/curriculum", label: "Kurikulum" },
-  { href: "/admin/modules", label: "Modul" },
+  { href: "/admin/programs", label: "Program" },
+  { href: "/admin/questions", label: "Bank Soal" },
+  { href: "/admin/enrollments", label: "Pendaftaran" },
+  { href: "/admin/attempts", label: "Percobaan" },
   { href: "/admin/users", label: "Pengguna" },
-  { href: "/admin/pricing", label: "Harga" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

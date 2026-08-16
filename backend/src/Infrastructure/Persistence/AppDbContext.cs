@@ -45,6 +45,20 @@ public class AppDbContext : DbContext
     public DbSet<Certificate> Certificates => Set<Certificate>();
 
     // Engagement & system
+    // INVERTA: programs, enrollment, assessment engine
+    public DbSet<Domain.Entities.Program> Programs => Set<Domain.Entities.Program>();
+    public DbSet<ProgramBatch> ProgramBatches => Set<ProgramBatch>();
+    public DbSet<ProgramSession> ProgramSessions => Set<ProgramSession>();
+    public DbSet<Enrollment> Enrollments => Set<Enrollment>();
+    public DbSet<SessionCompletion> SessionCompletions => Set<SessionCompletion>();
+    public DbSet<LiveAttendance> LiveAttendances => Set<LiveAttendance>();
+    public DbSet<Assessment> Assessments => Set<Assessment>();
+    public DbSet<Question> Questions => Set<Question>();
+    public DbSet<AssessmentQuestion> AssessmentQuestions => Set<AssessmentQuestion>();
+    public DbSet<Attempt> Attempts => Set<Attempt>();
+    public DbSet<ProctorEvent> ProctorEvents => Set<ProctorEvent>();
+    public DbSet<ScoreBandMapping> ScoreBandMappings => Set<ScoreBandMapping>();
+
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<ModuleFeedback> ModuleFeedbacks => Set<ModuleFeedback>();

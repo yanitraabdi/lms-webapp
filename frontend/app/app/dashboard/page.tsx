@@ -7,10 +7,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
-import { Badge, Button, Spinner, ErrorState, LockIcon, PlayIcon, type Tier } from "@/components/ui";
-import { getDashboard, minutesLabel, num, type ContinueModule, type LevelProgress } from "@/lib/learning";
-
-const TIER_BADGE: Record<number, Tier> = { 0: "free", 1: "beginner", 2: "intermediate", 3: "advanced" };
+import { Badge, Button, Spinner, ErrorState, EmptyState, CheckIcon, LockIcon, PlayIcon } from "@/components/ui";
+import {
+  listMyEnrollments, getStudentProgram, num, SESSION_TYPE_LABEL,
+  type Enrollment, type StudentSession,
+} from "@/lib/programs";
+import { listMyCertificates } from "@/lib/sessions";
 
 export default function DashboardPage() {
   const { status, accessToken, user } = useAuth();
@@ -20,9 +22,9 @@ export default function DashboardPage() {
     if (status === "unauthenticated") router.replace("/login?next=/app/dashboard");
   }, [status, router]);
 
-  const dash = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => getDashboard(accessToken!),
+  const enrollments = useQuery({
+    queryKey: ["my-enrollments"],
+    queryFn: () => listMyEnrollments(accessToken!),
     enabled: status === "authenticated" && !!accessToken,
   });
 
@@ -31,75 +33,55 @@ export default function DashboardPage() {
   }
 
   const firstName = (user?.name ?? "").split(" ")[0] || "kembali";
-  const tier = dash.data?.activeTier == null ? 0 : num(dash.data.activeTier);
+  const active = (enrollments.data ?? []).filter(
+    (e) => e.status === "Active" || e.status === "Completed");
 
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader />
       <OnboardingFlow token={accessToken} />
-      <div className="mx-auto max-w-6xl px-6 pb-16 pt-7">
-        {/* greeting + plan */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-[24px] font-extrabold tracking-tight">Selamat datang kembali, {firstName} 👋</h1>
-            <p className="text-sm text-ink-muted">Lanjutkan dari tempat Anda berhenti.</p>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-2.5 shadow-sm">
-            <Badge tier={TIER_BADGE[tier]} />
-            {tier < 3 && <Link href={tier === 0 ? "/pricing" : "/app/account"} className="text-[12.5px] font-bold text-primary hover:underline">Tingkatkan →</Link>}
-          </div>
+      <div className="mx-auto max-w-3xl px-6 pb-16 pt-7">
+        <div className="mb-6 flex flex-col gap-1">
+          <h1 className="text-[24px] font-extrabold tracking-tight">Halo, {firstName} 👋</h1>
+          <p className="text-sm text-ink-muted">Lanjutkan persiapan TOEFL Anda.</p>
         </div>
 
-        {dash.isPending ? (
+        {enrollments.isPending ? (
           <div className="flex min-h-[200px] items-center justify-center"><Spinner size={24} /></div>
-        ) : dash.isError ? (
-          <ErrorState title="Gagal memuat dasbor" action={<Button variant="neutral" size="sm" onClick={() => dash.refetch()}>Muat ulang</Button>} />
+        ) : enrollments.isError ? (
+          <ErrorState
+            title="Gagal memuat program"
+            action={<Button variant="neutral" size="sm" onClick={() => enrollments.refetch()}>Muat ulang</Button>}
+          />
+        ) : active.length === 0 ? (
+          <EmptyState
+            title="Belum ada program aktif"
+            message="Daftar program persiapan TOEFL untuk mulai belajar."
+            action={
+              <Link
+                href="/program/toefl-preparation"
+                className="inline-flex h-10 items-center justify-center rounded-sm bg-primary px-4 text-[13px] font-bold text-primary-ink hover:bg-primary-hover"
+              >
+                Lihat program
+              </Link>
+            }
+          />
         ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-            {/* left */}
-            <div className="flex flex-col gap-7">
-              {dash.data.continueLearning.length > 0 && (
-                <section className="flex flex-col gap-3">
-                  <h2 className="text-base font-extrabold">Lanjutkan menonton</h2>
-                  {dash.data.continueLearning.map((m) => <ContinueCard key={m.moduleId} m={m} wide />)}
-                </section>
-              )}
+          <div className="flex flex-col gap-5" data-tour="overall-progress">
+            {active.map((e) => <ProgramCard key={e.id} token={accessToken} enrollment={e} />)}
+          </div>
+        )}
 
-              {dash.data.recommendedNext.length > 0 && (
-                <section className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-extrabold">Rekomendasi berikutnya</h2>
-                    <span className="text-[11px] text-ink-subtle">· modul belum selesai berikutnya</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {dash.data.recommendedNext.map((m) => <ContinueCard key={m.moduleId} m={m} />)}
-                  </div>
-                </section>
-              )}
+        <CertificatesTeaser token={accessToken} />
 
-              {dash.data.continueLearning.length === 0 && dash.data.recommendedNext.length === 0 && (
-                <div className="rounded-lg border border-border bg-surface p-8 text-center shadow-sm">
-                  <p className="text-sm text-ink-muted">
-                    {tier === 0 ? "Berlangganan untuk mulai belajar." : "Anda telah menyelesaikan semua modul yang tersedia. 🎉"}
-                  </p>
-                  <Link href={tier === 0 ? "/pricing" : "/catalog"} className="mt-3 inline-block text-sm font-bold text-primary hover:underline">
-                    {tier === 0 ? "Lihat paket" : "Jelajahi katalog"}
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* right: progress rollups */}
-            <aside className="flex flex-col gap-4">
-              <div data-tour="overall-progress" className="flex flex-col items-center gap-3.5 rounded-lg border border-border bg-surface p-5 text-center shadow-sm">
-                <span className="text-xs font-bold uppercase tracking-wide text-ink-subtle">Progres keseluruhan</span>
-                <Donut percent={num(dash.data.overall.percent)} label={`${num(dash.data.overall.completedCount)}/${num(dash.data.overall.totalCount)} modul`} />
-              </div>
-              <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-sm">
-                <span className="text-xs font-bold uppercase tracking-wide text-ink-subtle">Progres per Level</span>
-                {dash.data.levels.map((l) => <LevelRow key={l.levelId} l={l} />)}
-              </div>
-            </aside>
+        {/* Pending payments surface here so a learner is never left wondering. */}
+        {(enrollments.data ?? []).some((e) => e.status === "PendingPayment") && (
+          <div className="mt-6 rounded-base border border-[#F5D9A8] bg-warning-soft px-5 py-4">
+            <p className="text-[13px] leading-relaxed text-ink">
+              <strong>Pembayaran sedang diproses.</strong> Akses terbuka otomatis setelah pembayaran
+              dikonfirmasi. Jika sudah membayar dan program belum terbuka, hubungi kami lewat{" "}
+              <Link href="/contact" className="font-bold text-primary hover:underline">halaman kontak</Link>.
+            </p>
           </div>
         )}
       </div>
@@ -107,75 +89,148 @@ export default function DashboardPage() {
   );
 }
 
-function ContinueCard({ m, wide }: { m: ContinueModule; wide?: boolean }) {
-  const pct = Math.round(num(m.percentComplete));
-  if (wide) {
+function ProgramCard({ token, enrollment }: { token: string; enrollment: Enrollment }) {
+  const q = useQuery({
+    queryKey: ["student-program", enrollment.programId],
+    queryFn: () => getStudentProgram(token, enrollment.programId),
+    retry: false,
+  });
+
+  if (q.isPending) {
     return (
-      <div className="flex items-center gap-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
-        <Link href={`/app/learn/${m.moduleId}`} className="relative flex aspect-video w-[150px] shrink-0 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#0050E6,#2A6BFF)]">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-primary"><PlayIcon size={15} /></span>
-        </Link>
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">{m.levelName} · {m.trackName}</span>
-          <h3 className="truncate text-base font-bold">{m.title}</h3>
-          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2"><div className="h-full bg-primary" style={{ width: `${pct}%` }} /></div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-ink-muted">{pct}% · {minutesLabel(m.durationSeconds)}</span>
-            <Link href={`/app/learn/${m.moduleId}`} className="rounded-sm bg-primary px-4 py-2 text-[13px] font-bold text-primary-ink hover:bg-primary-hover">Lanjutkan</Link>
-          </div>
-        </div>
+      <div className="flex min-h-[140px] items-center justify-center rounded-lg border border-border bg-surface">
+        <Spinner size={20} />
       </div>
     );
   }
-  return (
-    <article className="flex flex-col overflow-hidden rounded-base border border-border bg-surface shadow-sm">
-      <Link href={`/app/learn/${m.moduleId}`} className="relative flex aspect-video items-center justify-center bg-[linear-gradient(135deg,#0050E6,#2A6BFF)]">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-primary"><PlayIcon size={14} /></span>
-        <span className="absolute bottom-2 right-2 rounded-sm bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold text-white">{minutesLabel(m.durationSeconds)}</span>
-      </Link>
-      <div className="flex flex-col gap-2 p-3.5">
-        <span className="w-fit rounded-sm bg-surface-2 px-2 py-1 text-[10px] font-semibold text-ink-muted">{m.levelName}</span>
-        <h4 className="text-sm font-bold leading-snug">{m.title}</h4>
-        <Link href={`/app/learn/${m.moduleId}`} className="mt-0.5 rounded-sm bg-primary py-2 text-center text-[12.5px] font-bold text-primary-ink hover:bg-primary-hover">
-          {pct > 0 ? "Lanjutkan" : "Mulai modul"}
-        </Link>
+  if (q.isError) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+        <h2 className="text-lg font-extrabold">{enrollment.programName}</h2>
+        <p className="mt-1 text-[13px] text-ink-muted">Program tidak dapat dimuat saat ini.</p>
       </div>
-    </article>
-  );
-}
+    );
+  }
 
-function LevelRow({ l }: { l: LevelProgress }) {
-  const pct = num(l.percent);
+  const data = q.data;
+  const sessions = [...data.sessions].sort((a, b) => num(a.orderIndex) - num(b.orderIndex));
+  const completed = num(data.completedCount);
+  const total = num(data.sessionCount);
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const next = sessions.find((s) => s.id === data.nextSessionId);
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-2 text-[13px] font-bold">
-          <Badge tier={TIER_BADGE[num(l.tierLevel)]} className="px-2 py-0.5 text-[10px]">{l.name}</Badge>
-          {!l.unlocked && <LockIcon size={12} className="text-ink-subtle" />}
-          {l.certified && <span className="text-[10px] font-extrabold text-success">Lulus</span>}
-        </span>
-        {l.unlocked ? (
-          <span className={"text-[12.5px] font-bold " + (l.certified ? "text-success" : "text-ink")}>{num(l.completedCount)}/{num(l.publishedCount)} · {pct}%</span>
+    <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-extrabold">{data.name}</h2>
+          {data.batchName && <span className="text-[12.5px] text-ink-muted">Batch {data.batchName}</span>}
+        </div>
+        {completed === total ? (
+          <Badge tone="success" className="px-2.5 py-1">Selesai</Badge>
         ) : (
-          <Link href="/pricing" className="text-[11.5px] font-bold text-primary hover:underline">Buka</Link>
+          <Badge tone="neutral" className="px-2.5 py-1">{percent}%</Badge>
         )}
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-        <div className={"h-full " + (l.certified ? "bg-success" : "bg-primary")} style={{ width: `${pct}%` }} />
+
+      <div className="mt-3 flex items-center gap-3">
+        <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-surface-2">
+          <div
+            className={"h-full rounded-full " + (completed === total ? "bg-success" : "bg-primary")}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <span className="shrink-0 text-[12.5px] font-bold text-ink-muted">{completed}/{total} sesi</span>
       </div>
+
+      {next ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-base border border-primary bg-primary-soft/50 px-4 py-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-primary">Lanjutkan</span>
+            <span className="truncate text-[13.5px] font-bold text-ink">{next.title}</span>
+          </div>
+          <Link
+            href={nextHref(next)}
+            className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-primary px-3.5 text-[13px] font-bold text-primary-ink hover:bg-primary-hover"
+          >
+            Buka →
+          </Link>
+        </div>
+      ) : (
+        <p className="mt-4 rounded-base bg-success-soft px-4 py-3 text-[13px] font-semibold text-success">
+          Semua sesi selesai. Sertifikat Anda tersedia di halaman Sertifikat.
+        </p>
+      )}
+
+      <ul className="mt-4 flex flex-col gap-1.5 border-t border-border pt-3.5">
+        {sessions.slice(0, 4).map((s) => <SessionLine key={s.id} session={s} />)}
+        {sessions.length > 4 && (
+          <li className="pt-1">
+            <Link
+              href={`/app/program/${data.programId}`}
+              className="text-[12.5px] font-bold text-primary hover:underline"
+            >
+              Lihat semua {sessions.length} sesi →
+            </Link>
+          </li>
+        )}
+      </ul>
     </div>
   );
 }
 
-function Donut({ percent, label }: { percent: number; label: string }) {
+function SessionLine({ session }: { session: StudentSession }) {
+  const done = session.state === "Completed";
+  const locked = session.state === "Locked";
   return (
-    <div
-      className="flex h-[120px] w-[120px] items-center justify-center rounded-full"
-      style={{ background: `conic-gradient(var(--ds-color-primary) 0 ${percent}%, var(--ds-color-surface-2) ${percent}% 100%)` }}
-    >
-      <div className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-surface">
-        <span className="text-[28px] font-extrabold text-ink">{percent}%</span>
-        <span className="text-[11px] text-ink-muted">{label}</span>
+    <li className="flex items-center gap-2.5 text-[13px]">
+      <span
+        className={
+          "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold " +
+          (done ? "bg-success text-white" : locked ? "border-2 border-border text-ink-subtle" : "bg-primary text-white")
+        }
+      >
+        {done ? <CheckIcon size={11} strokeWidth={3} /> : locked ? <LockIcon size={10} /> : <PlayIcon size={9} />}
+      </span>
+      <span className={"min-w-0 flex-1 truncate " + (locked ? "text-ink-subtle" : "text-ink-muted")}>
+        {session.title}
+      </span>
+      {session.type !== "Video" && (
+        <span className="shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-ink-subtle">
+          {SESSION_TYPE_LABEL[session.type] ?? session.type}
+        </span>
+      )}
+    </li>
+  );
+}
+
+/** The final assessment has its own runner; everything else opens the session page. */
+function nextHref(session: StudentSession): string {
+  return session.type === "FinalAssessment"
+    ? `/app/assessment/${session.id}`
+    : `/app/session/${session.id}`;
+}
+
+function CertificatesTeaser({ token }: { token: string }) {
+  const q = useQuery({
+    queryKey: ["my-certificates"],
+    queryFn: () => listMyCertificates(token),
+  });
+
+  if (!q.data || q.data.length === 0) return null;
+
+  return (
+    <div className="mt-6 rounded-lg border border-border bg-surface p-5 shadow-sm" data-tour="nav-certificates">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">Sertifikat</span>
+          <span className="text-[14px] font-bold text-ink">
+            {q.data.length} sertifikat prediksi tersedia
+          </span>
+        </div>
+        <Link href="/app/certificates" className="text-[13px] font-bold text-primary hover:underline">
+          Lihat & unduh →
+        </Link>
       </div>
     </div>
   );

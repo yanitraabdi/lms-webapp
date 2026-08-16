@@ -119,9 +119,10 @@ public class LearningService(
                 m.Track.Name, m.Track.OrderIndex, m.RequiredPlanTier, m.IsPreview))
             .ToListAsync(ct);
 
-        var progress = (await db.WatchProgress.Where(w => w.UserId == userId).ToListAsync(ct))
-            .ToDictionary(w => w.ModuleId);
-        var certified = (await db.Certificates.Where(c => c.UserId == userId).Select(c => c.LevelId).ToListAsync(ct))
+        var progress = (await db.WatchProgress.Where(w => w.UserId == userId && w.ModuleId != null).ToListAsync(ct))
+            .ToDictionary(w => w.ModuleId!.Value);
+        var certified = (await db.Certificates.Where(c => c.UserId == userId && c.LevelId != null)
+                .Select(c => c.LevelId!.Value).ToListAsync(ct))
             .ToHashSet();
 
         bool Entitled(ModuleRow m) => Entitlement.CanAccess(tier, m.IsPreview, m.RequiredPlanTier);
@@ -177,7 +178,7 @@ public class LearningService(
     }
 
     private static ModuleProgressDto Map(WatchProgress w) =>
-        new(w.ModuleId, w.ResumePositionSeconds, w.PercentComplete, w.Completed, w.CompletedAt);
+        new(w.ModuleId ?? Guid.Empty, w.ResumePositionSeconds, w.PercentComplete, w.Completed, w.CompletedAt);
 
     private record ModuleRow(
         Guid Id, string Slug, string Title, int DurationSeconds, string? ThumbnailUrl, int OrderIndex,
