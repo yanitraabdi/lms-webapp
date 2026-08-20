@@ -55,7 +55,15 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
       className="max-w-2xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
-          <Button variant="neutral" size="sm" onClick={() => setAdding(true)}>+ Tambah sesi</Button>
+          <div className="flex items-center gap-3">
+            <Button variant="neutral" size="sm" onClick={() => setAdding(true)}>+ Tambah sesi</Button>
+            <Link
+              href={`/admin/programs/${program.id}/score-bands`}
+              className="text-[12.5px] font-bold text-primary hover:underline"
+            >
+              Tabel konversi skor →
+            </Link>
+          </div>
           <Button size="sm" onClick={onClose}>Selesai</Button>
         </div>
       }
