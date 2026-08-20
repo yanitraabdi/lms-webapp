@@ -161,7 +161,7 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
           </ul>
 
           {/* Safety net: the exact payload that will be sent, before it is sent. */}
-          <details className="mt-2.5">
+          <details open className="mt-2.5">
             <summary className="cursor-pointer text-[12px] font-bold text-ink-muted hover:text-ink">
               Lihat {parsed!.rows.length} baris yang akan disimpan
             </summary>
