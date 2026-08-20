@@ -21,7 +21,10 @@ const LIMITS: Record<string, [number, number]> = {
 };
 const SCALED_MIN = 31;
 
-/** Parses `section, minRaw, maxRaw, scaled[, band]` rows. Tab- or comma-separated. */
+/** Strict integer cell: rejects "", "1e2", "0x10", "5.5", " 5 " (already trimmed) — anything Number() would coerce. */
+const INT_RE = /^-?\d+$/;
+
+/** Parses `section, minRaw, maxRaw, scaled[, band]` rows. Tab-separated if the line has a tab, else comma-separated. */
 export function parseBands(text: string): { rows: ParsedBand[]; errors: string[] } {
   const rows: ParsedBand[] = [];
   const errors: string[] = [];
@@ -30,12 +33,17 @@ export function parseBands(text: string): { rows: ParsedBand[]; errors: string[]
     const trimmed = line.trim();
     if (!trimmed) return;
 
-    const cells = trimmed.split(/\t|,/).map((c) => c.trim());
+    // Split on tab when present so a comma inside a band label (tab-separated paste) survives intact.
+    const cells = (trimmed.includes("\t") ? trimmed.split("\t") : trimmed.split(",")).map((c) => c.trim());
     if (i === 0 && /^section$/i.test(cells[0])) return;          // spreadsheet header row
 
     const lineNo = i + 1;
     if (cells.length < 4) {
       errors.push(`Baris ${lineNo}: butuh 4 kolom (bagian, min, max, skala).`);
+      return;
+    }
+    if (cells.length > 5) {
+      errors.push(`Baris ${lineNo}: terlalu banyak kolom (maks. 5 — bagian, min, max, skala, label).`);
       return;
     }
 
@@ -46,15 +54,20 @@ export function parseBands(text: string): { rows: ParsedBand[]; errors: string[]
       return;
     }
 
-    const numbers = [min, max, scaled].map(Number);
-    if (numbers.some((n) => !Number.isInteger(n))) {
-      errors.push(`Baris ${lineNo}: min, max dan skala harus bilangan bulat.`);
+    if (![min, max, scaled].every((v) => INT_RE.test(v))) {
+      errors.push(`Baris ${lineNo}: min, max dan skala harus bilangan bulat (tidak boleh kosong).`);
       return;
     }
 
-    const [minRaw, maxRaw, scaledScore] = numbers;
+    const [minRaw, maxRaw, scaledScore] = [min, max, scaled].map(Number);
     if (minRaw > maxRaw) {
       errors.push(`Baris ${lineNo}: min (${minRaw}) lebih besar dari max (${maxRaw}).`);
+      return;
+    }
+
+    const limit = LIMITS[section];
+    if (limit && maxRaw > limit[0]) {
+      errors.push(`Baris ${lineNo}: max (${maxRaw}) melebihi batas skor mentah ${section} (${limit[0]}).`);
       return;
     }
 
@@ -146,6 +159,37 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
               </li>
             ))}
           </ul>
+
+          {/* Safety net: the exact payload that will be sent, before it is sent. */}
+          <details className="mt-2.5">
+            <summary className="cursor-pointer text-[12px] font-bold text-ink-muted hover:text-ink">
+              Lihat {parsed!.rows.length} baris yang akan disimpan
+            </summary>
+            <div className="mt-1.5 max-h-[220px] overflow-y-auto rounded-sm border border-border">
+              <table className="w-full border-collapse text-[12px]">
+                <thead className="sticky top-0 bg-surface">
+                  <tr className="text-left font-bold text-ink-muted">
+                    <th className="px-2 py-1">Bagian</th>
+                    <th className="px-2 py-1">Min</th>
+                    <th className="px-2 py-1">Max</th>
+                    <th className="px-2 py-1">Skala</th>
+                    <th className="px-2 py-1">Label</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsed!.rows.map((r, idx) => (
+                    <tr key={idx} className="border-t border-border">
+                      <td className="px-2 py-1">{r.section}</td>
+                      <td className="px-2 py-1">{r.minRaw}</td>
+                      <td className="px-2 py-1">{r.maxRaw}</td>
+                      <td className="px-2 py-1 font-semibold">{r.scaledScore}</td>
+                      <td className="px-2 py-1 text-ink-muted">{r.predictedBand ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
         </div>
       )}
 
