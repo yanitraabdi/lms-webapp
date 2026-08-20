@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, Modal, Spinner } from "@/components/ui";
+import { inputCls } from "@/components/admin/fields";
 import { QuestionPicker } from "@/components/admin/QuestionPicker";
 import {
   getAssessment, createAssessment, updateAssessment,
@@ -57,12 +58,24 @@ export function GatingTestEditor({
         setPassThreshold(num(a.config.passThreshold ?? 1));
         setRetakeCap(a.config.retakeCap == null ? "" : String(num(a.config.retakeCap)));
         setSelected(a.questions.map((q) => q.id));
-        if (a.config.sections?.length) {
-          setSections(a.config.sections.map((s) => ({
-            section: s.section ?? "General",
-            questions: num(s.questions ?? 0),
-            minutes: num(s.minutes ?? 0),
-          })));
+        const saved = a.config.sections ?? [];
+        if (saved.length) {
+          // The composer only knows the three ITP sections. Read each one's saved numbers by
+          // name; never invent a section (a "General" fallback would be written straight back
+          // into the config as if an operator had chosen it).
+          setSections(DEFAULT_SECTIONS.map((d) => {
+            const found = saved.find((s) => s.section === d.section);
+            return found ? { ...d, questions: num(found.questions ?? 0), minutes: num(found.minutes ?? 0) } : d;
+          }));
+          const stray = saved
+            .filter((s) => !DEFAULT_SECTIONS.some((d) => d.section === s.section))
+            .map((s) => s.section ?? "tanpa nama");
+          if (stray.length) {
+            setError(
+              `Konfigurasi memuat bagian di luar format TOEFL ITP (${stray.join(", ")}). ` +
+              "Bagian tersebut akan dihapus jika tes ini disimpan."
+            );
+          }
         }
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Gagal memuat tes."))
@@ -70,9 +83,16 @@ export function GatingTestEditor({
     return () => { cancelled = true; };
   }, [token, assessmentId]);
 
-  const valid = isFinal
+  // Blank means unlimited; 0 would make the very first attempt exceed the cap, locking the
+  // session — and the whole linear program — for every learner.
+  const capOk = retakeCap.trim() === "" || Number(retakeCap) >= 1;
+  const itpMismatch = isFinal
+    ? DEFAULT_SECTIONS.filter((d, i) => sections[i]?.questions !== d.questions)
+    : [];
+
+  const valid = capOk && (isFinal
     ? !!title.trim() && sections.every((s) => s.questions >= 1 && s.minutes >= 1)
-    : !!title.trim() && selected.length > 0 && passThreshold >= 1 && passThreshold <= selected.length;
+    : !!title.trim() && selected.length > 0 && passThreshold >= 1 && passThreshold <= selected.length);
 
   async function save() {
     if (!valid) return;
@@ -172,6 +192,12 @@ export function GatingTestEditor({
             </label>
           </div>
 
+          {!capOk && (
+            <p className="text-[12.5px] font-semibold text-danger">
+              Batas percobaan minimal 1. Kosongkan untuk tanpa batas.
+            </p>
+          )}
+
           {!isFinal && selected.length > 0 && passThreshold > selected.length && (
             <p className="text-[12.5px] font-semibold text-danger">
               Skor lulus tidak boleh melebihi jumlah soal ({selected.length}).
@@ -204,6 +230,13 @@ export function GatingTestEditor({
                   </label>
                 </div>
               ))}
+              {itpMismatch.length > 0 && (
+                <p className="text-[12.5px] font-semibold text-warning">
+                  Format TOEFL ITP wajib{" "}
+                  {DEFAULT_SECTIONS.map((d) => `${d.questions} ${d.section}`).join(" / ")} soal.
+                  Program tidak bisa diterbitkan selama jumlahnya berbeda.
+                </p>
+              )}
               <p className="text-[12.5px] text-ink-muted">
                 Soal untuk tiap bagian dipilih di halaman “Susun soal” setelah tes akhir tersimpan.
                 Proktoring dan batas pemutaran audio aktif untuk tes akhir.
@@ -223,5 +256,3 @@ export function GatingTestEditor({
   );
 }
 
-const inputCls =
-  "rounded-sm border border-border bg-surface px-3 py-2 text-[13.5px] outline-none focus:border-primary";

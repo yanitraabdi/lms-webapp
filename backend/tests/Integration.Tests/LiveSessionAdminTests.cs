@@ -287,44 +287,14 @@ public class LiveSessionAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         // A content-complete final assessment (all three sections populated, full score bands)
         // is needed only because publishing (and therefore enrolling) now requires readiness —
         // the tests in this file don't otherwise exercise the final assessment itself.
-        var lQ = await PostJson<QuestionIdDto>("/api/admin/questions", admin, new
-        {
-            section = "Listening", prompt = $"L {suffix}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = "clip.mp3", passageRef = (string?)null, tags = (string[]?)null,
-        });
-        var sQuestion = await PostJson<QuestionIdDto>("/api/admin/questions", admin, new
-        {
-            section = "Structure", prompt = $"S {suffix}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
-        });
-        var rQuestion = await PostJson<QuestionIdDto>("/api/admin/questions", admin, new
-        {
-            section = "Reading", prompt = $"R {suffix}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
-        });
-        var assessment = await PostJson<AssessmentIdDto>("/api/admin/assessments", admin, new
-        {
-            kind = "Final", title = "Tes Akhir",
-            config = new
-            {
-                passThreshold = 0, retakeCap = 1, proctoringEnabled = true,
-                sections = new[]
-                {
-                    new { section = "Listening", questions = 1, minutes = 35 },
-                    new { section = "Structure", questions = 1, minutes = 25 },
-                    new { section = "Reading",   questions = 1, minutes = 55 },
-                },
-            },
-        });
-        (await Authed(HttpMethod.Put, $"/api/admin/assessments/{assessment.Id}/questions", admin,
-            new { questionIdsInOrder = new[] { lQ.Id, sQuestion.Id, rQuestion.Id } })).EnsureSuccessStatusCode();
+        var assessment = await ItpFinal.SeedAsync(factory, "Tes Akhir");
 
         var next = await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
         {
             type = "FinalAssessment", title = "Tes Akhir", description = (string?)null, orderIndex = 2,
             providerAssetId = (string?)null, durationSeconds = (int?)null,
             scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
-            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.Id,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.AssessmentId,
         });
 
         // Score bands must cover the FULL ITP raw-score range per section (not just the toy
@@ -367,7 +337,7 @@ public class LiveSessionAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             list.Add(new Learner(token, userId, await EmailOf(userId)));
         }
 
-        return new Ctx(admin, program.Id, live.Id, live.Title, next.Id, assessment.Id, list);
+        return new Ctx(admin, program.Id, live.Id, live.Title, next.Id, assessment.AssessmentId, list);
     }
 
     private record QuestionIdDto(Guid Id);

@@ -10,6 +10,7 @@ const FIX: Record<string, (p: AdminProgram) => { href: string; label: string } |
   score_bands_complete: (p) => ({ href: `/admin/programs/${p.id}/score-bands`, label: "Buka tabel konversi" }),
   gating_tests_populated: () => null,
   final_sections_populated: () => null,
+  final_sections_match_itp: () => null,
   has_sessions: () => null,
   final_assessment_present: () => null,
   price_set: () => null,

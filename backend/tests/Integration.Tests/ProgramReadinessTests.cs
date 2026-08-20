@@ -118,6 +118,53 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
     }
 
     [Fact]
+    public async Task A_final_assessment_that_is_not_the_ITP_format_blocks_readiness()
+    {
+        var admin = await AdminToken();
+        var program = await NewProgram(admin);
+
+        // The 5/4/5 typo: internally consistent (each section holds exactly what it declares), and
+        // raw scores 0-5 still resolve against the 0-50 band table — so nothing else catches it and
+        // every certificate would carry a bogus ~310 prediction.
+        var final = await NewAssessment(admin, "Final", new
+        {
+            passThreshold = 0, retakeCap = 1, proctoringEnabled = true,
+            sections = new[]
+            {
+                new { section = "Listening", questions = 5, minutes = 35 },
+                new { section = "Structure", questions = 4, minutes = 25 },
+                new { section = "Reading",   questions = 5, minutes = 55 },
+            },
+        });
+        var ids = new List<Guid>();
+        foreach (var (section, count) in new[] { ("Listening", 5), ("Structure", 4), ("Reading", 5) })
+            for (var i = 0; i < count; i++) ids.Add(await NewQuestion(admin, section));
+        await SetQuestions(admin, final, [.. ids]);
+        await NewSession(admin, program, "FinalAssessment", 1, final);
+        await PutScoreBands(admin, program, FullBands());
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+
+        // The populated check is happy — 5 questions for a declared 5 — which is exactly why the
+        // format has to be checked against ToeflScoring instead.
+        Assert.True(Check(r, "final_sections_populated").Passed);
+
+        var format = Check(r, "final_sections_match_itp");
+        Assert.False(format.Passed);
+        Assert.True(format.Blocking);
+        Assert.False(r.Ready);
+        // The detail must let an operator find the problem: what was declared, what is required.
+        Assert.Contains("Listening tertulis 5 soal, wajib 50", format.Detail);
+        Assert.Contains("Structure tertulis 4 soal, wajib 40", format.Detail);
+        Assert.Contains("Reading tertulis 5 soal, wajib 50", format.Detail);
+
+        // …and publishing is refused, naming the same thing.
+        var publish = await Publish(admin, program, published: true);
+        Assert.Equal(HttpStatusCode.Conflict, publish.StatusCode);
+        Assert.Contains("wajib 50", await publish.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task A_fully_configured_program_is_ready()
     {
         var admin = await AdminToken();
@@ -243,12 +290,10 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         await SetQuestions(admin, gating, [q1]);
         await NewSession(admin, program, "Video", 1, gating);
 
-        var final = await NewAssessment(admin, "Final", sections: true);
-        var l = await NewQuestion(admin, "Listening");
-        var s = await NewQuestion(admin, "Structure");
-        var rd = await NewQuestion(admin, "Reading");
-        await SetQuestions(admin, final, [l, s, rd]);
-        await NewSession(admin, program, "FinalAssessment", 2, final);
+        // The ITP format is 50/40/50 and readiness checks it against Academy.Domain.ToeflScoring,
+        // so a "ready" program needs a real 140-question final assessment.
+        var final = await ItpFinal.SeedAsync(factory);
+        await NewSession(admin, program, "FinalAssessment", 2, final.AssessmentId);
 
         await PutScoreBands(admin, program, FullBands());
         return program;
@@ -291,20 +336,9 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         return (await res.Content.ReadFromJsonAsync<AdminProgramDto>(Json))!.Id;
     }
 
-    private async Task<Guid> NewAssessment(string admin, string kind, bool sections = false)
+    private async Task<Guid> NewAssessment(string admin, string kind, object? config = null)
     {
-        object config = sections
-            ? new
-            {
-                passThreshold = 0, retakeCap = 1, proctoringEnabled = true,
-                sections = new[]
-                {
-                    new { section = "Listening", questions = 1, minutes = 35 },
-                    new { section = "Structure", questions = 1, minutes = 25 },
-                    new { section = "Reading",   questions = 1, minutes = 55 },
-                },
-            }
-            : new { passThreshold = 1, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() };
+        config ??= new { passThreshold = 1, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() };
 
         var res = await Authed(HttpMethod.Post, "/api/admin/assessments", admin,
             new { kind, title = $"Tes {Guid.NewGuid():N}"[..12], config });

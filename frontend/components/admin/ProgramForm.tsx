@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
+import { Field, inputBlockCls } from "@/components/admin/fields";
 import { createProgram, updateProgram, num, type AdminProgram } from "@/lib/programs";
 
 export function ProgramForm({ token, program, onClose }: { token: string; program: AdminProgram | null; onClose: () => void }) {
@@ -49,14 +50,14 @@ export function ProgramForm({ token, program, onClose }: { token: string; progra
     >
       <div className="flex flex-col gap-3">
         {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
-        <Field label="Nama program"><input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></Field>
-        <Field label="Slug (opsional)"><input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="otomatis dari nama" className={inputCls} /></Field>
-        <Field label="Ringkasan"><input value={summary} onChange={(e) => setSummary(e.target.value)} className={inputCls} /></Field>
+        <Field label="Nama program"><input value={name} onChange={(e) => setName(e.target.value)} className={inputBlockCls} /></Field>
+        <Field label="Slug (opsional)"><input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="otomatis dari nama" className={inputBlockCls} /></Field>
+        <Field label="Ringkasan"><input value={summary} onChange={(e) => setSummary(e.target.value)} className={inputBlockCls} /></Field>
         <Field label="Deskripsi">
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputBlockCls} />
         </Field>
         <Field label="Harga (IDR)">
-          <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className={inputCls} />
+          <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className={inputBlockCls} />
         </Field>
         {/* Publishing is gated on content readiness, and a brand-new program can never be ready,
             so the create path has no publish control — publish from Edit once "Periksa" is green. */}
@@ -73,17 +74,5 @@ export function ProgramForm({ token, program, onClose }: { token: string; progra
         )}
       </div>
     </Modal>
-  );
-}
-
-const inputCls =
-  "w-full rounded-sm border border-border bg-surface px-3 py-2 text-[13.5px] outline-none focus:border-primary";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[12px] font-bold text-ink-muted">{label}</span>
-      {children}
-    </label>
   );
 }

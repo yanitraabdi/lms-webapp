@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Academy.Application.Abstractions;
+using Academy.Application.Assessments;
 using Academy.Application.Programs;
 using Academy.Domain;
 using Academy.Domain.Entities;
@@ -263,7 +264,13 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
             final is null ? "Belum ada sesi tes akhir."
             : finalAssessmentId is null ? "Sesi tes akhir belum memiliki tes." : null));
 
-        checks.Add(await FinalSectionsCheckAsync(finalAssessmentId, ct));
+        var finalConfig = finalAssessmentId is Guid fid
+            ? AssessmentService.ParseConfig(
+                await db.Assessments.Where(a => a.Id == fid).Select(a => a.Config).FirstAsync(ct))
+            : null;
+
+        checks.Add(FinalFormatCheck(finalConfig));
+        checks.Add(await FinalSectionsCheckAsync(finalAssessmentId, finalConfig, ct));
         checks.Add(await ScoreBandsCheckAsync(programId, ct));
 
         checks.Add(new("price_set", "Harga sudah diisi", program.PriceIdr > 0, false,
@@ -272,17 +279,61 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         return new ProgramReadinessDto(checks.All(c => !c.Blocking || c.Passed), checks);
     }
 
+    /// <summary>
+    /// The declared section layout must BE the TOEFL ITP format. Without this, an operator who
+    /// types 5/4/5 instead of 50/40/50 passes every other check — the raw scores still resolve
+    /// against the 0–50 band table, so nothing fails loudly and every certificate carries a bogus
+    /// ~310 prediction. Checked against the format constants, never against the config itself.
+    /// </summary>
+    private static ReadinessCheckDto FinalFormatCheck(AssessmentConfig? config)
+    {
+        const string key = "final_sections_match_itp";
+        const string title = "Format tes akhir sesuai TOEFL ITP";
+
+        if (config is null)
+            return new(key, title, false, true, "Tes akhir belum terpasang.");
+        if (config.Sections.Count == 0)
+            return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");
+
+        var required = new[]
+        {
+            (Section: QuestionSection.Listening, Questions: ToeflScoring.ListeningQuestions),
+            (Section: QuestionSection.Structure, Questions: ToeflScoring.StructureQuestions),
+            (Section: QuestionSection.Reading,   Questions: ToeflScoring.ReadingQuestions),
+        };
+
+        var problems = new List<string>();
+        foreach (var (section, questions) in required)
+        {
+            var declared = config.Sections.Where(s => s.Section == section).ToList();
+            if (declared.Count == 0)
+                problems.Add($"{section} belum ada (wajib {questions} soal)");
+            else if (declared.Count > 1)
+                problems.Add($"{section} tercantum {declared.Count} kali (wajib sekali, {questions} soal)");
+            else if (declared[0].Questions != questions)
+                problems.Add($"{section} tertulis {declared[0].Questions} soal, wajib {questions}");
+        }
+        foreach (var extra in config.Sections.Select(s => s.Section)
+                     .Where(s => !required.Any(r => r.Section == s)).Distinct())
+            problems.Add($"{extra} bukan bagian TOEFL ITP");
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0
+                ? $"Format TOEFL ITP wajib {ToeflScoring.ListeningQuestions} Listening / "
+                  + $"{ToeflScoring.StructureQuestions} Structure / {ToeflScoring.ReadingQuestions} Reading soal. "
+                  + $"Perbaiki di “Konfigurasi” tes akhir: {string.Join("; ", problems)}."
+                : null);
+    }
+
     /// <summary>Each configured section must hold exactly the number of questions it declares.</summary>
-    private async Task<ReadinessCheckDto> FinalSectionsCheckAsync(Guid? assessmentId, CancellationToken ct)
+    private async Task<ReadinessCheckDto> FinalSectionsCheckAsync(
+        Guid? assessmentId, AssessmentConfig? config, CancellationToken ct)
     {
         const string key = "final_sections_populated";
         const string title = "Bagian tes akhir lengkap";
 
-        if (assessmentId is not Guid id)
+        if (assessmentId is not Guid id || config is null)
             return new(key, title, false, true, "Tes akhir belum terpasang.");
-
-        var config = AssessmentService.ParseConfig(
-            await db.Assessments.Where(a => a.Id == id).Select(a => a.Config).FirstAsync(ct));
 
         if (config.Sections.Count == 0)
             return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");

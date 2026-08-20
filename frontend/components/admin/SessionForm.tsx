@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
+import { Field, inputBlockCls } from "@/components/admin/fields";
 import { createSession, type UpsertSession } from "@/lib/programs";
 
 export type SessionKind = "Video" | "Live" | "FinalAssessment";
@@ -58,29 +59,29 @@ export function SessionForm({
       <div className="flex flex-col gap-3">
         {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
         <Field label="Tipe sesi">
-          <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={inputCls}>
+          <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={inputBlockCls}>
             <option value="Video">Video + tes</option>
             <option value="Live">Sesi Live</option>
             <option value="FinalAssessment">Tes Akhir</option>
           </select>
         </Field>
-        <Field label="Judul"><input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} /></Field>
+        <Field label="Judul"><input value={title} onChange={(e) => setTitle(e.target.value)} className={inputBlockCls} /></Field>
 
         {type === "Video" && (
           <>
             <Field label="Durasi (menit)">
-              <input type="number" min={1} value={minutes} onChange={(e) => setMinutes(e.target.value)} className={inputCls} />
+              <input type="number" min={1} value={minutes} onChange={(e) => setMinutes(e.target.value)} className={inputBlockCls} />
             </Field>
-            <Field label="Bunny asset id"><input value={assetId} onChange={(e) => setAssetId(e.target.value)} className={inputCls} /></Field>
+            <Field label="Bunny asset id"><input value={assetId} onChange={(e) => setAssetId(e.target.value)} className={inputBlockCls} /></Field>
           </>
         )}
 
         {type === "Live" && (
           <>
             <Field label="Jadwal">
-              <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className={inputCls} />
+              <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className={inputBlockCls} />
             </Field>
-            <Field label="Tautan Zoom"><input value={joinUrl} onChange={(e) => setJoinUrl(e.target.value)} className={inputCls} /></Field>
+            <Field label="Tautan Zoom"><input value={joinUrl} onChange={(e) => setJoinUrl(e.target.value)} className={inputBlockCls} /></Field>
           </>
         )}
 
@@ -92,17 +93,5 @@ export function SessionForm({
         )}
       </div>
     </Modal>
-  );
-}
-
-const inputCls =
-  "w-full rounded-sm border border-border bg-surface px-3 py-2 text-[13.5px] outline-none focus:border-primary";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[12px] font-bold text-ink-muted">{label}</span>
-      {children}
-    </label>
   );
 }

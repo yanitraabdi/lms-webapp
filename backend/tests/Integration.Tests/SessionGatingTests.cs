@@ -140,6 +140,34 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     }
 
     [Fact]
+    public async Task A_retake_cap_of_zero_is_refused_by_the_admin_api()
+    {
+        var admin = await AdminToken();
+
+        // cap 0 would make `used >= cap` true before the first attempt: the gating test could
+        // never be passed and the linear lock would jam for every learner on the program.
+        var res = await Authed(HttpMethod.Post, "/api/admin/assessments", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 1, retakeCap = 0, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+
+        // …and the same value cannot be smuggled in through an update either.
+        var ok = await PostJson<AdminAssessmentDto>("/api/admin/assessments", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 1, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        var update = await Authed(HttpMethod.Put, $"/api/admin/assessments/{ok.Id}", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 1, retakeCap = 0, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
+    }
+
+    [Fact]
     public async Task Unlimited_retakes_by_default()
     {
         var c = await EnrolledLearner();
@@ -314,44 +342,13 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         // These three sessions are what each test drives; content-completeness (needed to
         // publish, needed to enroll) is satisfied with a throwaway final-assessment session
         // and a full score-band table, same as ProgramReadinessTests.BuildReadyProgram.
-        var finalAssessment = await PostJson<AdminAssessmentDto>("/api/admin/assessments", admin, new
-        {
-            kind = "Final",
-            title = "Tes akhir",
-            config = new
-            {
-                passThreshold = 0, retakeCap = (int?)null, proctoringEnabled = true,
-                sections = new[]
-                {
-                    new { section = "Listening", questions = 1, minutes = 35 },
-                    new { section = "Structure", questions = 1, minutes = 25 },
-                    new { section = "Reading",   questions = 1, minutes = 55 },
-                },
-            },
-        });
-        var lQ = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
-        {
-            section = "Listening", prompt = $"L {Guid.NewGuid():N}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = "clip.mp3", passageRef = (string?)null, tags = (string[]?)null,
-        });
-        var sQ = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
-        {
-            section = "Structure", prompt = $"S {Guid.NewGuid():N}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
-        });
-        var rQ = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
-        {
-            section = "Reading", prompt = $"R {Guid.NewGuid():N}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
-        });
-        (await Authed(HttpMethod.Put, $"/api/admin/assessments/{finalAssessment.Id}/questions", admin,
-            new { questionIdsInOrder = new[] { lQ.Id, sQ.Id, rQ.Id } })).EnsureSuccessStatusCode();
+        var finalAssessment = await ItpFinal.SeedAsync(factory, "Tes akhir");
         await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
         {
             type = "FinalAssessment", title = "Sesi Akhir", description = (string?)null, orderIndex = 4,
             providerAssetId = (string?)null, durationSeconds = (int?)null,
             scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
-            joinUrl = (string?)null, location = (string?)null, assessmentId = finalAssessment.Id,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = finalAssessment.AssessmentId,
         });
 
         // Score bands must cover the FULL ITP raw-score range per section (not just the toy

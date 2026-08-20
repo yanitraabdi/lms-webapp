@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Spinner, SearchIcon } from "@/components/ui";
+import { ErrorState, Spinner, SearchIcon } from "@/components/ui";
 import { listQuestions, QUESTION_SECTIONS } from "@/lib/sessions";
 
 /** Bank picker. Selection order is preserved — it becomes the question order in the test. */
@@ -59,6 +59,13 @@ export function QuestionPicker({
 
       {q.isPending ? (
         <div className="flex min-h-[120px] items-center justify-center"><Spinner size={20} /></div>
+      ) : q.isError ? (
+        // A failed bank query is NOT an empty bank — saying "add some questions first" here
+        // sends the operator off to author content that already exists.
+        <ErrorState
+          title="Bank soal gagal dimuat"
+          message="Coba muat ulang halaman. Soal yang sudah ada tidak hilang."
+        />
       ) : (q.data ?? []).length === 0 ? (
         <p className="py-6 text-center text-sm text-ink-muted">
           Tidak ada soal. Tambahkan di halaman Bank Soal terlebih dahulu.

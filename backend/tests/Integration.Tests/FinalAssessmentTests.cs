@@ -78,7 +78,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         Assert.True(result.AutoSubmitted);
         // Answers saved before expiry still count — scored as-of expiry, not discarded.
-        Assert.Equal(c.PerSection, result.SectionScores[nameof(QuestionSection.Listening)]);
+        Assert.Equal(ToeflScoring.ListeningQuestions, result.SectionScores[nameof(QuestionSection.Listening)]);
         Assert.Equal(0, result.SectionScores[nameof(QuestionSection.Structure)]);
     }
 
@@ -169,7 +169,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var state = await Start(c);
         var result = await AnswerEverythingCorrectly(c, state.AttemptId);
 
-        Assert.Equal(c.PerSection * 3, result.Score);
+        Assert.Equal(ToeflScoring.TotalQuestions, result.Score);
         Assert.NotNull(result.TotalScaledScore);
         Assert.True(ToeflScoring.IsValidTotal(result.TotalScaledScore!.Value));
 
@@ -228,7 +228,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var result = await AnswerEverythingCorrectly(c, state.AttemptId);
 
         // The attempt is preserved and scored...
-        Assert.Equal(c.PerSection * 3, result.Score);
+        Assert.Equal(ToeflScoring.TotalQuestions, result.Score);
         // ...but no band is guessed and NO certificate is issued (KAK §9.9.4).
         Assert.Null(result.TotalScaledScore);
         Assert.Null(result.PredictedBand);
@@ -316,7 +316,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     // ================================================================ helpers
 
     private record Ctx(string Token, Guid UserId, string Admin, Guid ProgramId, Guid SessionId,
-                       Guid AssessmentId, int PerSection,
+                       Guid AssessmentId,
                        IReadOnlyDictionary<QuestionSection, List<(Guid Id, int Correct)>> Key);
 
     /// <summary>
@@ -325,7 +325,6 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     /// </summary>
     private async Task<Ctx> SetUp(int? retakeCap = 1, int? audioPlayLimit = null, bool bandsCoverOnlyZero = false)
     {
-        const int perSection = 2;
         var admin = await AdminToken();
         var suffix = Guid.NewGuid().ToString("N")[..8];
 
@@ -335,64 +334,21 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
             summary = (string?)null, priceIdr = 100000m, published = false,
         });
 
-        // Author perSection questions per ITP section.
-        var key = new Dictionary<QuestionSection, List<(Guid, int)>>();
-        var ordered = new List<Guid>();
-        foreach (var section in new[] { QuestionSection.Listening, QuestionSection.Structure, QuestionSection.Reading })
-        {
-            var list = new List<(Guid, int)>();
-            for (var i = 0; i < perSection; i++)
-            {
-                var correct = i % 2;
-                var q = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
-                {
-                    section = section.ToString(),
-                    prompt = $"{section} {i} {Guid.NewGuid():N}",
-                    choices = new[] { "a", "b" },
-                    correct = new[] { correct },
-                    audioRef = section == QuestionSection.Listening ? "clip.mp3" : null,
-                    passageRef = (string?)null,
-                    tags = (string[]?)null,
-                });
-                list.Add((q.Id, correct));
-                ordered.Add(q.Id);
-            }
-            key[section] = list;
-        }
-
-        var assessment = await PostJson<AdminAssessmentDto>("/api/admin/assessments", admin, new
-        {
-            kind = "Final",
-            title = "Simulasi TOEFL ITP",
-            config = new
-            {
-                passThreshold = 0,
-                retakeCap,
-                proctoringEnabled = true,
-                audioPlayLimit,
-                sections = new[]
-                {
-                    new { section = "Listening", questions = perSection, minutes = 35 },
-                    new { section = "Structure", questions = perSection, minutes = 25 },
-                    new { section = "Reading",   questions = perSection, minutes = 55 },
-                },
-            },
-        });
-
-        (await Authed(HttpMethod.Put, $"/api/admin/assessments/{assessment.Id}/questions", admin,
-            new { questionIdsInOrder = ordered })).EnsureSuccessStatusCode();
+        // A full ITP-format sitting (50/40/50) — readiness refuses to publish anything smaller,
+        // and this file's assertions are about the sitting, not about question authoring.
+        var assessment = await ItpFinal.SeedAsync(factory, retakeCap: retakeCap, audioPlayLimit: audioPlayLimit);
+        var key = assessment.Key;
 
         var session = await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
         {
             type = "FinalAssessment", title = "Tes Akhir", description = (string?)null, orderIndex = 1,
             providerAssetId = (string?)null, durationSeconds = (int?)null,
             scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
-            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.Id,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.AssessmentId,
         });
 
-        // Score bands must cover the FULL ITP raw-score range per section (the readiness check
-        // tests against the fixed ITP format sizes, not this test's toy perSection question
-        // count) — full coverage so the program is publishable...
+        // Score bands must cover the FULL ITP raw-score range per section — full coverage so
+        // the program is publishable...
         var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
         {
             ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
@@ -432,7 +388,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         (await _client.PostAsync($"/api/dev/payments/{Uri.EscapeDataString(pay.ProviderRef)}/succeed", null))
             .EnsureSuccessStatusCode();
 
-        return new Ctx(token, userId, admin, program.Id, session.Id, assessment.Id, perSection, key);
+        return new Ctx(token, userId, admin, program.Id, session.Id, assessment.AssessmentId, key);
     }
 
     private async Task<AttemptStateDto> Start(Ctx c)
