@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Modal, Spinner, XIcon } from "@/components/ui";
 import { AttendanceModal } from "@/components/admin/AttendanceModal";
 import { SessionForm } from "@/components/admin/SessionForm";
+import { GatingTestEditor } from "@/components/admin/GatingTestEditor";
 import {
   listSessions, deleteSession, reorderSessions,
   minutesLabel, num,
@@ -18,6 +19,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [attendanceFor, setAttendanceFor] = useState<string | null>(null);
+  const [testFor, setTestFor] = useState<{ sessionId: string; assessmentId: string | null } | null>(null);
 
   const sessions = [...(q.data ?? [])].sort((a, b) => num(a.orderIndex) - num(b.orderIndex));
 
@@ -82,6 +84,15 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
                     Kehadiran
                   </button>
                 )}
+                {s.type === "Video" && (
+                  <button
+                    type="button"
+                    onClick={() => setTestFor({ sessionId: s.id, assessmentId: s.assessmentId ?? null })}
+                    className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
+                  >
+                    {s.assessmentId ? "Tes ✓" : "Tes"}
+                  </button>
+                )}
                 <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)}
                   aria-label="Naikkan" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↑</button>
                 <button type="button" disabled={busy || i === sessions.length - 1} onClick={() => move(i, 1)}
@@ -101,6 +112,15 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
           token={token}
           sessionId={attendanceFor}
           onClose={() => setAttendanceFor(null)}
+        />
+      )}
+
+      {testFor && (
+        <GatingTestEditor
+          token={token}
+          sessionId={testFor.sessionId}
+          assessmentId={testFor.assessmentId}
+          onClose={async () => { setTestFor(null); await qc.invalidateQueries({ queryKey: key }); }}
         />
       )}
 
