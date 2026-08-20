@@ -332,7 +332,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var program = await PostJson<AdminProgramDto>("/api/admin/programs", admin, new
         {
             name = $"Final {suffix}", slug = $"final-{suffix}", description = "Uji M4",
-            summary = (string?)null, priceIdr = 100000m, published = true,
+            summary = (string?)null, priceIdr = 100000m, published = false,
         });
 
         // Author perSection questions per ITP section.
@@ -390,20 +390,40 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
             joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.Id,
         });
 
-        // Score bands: full coverage, or (for the fail-loudly test) only raw 0.
-        var bands = new List<object>();
-        foreach (var section in new[] { "Listening", "Structure", "Reading" })
-            for (var raw = 0; raw <= perSection; raw++)
-            {
-                if (bandsCoverOnlyZero && raw > 0) continue;
-                bands.Add(new
-                {
-                    id = Guid.Empty, section, minRaw = raw, maxRaw = raw,
-                    scaledScore = ToeflScoring.ScaledMin + raw, predictedBand = (string?)null,
-                });
-            }
+        // Score bands must cover the FULL ITP raw-score range per section (the readiness check
+        // tests against the fixed ITP format sizes, not this test's toy perSection question
+        // count) — full coverage so the program is publishable...
+        var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        };
+        var rows = new List<(string Section, int Raw, int MaxRaw, int ScaledMax)>();
+        foreach (var (section, maxRaw, scaledMax) in sectionSizes)
+            for (var raw = 0; raw <= maxRaw; raw++)
+                rows.Add((section, raw, maxRaw, scaledMax));
+        object BandRow((string Section, int Raw, int MaxRaw, int ScaledMax) r) => new
+        {
+            id = Guid.Empty, section = r.Section, minRaw = r.Raw, maxRaw = r.Raw,
+            scaledScore = ToeflScoring.ScaledMin
+                + (int)Math.Round((double)r.Raw / r.MaxRaw * (r.ScaledMax - ToeflScoring.ScaledMin)),
+            predictedBand = (string?)null,
+        };
         (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
-            new { bands })).EnsureSuccessStatusCode();
+            new { bands = rows.Select(BandRow) })).EnsureSuccessStatusCode();
+
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
+        {
+            name = program.Name, slug = program.Slug, description = program.Description,
+            summary = program.Summary, priceIdr = program.PriceIdr, published = true,
+        })).EnsureSuccessStatusCode();
+
+        // ...then, for the fail-loudly test, drift the table down to only raw 0 post-publish.
+        // Publish gates on readiness; it never re-checks bands an admin edits afterwards.
+        if (bandsCoverOnlyZero)
+            (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
+                new { bands = rows.Where(r => r.Raw == 0).Select(BandRow) })).EnsureSuccessStatusCode();
 
         var (token, userId) = await VerifiedUser();
         var checkout = await Authed(HttpMethod.Post, $"/api/programs/{program.Id}/enroll", token, new { });

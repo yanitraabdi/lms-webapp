@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -126,6 +127,72 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
 
         Assert.True(r.Ready);
         Assert.All(r.Checks.Where(c => c.Blocking), c => Assert.True(c.Passed));
+    }
+
+    [Fact]
+    public async Task A_new_program_cannot_be_created_already_published()
+    {
+        var admin = await AdminToken();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+
+        var res = await Authed(HttpMethod.Post, "/api/admin/programs", admin, new
+        {
+            name = $"Langsung {suffix}", slug = $"langsung-{suffix}", description = "A3",
+            summary = (string?)null, priceIdr = 100000m, published = true,
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Publishing_an_unready_program_is_refused_and_names_what_is_missing()
+    {
+        var admin = await AdminToken();
+        var program = await NewProgram(admin);
+
+        var res = await Publish(admin, program, published: true);
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        var body = await res.Content.ReadAsStringAsync();
+        Assert.Contains("Belum ada sesi", body);
+    }
+
+    [Fact]
+    public async Task Publishing_a_ready_program_succeeds()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+
+        (await Publish(admin, program, published: true)).EnsureSuccessStatusCode();
+
+        var listed = await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin);
+        Assert.Equal("Published", listed.Single(p => p.Id == program).Status);
+    }
+
+    [Fact]
+    public async Task Saving_a_draft_and_unpublishing_are_never_gated()
+    {
+        var admin = await AdminToken();
+        var program = await NewProgram(admin);          // empty, therefore unready
+
+        // Draft edits stay legal so operators can stage incomplete content.
+        (await Publish(admin, program, published: false)).EnsureSuccessStatusCode();
+
+        var ready = await BuildReadyProgram(admin);
+        (await Publish(admin, ready, published: true)).EnsureSuccessStatusCode();
+        // Unpublishing is never blocked, even though the check would still run.
+        (await Publish(admin, ready, published: false)).EnsureSuccessStatusCode();
+    }
+
+    private async Task<HttpResponseMessage> Publish(string admin, Guid program, bool published)
+    {
+        var p = (await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin))
+            .Single(x => x.Id == program);
+        return await Authed(HttpMethod.Put, $"/api/admin/programs/{program}", admin, new
+        {
+            name = p.Name, slug = p.Slug, description = p.Description,
+            summary = p.Summary, priceIdr = p.PriceIdr, published,
+        });
     }
 
     // ---- helpers ----

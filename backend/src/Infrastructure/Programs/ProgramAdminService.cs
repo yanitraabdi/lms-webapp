@@ -35,6 +35,12 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
 
     public async Task<AdminProgramDto> CreateAsync(Guid actor, UpsertProgramRequest req, CancellationToken ct = default)
     {
+        // A brand-new program has no sessions, so it can never be ready. Refuse directly rather
+        // than running the full check against a program that does not exist yet.
+        if (req.Published)
+            throw new ProgramException(
+                "Program baru harus dibuat sebagai draf. Terbitkan setelah kontennya lengkap.", 409);
+
         var slug = await UniqueSlugAsync(req.Slug ?? Slugify(req.Name), null, ct);
         var program = new Domain.Entities.Program
         {
@@ -58,6 +64,17 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
     {
         var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new ProgramException("Program tidak ditemukan.", 404);
+
+        // Publishing is the gate; drafts and unpublishing stay free so work can be staged.
+        if (req.Published)
+        {
+            var readiness = await GetReadinessAsync(id, ct);
+            if (!readiness.Ready)
+                throw new ProgramException(
+                    "Program belum siap diterbitkan. " + string.Join(" ",
+                        readiness.Checks.Where(c => c.Blocking && !c.Passed)
+                                        .Select(c => c.Detail ?? c.Title)), 409);
+        }
 
         var wasPublished = program.Status == ProgramStatus.Published;
         program.Name = req.Name.Trim();

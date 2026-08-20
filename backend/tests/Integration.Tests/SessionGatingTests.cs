@@ -7,6 +7,7 @@ using Academy.Application.Assessments;
 using Academy.Application.Auth;
 using Academy.Application.Billing;
 using Academy.Application.Programs;
+using Academy.Domain;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
 using Academy.Infrastructure.Programs;
@@ -294,7 +295,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var program = await PostJson<AdminProgramDto>("/api/admin/programs", admin, new
         {
             name = $"Program {suffix}", slug = $"prog-{suffix}", description = "Uji M3",
-            summary = (string?)null, priceIdr = 100000m, published = true,
+            summary = (string?)null, priceIdr = 100000m, published = false,
         });
 
         var sessionIds = new List<Guid>();
@@ -309,6 +310,77 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
             });
             sessionIds.Add(s.Id);
         }
+
+        // These three sessions are what each test drives; content-completeness (needed to
+        // publish, needed to enroll) is satisfied with a throwaway final-assessment session
+        // and a full score-band table, same as ProgramReadinessTests.BuildReadyProgram.
+        var finalAssessment = await PostJson<AdminAssessmentDto>("/api/admin/assessments", admin, new
+        {
+            kind = "Final",
+            title = "Tes akhir",
+            config = new
+            {
+                passThreshold = 0, retakeCap = (int?)null, proctoringEnabled = true,
+                sections = new[]
+                {
+                    new { section = "Listening", questions = 1, minutes = 35 },
+                    new { section = "Structure", questions = 1, minutes = 25 },
+                    new { section = "Reading",   questions = 1, minutes = 55 },
+                },
+            },
+        });
+        var lQ = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
+        {
+            section = "Listening", prompt = $"L {Guid.NewGuid():N}", choices = new[] { "a", "b" },
+            correct = new[] { 0 }, audioRef = "clip.mp3", passageRef = (string?)null, tags = (string[]?)null,
+        });
+        var sQ = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
+        {
+            section = "Structure", prompt = $"S {Guid.NewGuid():N}", choices = new[] { "a", "b" },
+            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
+        });
+        var rQ = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
+        {
+            section = "Reading", prompt = $"R {Guid.NewGuid():N}", choices = new[] { "a", "b" },
+            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
+        });
+        (await Authed(HttpMethod.Put, $"/api/admin/assessments/{finalAssessment.Id}/questions", admin,
+            new { questionIdsInOrder = new[] { lQ.Id, sQ.Id, rQ.Id } })).EnsureSuccessStatusCode();
+        await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
+        {
+            type = "FinalAssessment", title = "Sesi Akhir", description = (string?)null, orderIndex = 4,
+            providerAssetId = (string?)null, durationSeconds = (int?)null,
+            scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = finalAssessment.Id,
+        });
+
+        // Score bands must cover the FULL ITP raw-score range per section (not just the toy
+        // question count above) — the readiness check tests against the fixed ITP format sizes.
+        var bands = new List<object>();
+        foreach (var (section, maxRaw, scaledMax) in new[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        })
+            for (var raw = 0; raw <= maxRaw; raw++)
+            {
+                var scaled = ToeflScoring.ScaledMin
+                    + (int)Math.Round((double)raw / maxRaw * (scaledMax - ToeflScoring.ScaledMin));
+                bands.Add(new
+                {
+                    id = Guid.Empty, section, minRaw = raw, maxRaw = raw,
+                    scaledScore = scaled, predictedBand = (string?)null,
+                });
+            }
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
+            new { bands })).EnsureSuccessStatusCode();
+
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
+        {
+            name = program.Name, slug = program.Slug, description = program.Description,
+            summary = program.Summary, priceIdr = program.PriceIdr, published = true,
+        })).EnsureSuccessStatusCode();
 
         var (token, userId) = await VerifiedUser();
         var checkout = await Authed(HttpMethod.Post, $"/api/programs/{program.Id}/enroll", token, new { });
