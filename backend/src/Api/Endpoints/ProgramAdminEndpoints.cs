@@ -23,6 +23,10 @@ public static class ProgramAdminEndpoints
             return p is null ? TypedResults.NotFound() : TypedResults.Ok(p);
         });
 
+        g.MapGet("/programs/{id:guid}/readiness", async Task<Ok<ProgramReadinessDto>> (
+                Guid id, IProgramAdminService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.GetReadinessAsync(id, ct)));
+
         g.MapPost("/programs", async Task<Ok<AdminProgramDto>> (
                 UpsertProgramRequest r, ClaimsPrincipal u, IProgramAdminService s, CancellationToken ct) =>
             TypedResults.Ok(await s.CreateAsync(u.UserId(), r, ct)));

@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Academy.Application.Abstractions;
 using Academy.Application.Programs;
+using Academy.Domain;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
+using Academy.Infrastructure.Assessments;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -207,6 +209,117 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         Audit(actor, "batch_deleted", batchId, new { batch.Name });
         await db.SaveChangesAsync(ct);
     }
+
+    // ---------------------------------------------------------------- readiness
+
+    public async Task<ProgramReadinessDto> GetReadinessAsync(Guid programId, CancellationToken ct = default)
+    {
+        var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == programId, ct)
+            ?? throw new ProgramException("Program tidak ditemukan.", 404);
+
+        var sessions = await db.ProgramSessions
+            .Where(s => s.ProgramId == programId)
+            .Select(s => new { s.Id, s.Type, s.Title, s.AssessmentId })
+            .ToListAsync(ct);
+
+        var checks = new List<ReadinessCheckDto>
+        {
+            new("has_sessions", "Program memiliki sesi", sessions.Count > 0, true,
+                sessions.Count == 0 ? "Belum ada sesi pada program ini." : null),
+        };
+
+        // Every attached assessment must actually have questions.
+        var empty = new List<string>();
+        foreach (var s in sessions.Where(s => s.AssessmentId != null))
+            if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == s.AssessmentId, ct))
+                empty.Add(s.Title);
+        checks.Add(new("gating_tests_populated", "Semua tes memiliki soal", empty.Count == 0, true,
+            empty.Count > 0 ? $"Tes tanpa soal: {string.Join(", ", empty)}." : null));
+
+        var final = sessions.FirstOrDefault(s => s.Type == SessionType.FinalAssessment);
+        var finalAssessmentId = final?.AssessmentId;
+        checks.Add(new("final_assessment_present", "Tes akhir terpasang", finalAssessmentId is not null, true,
+            final is null ? "Belum ada sesi tes akhir."
+            : finalAssessmentId is null ? "Sesi tes akhir belum memiliki tes." : null));
+
+        checks.Add(await FinalSectionsCheckAsync(finalAssessmentId, ct));
+        checks.Add(await ScoreBandsCheckAsync(programId, ct));
+
+        checks.Add(new("price_set", "Harga sudah diisi", program.PriceIdr > 0, false,
+            program.PriceIdr > 0 ? null : "Harga masih 0."));
+
+        return new ProgramReadinessDto(checks.All(c => !c.Blocking || c.Passed), checks);
+    }
+
+    /// <summary>Each configured section must hold exactly the number of questions it declares.</summary>
+    private async Task<ReadinessCheckDto> FinalSectionsCheckAsync(Guid? assessmentId, CancellationToken ct)
+    {
+        const string key = "final_sections_populated";
+        const string title = "Bagian tes akhir lengkap";
+
+        if (assessmentId is not Guid id)
+            return new(key, title, false, true, "Tes akhir belum terpasang.");
+
+        var config = AssessmentService.ParseConfig(
+            await db.Assessments.Where(a => a.Id == id).Select(a => a.Config).FirstAsync(ct));
+
+        if (config.Sections.Count == 0)
+            return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");
+
+        var problems = new List<string>();
+        foreach (var section in config.Sections)
+        {
+            var actual = await db.AssessmentQuestions
+                .CountAsync(q => q.AssessmentId == id && q.Question.Section == section.Section, ct);
+            if (actual != section.Questions)
+                problems.Add($"{section.Section} {actual}/{section.Questions}");
+        }
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0 ? $"Jumlah soal belum sesuai: {string.Join(", ", problems)}." : null);
+    }
+
+    /// <summary>Every raw score in every ITP section must map exactly once, within its scaled band.</summary>
+    private async Task<ReadinessCheckDto> ScoreBandsCheckAsync(Guid programId, CancellationToken ct)
+    {
+        const string key = "score_bands_complete";
+        const string title = "Tabel konversi skor lengkap";
+
+        var bands = await db.ScoreBandMappings
+            .Where(b => b.ProgramId == programId)
+            .Select(b => new { b.Section, b.MinRaw, b.MaxRaw, b.ScaledScore })
+            .ToListAsync(ct);
+
+        if (bands.Count == 0)
+            return new(key, title, false, true, "Tabel konversi skor belum diisi.");
+
+        var problems = new List<string>();
+        foreach (var (section, maxRaw, scaledMax) in new[]
+        {
+            (QuestionSection.Listening, ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            (QuestionSection.Structure, ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            (QuestionSection.Reading,   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        })
+        {
+            var rows = bands.Where(b => b.Section == section).ToList();
+
+            var missing = Enumerable.Range(0, maxRaw + 1)
+                .Where(raw => !rows.Any(r => raw >= r.MinRaw && raw <= r.MaxRaw))
+                .ToList();
+            if (missing.Count > 0)
+                problems.Add($"{section}: skor {Describe(missing)} belum dipetakan");
+
+            var outOfRange = rows.Count(r => !ToeflScoring.IsValidScaled(r.ScaledScore, scaledMax));
+            if (outOfRange > 0)
+                problems.Add($"{section}: {outOfRange} nilai skala di luar {ToeflScoring.ScaledMin}-{scaledMax}");
+        }
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0 ? string.Join("; ", problems) + "." : null);
+    }
+
+    private static string Describe(List<int> missing) =>
+        missing.Count <= 5 ? string.Join(", ", missing) : $"{missing[0]}-{missing[^1]} ({missing.Count} nilai)";
 
     // ---------------------------------------------------------------- enrollment support
 
