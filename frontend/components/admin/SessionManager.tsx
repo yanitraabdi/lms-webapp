@@ -20,7 +20,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [attendanceFor, setAttendanceFor] = useState<string | null>(null);
-  const [testFor, setTestFor] = useState<{ sessionId: string; assessmentId: string | null } | null>(null);
+  const [testFor, setTestFor] = useState<{ sessionId: string; assessmentId: string | null; kind: "Gating" | "Final" } | null>(null);
 
   const sessions = [...(q.data ?? [])].sort((a, b) => num(a.orderIndex) - num(b.orderIndex));
 
@@ -96,19 +96,29 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
                 {s.type === "Video" && (
                   <button
                     type="button"
-                    onClick={() => setTestFor({ sessionId: s.id, assessmentId: s.assessmentId ?? null })}
+                    onClick={() => setTestFor({ sessionId: s.id, assessmentId: s.assessmentId ?? null, kind: "Gating" })}
                     className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
                   >
                     {s.assessmentId ? "Tes ✓" : "Tes"}
                   </button>
                 )}
-                {s.type === "FinalAssessment" && s.assessmentId && (
-                  <Link
-                    href={`/admin/assessments/${s.assessmentId}`}
-                    className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
-                  >
-                    Susun soal
-                  </Link>
+                {s.type === "FinalAssessment" && (
+                  s.assessmentId ? (
+                    <Link
+                      href={`/admin/assessments/${s.assessmentId}`}
+                      className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
+                    >
+                      Susun soal
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setTestFor({ sessionId: s.id, assessmentId: null, kind: "Final" })}
+                      className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
+                    >
+                      Buat tes akhir
+                    </button>
+                  )
                 )}
                 <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)}
                   aria-label="Naikkan" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↑</button>
@@ -137,6 +147,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
           token={token}
           sessionId={testFor.sessionId}
           assessmentId={testFor.assessmentId}
+          kind={testFor.kind}
           onClose={async () => { setTestFor(null); await qc.invalidateQueries({ queryKey: key }); }}
         />
       )}

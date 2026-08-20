@@ -6,17 +6,44 @@ import { QuestionPicker } from "@/components/admin/QuestionPicker";
 import {
   getAssessment, createAssessment, updateAssessment,
   setAssessmentQuestions, attachAssessment, num,
+  type AssessmentConfig,
 } from "@/lib/sessions";
 
-/** Create, edit, attach or detach the short test that gates a video session. */
+type SectionRow = {
+  section: NonNullable<NonNullable<AssessmentConfig["sections"]>[number]["section"]>;
+  questions: number;
+  minutes: number;
+};
+
+/** ITP layout (KAK §9.7.1) — the starting point for a new final assessment. */
+const DEFAULT_SECTIONS: SectionRow[] = [
+  { section: "Listening", questions: 50, minutes: 35 },
+  { section: "Structure", questions: 40, minutes: 25 },
+  { section: "Reading", questions: 50, minutes: 55 },
+];
+
+/**
+ * Create, edit, attach or detach the test a session needs: the short gating test of a video
+ * session (kind "Gating", questions picked here), or the final assessment of a final session
+ * (kind "Final" — only the section layout is set here; the questions are composed on
+ * /admin/assessments/{id}).
+ */
 export function GatingTestEditor({
-  token, sessionId, assessmentId, onClose,
-}: { token: string; sessionId: string; assessmentId: string | null; onClose: () => void }) {
+  token, sessionId, assessmentId, kind = "Gating", onClose,
+}: {
+  token: string;
+  sessionId: string;
+  assessmentId: string | null;
+  kind?: "Gating" | "Final";
+  onClose: () => void;
+}) {
+  const isFinal = kind === "Final";
   const [loading, setLoading] = useState(!!assessmentId);
-  const [title, setTitle] = useState("Tes sesi");
+  const [title, setTitle] = useState(isFinal ? "Simulasi TOEFL ITP — Tes Akhir" : "Tes sesi");
   const [passThreshold, setPassThreshold] = useState(1);
-  const [retakeCap, setRetakeCap] = useState("");        // blank = unlimited
+  const [retakeCap, setRetakeCap] = useState(isFinal ? "1" : "");   // blank = unlimited
   const [selected, setSelected] = useState<string[]>([]);
+  const [sections, setSections] = useState<SectionRow[]>(DEFAULT_SECTIONS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,33 +57,51 @@ export function GatingTestEditor({
         setPassThreshold(num(a.config.passThreshold ?? 1));
         setRetakeCap(a.config.retakeCap == null ? "" : String(num(a.config.retakeCap)));
         setSelected(a.questions.map((q) => q.id));
+        if (a.config.sections?.length) {
+          setSections(a.config.sections.map((s) => ({
+            section: s.section ?? "General",
+            questions: num(s.questions ?? 0),
+            minutes: num(s.minutes ?? 0),
+          })));
+        }
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Gagal memuat tes."))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [token, assessmentId]);
 
-  const valid = title.trim() && selected.length > 0 && passThreshold >= 1 && passThreshold <= selected.length;
+  const valid = isFinal
+    ? !!title.trim() && sections.every((s) => s.questions >= 1 && s.minutes >= 1)
+    : !!title.trim() && selected.length > 0 && passThreshold >= 1 && passThreshold <= selected.length;
 
   async function save() {
     if (!valid) return;
     setBusy(true); setError(null);
     try {
-      const config = {
-        passThreshold,
-        retakeCap: retakeCap.trim() === "" ? null : Number(retakeCap),
-        proctoringEnabled: false,
-        audioPlayLimit: null,
-        sections: [],
-        timeLimitMinutes: null,
-      };
+      const config = isFinal
+        ? {
+            passThreshold: null,
+            retakeCap: retakeCap.trim() === "" ? null : Number(retakeCap),
+            proctoringEnabled: true,
+            audioPlayLimit: 1,
+            sections,
+            timeLimitMinutes: null,
+          }
+        : {
+            passThreshold,
+            retakeCap: retakeCap.trim() === "" ? null : Number(retakeCap),
+            proctoringEnabled: false,
+            audioPlayLimit: null,
+            sections: [],
+            timeLimitMinutes: null,
+          };
       let id = assessmentId;
       if (id) {
-        await updateAssessment(token, id, { kind: "Gating", title: title.trim(), config });
+        await updateAssessment(token, id, { kind, title: title.trim(), config });
       } else {
-        id = (await createAssessment(token, { kind: "Gating", title: title.trim(), config })).id;
+        id = (await createAssessment(token, { kind, title: title.trim(), config })).id;
       }
-      await setAssessmentQuestions(token, id, selected);
+      if (!isFinal) await setAssessmentQuestions(token, id, selected);
       if (!assessmentId) await attachAssessment(token, sessionId, id);
       onClose();
     } catch (e) {
@@ -81,7 +126,7 @@ export function GatingTestEditor({
     <Modal
       open
       onClose={onClose}
-      title="Tes sesi"
+      title={isFinal ? "Tes akhir" : "Tes sesi"}
       className="max-w-2xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
@@ -107,14 +152,16 @@ export function GatingTestEditor({
           </label>
 
           <div className="flex flex-wrap gap-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-[12px] font-bold text-ink-muted">Skor lulus</span>
-              <input
-                type="number" min={1} max={Math.max(1, selected.length)} value={passThreshold}
-                onChange={(e) => setPassThreshold(Number(e.target.value) || 1)}
-                className={inputCls + " w-24"}
-              />
-            </label>
+            {!isFinal && (
+              <label className="flex flex-col gap-1">
+                <span className="text-[12px] font-bold text-ink-muted">Skor lulus</span>
+                <input
+                  type="number" min={1} max={Math.max(1, selected.length)} value={passThreshold}
+                  onChange={(e) => setPassThreshold(Number(e.target.value) || 1)}
+                  className={inputCls + " w-24"}
+                />
+              </label>
+            )}
             <label className="flex flex-col gap-1">
               <span className="text-[12px] font-bold text-ink-muted">Batas percobaan</span>
               <input
@@ -125,18 +172,51 @@ export function GatingTestEditor({
             </label>
           </div>
 
-          {selected.length > 0 && passThreshold > selected.length && (
+          {!isFinal && selected.length > 0 && passThreshold > selected.length && (
             <p className="text-[12.5px] font-semibold text-danger">
               Skor lulus tidak boleh melebihi jumlah soal ({selected.length}).
             </p>
           )}
 
-          <div>
-            <span className="text-[12px] font-bold text-ink-muted">Soal</span>
-            <div className="mt-1">
-              <QuestionPicker token={token} selected={selected} onChange={setSelected} />
+          {isFinal ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-[12px] font-bold text-ink-muted">Bagian tes</span>
+              {sections.map((s, i) => (
+                <div key={s.section} className="flex flex-wrap items-center gap-3 rounded-base border border-border px-3.5 py-2.5">
+                  <span className="w-24 text-[13.5px] font-semibold text-ink">{s.section}</span>
+                  <label className="flex items-center gap-1.5 text-[12px] font-bold text-ink-muted">
+                    Jumlah soal
+                    <input
+                      type="number" min={1} value={s.questions}
+                      onChange={(e) => setSections((rows) => rows.map((r, j) =>
+                        j === i ? { ...r, questions: Number(e.target.value) || 0 } : r))}
+                      className={inputCls + " w-20"}
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[12px] font-bold text-ink-muted">
+                    Menit
+                    <input
+                      type="number" min={1} value={s.minutes}
+                      onChange={(e) => setSections((rows) => rows.map((r, j) =>
+                        j === i ? { ...r, minutes: Number(e.target.value) || 0 } : r))}
+                      className={inputCls + " w-20"}
+                    />
+                  </label>
+                </div>
+              ))}
+              <p className="text-[12.5px] text-ink-muted">
+                Soal untuk tiap bagian dipilih di halaman “Susun soal” setelah tes akhir tersimpan.
+                Proktoring dan batas pemutaran audio aktif untuk tes akhir.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div>
+              <span className="text-[12px] font-bold text-ink-muted">Soal</span>
+              <div className="mt-1">
+                <QuestionPicker token={token} selected={selected} onChange={setSelected} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Modal>

@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Spinner, ErrorState } from "@/components/ui";
 import { ProgramForm } from "@/components/admin/ProgramForm";
 import { SessionManager } from "@/components/admin/SessionManager";
+import { ReadinessPanel } from "@/components/admin/ReadinessPanel";
 import {
   listPrograms,
   formatIdr, num,
@@ -18,6 +19,7 @@ export default function AdminProgramsPage() {
   const [editing, setEditing] = useState<AdminProgram | null>(null);
   const [creating, setCreating] = useState(false);
   const [sessionsFor, setSessionsFor] = useState<AdminProgram | null>(null);
+  const [readinessFor, setReadinessFor] = useState<AdminProgram | null>(null);
 
   const programs = useQuery({
     queryKey: ["admin-programs"],
@@ -53,6 +55,7 @@ export default function AdminProgramsPage() {
                 <th className="px-3 py-3">Sesi</th>
                 <th className="px-3 py-3">Peserta</th>
                 <th className="px-3 py-3">Status</th>
+                <th className="px-3 py-3">Kesiapan</th>
                 <th className="px-5 py-3 text-right">Aksi</th>
               </tr>
             </thead>
@@ -70,6 +73,15 @@ export default function AdminProgramsPage() {
                     <Badge tone={p.status === "Published" ? "success" : "neutral"} className="px-2.5 py-0.5 text-[11.5px]">
                       {p.status === "Published" ? "Terbit" : p.status === "Draft" ? "Draf" : "Arsip"}
                     </Badge>
+                  </td>
+                  <td className="px-3 py-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setReadinessFor(p)}
+                      className="text-[12.5px] font-bold text-primary hover:underline"
+                    >
+                      Periksa
+                    </button>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex justify-end gap-2">
@@ -90,6 +102,10 @@ export default function AdminProgramsPage() {
           program={editing}
           onClose={() => { setCreating(false); setEditing(null); qc.invalidateQueries({ queryKey: ["admin-programs"] }); }}
         />
+      )}
+
+      {readinessFor && token && (
+        <ReadinessPanel token={token} program={readinessFor} onClose={() => setReadinessFor(null)} />
       )}
 
       {sessionsFor && token && (

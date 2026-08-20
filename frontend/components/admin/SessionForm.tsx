@@ -86,7 +86,8 @@ export function SessionForm({
 
         {type === "FinalAssessment" && (
           <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
-            Soal dan konfigurasi tes akhir dikelola di bank soal (milestone berikutnya).
+            Setelah sesi tersimpan, gunakan tombol “Buat tes akhir” pada baris sesi untuk
+            menyusun bagian dan soalnya.
           </p>
         )}
       </div>

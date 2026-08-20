@@ -58,10 +58,19 @@ export function ProgramForm({ token, program, onClose }: { token: string; progra
         <Field label="Harga (IDR)">
           <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className={inputCls} />
         </Field>
-        <label className="flex items-center gap-2 text-[13px] font-semibold">
-          <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="accent-primary" />
-          Terbitkan (tampil di halaman publik)
-        </label>
+        {/* Publishing is gated on content readiness, and a brand-new program can never be ready,
+            so the create path has no publish control — publish from Edit once "Periksa" is green. */}
+        {program ? (
+          <label className="flex items-center gap-2 text-[13px] font-semibold">
+            <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="accent-primary" />
+            Terbitkan (tampil di halaman publik)
+          </label>
+        ) : (
+          <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
+            Program baru tersimpan sebagai draf. Lengkapi sesi, tes, dan tabel konversi skor,
+            lalu terbitkan lewat Edit.
+          </p>
+        )}
       </div>
     </Modal>
   );
