@@ -50,8 +50,8 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
             Description = req.Description.Trim(),
             Summary = req.Summary?.Trim(),
             PriceIdr = req.PriceIdr,
-            Status = req.Published ? ProgramStatus.Published : ProgramStatus.Draft,
-            PublishedAt = req.Published ? DateTimeOffset.UtcNow : null,
+            Status = ProgramStatus.Draft,
+            PublishedAt = null,
         };
         db.Programs.Add(program);
         Audit(actor, "program_created", program.Id, new { program.Name, program.Slug });
@@ -65,8 +65,12 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new ProgramException("Program tidak ditemukan.", 404);
 
-        // Publishing is the gate; drafts and unpublishing stay free so work can be staged.
-        if (req.Published)
+        // Only the draft->published TRANSITION is gated. Editing an already-published program
+        // (including re-saving it with published:true unchanged) stays free, or an admin could
+        // never fix a typo without un-publishing first and taking the live page down. Content can
+        // already drift unready after publish via un-gated endpoints (DeleteSessionAsync,
+        // PUT /score-bands) — this was never meant to be airtight, only to catch it at the gate.
+        if (req.Published && program.Status != ProgramStatus.Published)
         {
             var readiness = await GetReadinessAsync(id, ct);
             if (!readiness.Ready)

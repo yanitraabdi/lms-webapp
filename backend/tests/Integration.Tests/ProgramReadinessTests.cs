@@ -184,6 +184,38 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         (await Publish(admin, ready, published: false)).EnsureSuccessStatusCode();
     }
 
+    [Fact]
+    public async Task Editing_an_already_published_program_is_not_re_gated()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+        (await Publish(admin, program, published: true)).EnsureSuccessStatusCode();
+
+        // Make the program unready without ever un-publishing it — deleting the final-assessment
+        // session (an un-gated endpoint) is the cheapest way to break `final_assessment_present`.
+        var sessions = await AuthedGet<List<AdminSessionDto>>($"/api/admin/programs/{program}/sessions", admin);
+        var finalSession = sessions.Single(s => s.Type == "FinalAssessment");
+        (await Authed(HttpMethod.Delete, $"/api/admin/sessions/{finalSession.Id}", admin)).EnsureSuccessStatusCode();
+
+        var readiness = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+        Assert.False(readiness.Ready);
+
+        // The gate only fires on the draft->published TRANSITION. A program that is ALREADY
+        // published must stay editable even once it has drifted unready — otherwise an admin
+        // fixing a typo would be forced to un-publish first, taking the live page down.
+        var current = (await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin)).Single(p => p.Id == program);
+        var res = await Authed(HttpMethod.Put, $"/api/admin/programs/{program}", admin, new
+        {
+            name = current.Name, slug = current.Slug, description = "Deskripsi diperbarui",
+            summary = current.Summary, priceIdr = current.PriceIdr, published = true,
+        });
+
+        res.EnsureSuccessStatusCode();
+        var after = (await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin)).Single(p => p.Id == program);
+        Assert.Equal("Published", after.Status);
+        Assert.Equal("Deskripsi diperbarui", after.Description);
+    }
+
     private async Task<HttpResponseMessage> Publish(string admin, Guid program, bool published)
     {
         var p = (await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin))
