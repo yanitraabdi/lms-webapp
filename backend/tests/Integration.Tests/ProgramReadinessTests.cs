@@ -6,6 +6,7 @@ using Academy.Application.Assessments;
 using Academy.Application.Auth;
 using Academy.Application.Programs;
 using Academy.Domain;
+using Academy.Domain.Entities;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +81,33 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         // Cover everything except Listening raw score 7.
         var bands = FullBands().Where(b => !(b.Section == "Listening" && b.MinRaw == 7)).ToList();
         await PutScoreBands(admin, program, bands);
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+
+        var check = Check(r, "score_bands_complete");
+        Assert.False(check.Passed);
+        Assert.Contains("Listening", check.Detail);
+    }
+
+    [Fact]
+    public async Task Score_bands_with_an_overlap_are_incomplete()
+    {
+        var admin = await AdminToken();
+        var program = await NewProgram(admin);
+        await PutScoreBands(admin, program, FullBands());
+
+        // The score-bands endpoint itself rejects overlapping ranges, so the only way to get an
+        // overlapping row into the table is to write it directly via the DbContext.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.ScoreBandMappings.Add(new ScoreBandMapping
+            {
+                Id = Guid.CreateVersion7(), ProgramId = program, Section = QuestionSection.Listening,
+                MinRaw = 0, MaxRaw = 3, ScaledScore = ToeflScoring.ScaledMin, PredictedBand = null,
+            });
+            await db.SaveChangesAsync();
+        }
 
         var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
 

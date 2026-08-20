@@ -309,6 +309,12 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
             if (missing.Count > 0)
                 problems.Add($"{section}: skor {Describe(missing)} belum dipetakan");
 
+            var duplicated = Enumerable.Range(0, maxRaw + 1)
+                .Where(raw => rows.Count(r => raw >= r.MinRaw && raw <= r.MaxRaw) > 1)
+                .ToList();
+            if (duplicated.Count > 0)
+                problems.Add($"{section}: skor {Describe(duplicated)} dipetakan lebih dari sekali");
+
             var outOfRange = rows.Count(r => !ToeflScoring.IsValidScaled(r.ScaledScore, scaledMax));
             if (outOfRange > 0)
                 problems.Add($"{section}: {outOfRange} nilai skala di luar {ToeflScoring.ScaledMin}-{scaledMax}");
