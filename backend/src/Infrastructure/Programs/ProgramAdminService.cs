@@ -1,8 +1,11 @@
 using System.Text.Json;
 using Academy.Application.Abstractions;
+using Academy.Application.Assessments;
 using Academy.Application.Programs;
+using Academy.Domain;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
+using Academy.Infrastructure.Assessments;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,6 +36,12 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
 
     public async Task<AdminProgramDto> CreateAsync(Guid actor, UpsertProgramRequest req, CancellationToken ct = default)
     {
+        // A brand-new program has no sessions, so it can never be ready. Refuse directly rather
+        // than running the full check against a program that does not exist yet.
+        if (req.Published)
+            throw new ProgramException(
+                "Program baru harus dibuat sebagai draf. Terbitkan setelah kontennya lengkap.", 409);
+
         var slug = await UniqueSlugAsync(req.Slug ?? Slugify(req.Name), null, ct);
         var program = new Domain.Entities.Program
         {
@@ -42,8 +51,8 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
             Description = req.Description.Trim(),
             Summary = req.Summary?.Trim(),
             PriceIdr = req.PriceIdr,
-            Status = req.Published ? ProgramStatus.Published : ProgramStatus.Draft,
-            PublishedAt = req.Published ? DateTimeOffset.UtcNow : null,
+            Status = ProgramStatus.Draft,
+            PublishedAt = null,
         };
         db.Programs.Add(program);
         Audit(actor, "program_created", program.Id, new { program.Name, program.Slug });
@@ -56,6 +65,21 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
     {
         var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new ProgramException("Program tidak ditemukan.", 404);
+
+        // Only the draft->published TRANSITION is gated. Editing an already-published program
+        // (including re-saving it with published:true unchanged) stays free, or an admin could
+        // never fix a typo without un-publishing first and taking the live page down. Content can
+        // already drift unready after publish via un-gated endpoints (DeleteSessionAsync,
+        // PUT /score-bands) — this was never meant to be airtight, only to catch it at the gate.
+        if (req.Published && program.Status != ProgramStatus.Published)
+        {
+            var readiness = await GetReadinessAsync(id, ct);
+            if (!readiness.Ready)
+                throw new ProgramException(
+                    "Program belum siap diterbitkan. " + string.Join(" ",
+                        readiness.Checks.Where(c => c.Blocking && !c.Passed)
+                                        .Select(c => c.Detail ?? c.Title)), 409);
+        }
 
         var wasPublished = program.Status == ProgramStatus.Published;
         program.Name = req.Name.Trim();
@@ -207,6 +231,173 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         Audit(actor, "batch_deleted", batchId, new { batch.Name });
         await db.SaveChangesAsync(ct);
     }
+
+    // ---------------------------------------------------------------- readiness
+
+    public async Task<ProgramReadinessDto> GetReadinessAsync(Guid programId, CancellationToken ct = default)
+    {
+        var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == programId, ct)
+            ?? throw new ProgramException("Program tidak ditemukan.", 404);
+
+        var sessions = await db.ProgramSessions
+            .Where(s => s.ProgramId == programId)
+            .Select(s => new { s.Id, s.Type, s.Title, s.AssessmentId })
+            .ToListAsync(ct);
+
+        var checks = new List<ReadinessCheckDto>
+        {
+            new("has_sessions", "Program memiliki sesi", sessions.Count > 0, true,
+                sessions.Count == 0 ? "Belum ada sesi pada program ini." : null),
+        };
+
+        // Every attached assessment must actually have questions.
+        var empty = new List<string>();
+        foreach (var s in sessions.Where(s => s.AssessmentId != null))
+            if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == s.AssessmentId, ct))
+                empty.Add(s.Title);
+        checks.Add(new("gating_tests_populated", "Semua tes memiliki soal", empty.Count == 0, true,
+            empty.Count > 0 ? $"Tes tanpa soal: {string.Join(", ", empty)}." : null));
+
+        var final = sessions.FirstOrDefault(s => s.Type == SessionType.FinalAssessment);
+        var finalAssessmentId = final?.AssessmentId;
+        checks.Add(new("final_assessment_present", "Tes akhir terpasang", finalAssessmentId is not null, true,
+            final is null ? "Belum ada sesi tes akhir."
+            : finalAssessmentId is null ? "Sesi tes akhir belum memiliki tes." : null));
+
+        var finalConfig = finalAssessmentId is Guid fid
+            ? AssessmentService.ParseConfig(
+                await db.Assessments.Where(a => a.Id == fid).Select(a => a.Config).FirstAsync(ct))
+            : null;
+
+        checks.Add(FinalFormatCheck(finalConfig));
+        checks.Add(await FinalSectionsCheckAsync(finalAssessmentId, finalConfig, ct));
+        checks.Add(await ScoreBandsCheckAsync(programId, ct));
+
+        checks.Add(new("price_set", "Harga sudah diisi", program.PriceIdr > 0, false,
+            program.PriceIdr > 0 ? null : "Harga masih 0."));
+
+        return new ProgramReadinessDto(checks.All(c => !c.Blocking || c.Passed), checks);
+    }
+
+    /// <summary>
+    /// The declared section layout must BE the TOEFL ITP format. Without this, an operator who
+    /// types 5/4/5 instead of 50/40/50 passes every other check — the raw scores still resolve
+    /// against the 0–50 band table, so nothing fails loudly and every certificate carries a bogus
+    /// ~310 prediction. Checked against the format constants, never against the config itself.
+    /// </summary>
+    private static ReadinessCheckDto FinalFormatCheck(AssessmentConfig? config)
+    {
+        const string key = "final_sections_match_itp";
+        const string title = "Format tes akhir sesuai TOEFL ITP";
+
+        if (config is null)
+            return new(key, title, false, true, "Tes akhir belum terpasang.");
+        if (config.Sections.Count == 0)
+            return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");
+
+        var required = new[]
+        {
+            (Section: QuestionSection.Listening, Questions: ToeflScoring.ListeningQuestions),
+            (Section: QuestionSection.Structure, Questions: ToeflScoring.StructureQuestions),
+            (Section: QuestionSection.Reading,   Questions: ToeflScoring.ReadingQuestions),
+        };
+
+        var problems = new List<string>();
+        foreach (var (section, questions) in required)
+        {
+            var declared = config.Sections.Where(s => s.Section == section).ToList();
+            if (declared.Count == 0)
+                problems.Add($"{section} belum ada (wajib {questions} soal)");
+            else if (declared.Count > 1)
+                problems.Add($"{section} tercantum {declared.Count} kali (wajib sekali, {questions} soal)");
+            else if (declared[0].Questions != questions)
+                problems.Add($"{section} tertulis {declared[0].Questions} soal, wajib {questions}");
+        }
+        foreach (var extra in config.Sections.Select(s => s.Section)
+                     .Where(s => !required.Any(r => r.Section == s)).Distinct())
+            problems.Add($"{extra} bukan bagian TOEFL ITP");
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0
+                ? $"Format TOEFL ITP wajib {ToeflScoring.ListeningQuestions} Listening / "
+                  + $"{ToeflScoring.StructureQuestions} Structure / {ToeflScoring.ReadingQuestions} Reading soal. "
+                  + $"Perbaiki di “Konfigurasi” tes akhir: {string.Join("; ", problems)}."
+                : null);
+    }
+
+    /// <summary>Each configured section must hold exactly the number of questions it declares.</summary>
+    private async Task<ReadinessCheckDto> FinalSectionsCheckAsync(
+        Guid? assessmentId, AssessmentConfig? config, CancellationToken ct)
+    {
+        const string key = "final_sections_populated";
+        const string title = "Bagian tes akhir lengkap";
+
+        if (assessmentId is not Guid id || config is null)
+            return new(key, title, false, true, "Tes akhir belum terpasang.");
+
+        if (config.Sections.Count == 0)
+            return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");
+
+        var problems = new List<string>();
+        foreach (var section in config.Sections)
+        {
+            var actual = await db.AssessmentQuestions
+                .CountAsync(q => q.AssessmentId == id && q.Question.Section == section.Section, ct);
+            if (actual != section.Questions)
+                problems.Add($"{section.Section} {actual}/{section.Questions}");
+        }
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0 ? $"Jumlah soal belum sesuai: {string.Join(", ", problems)}." : null);
+    }
+
+    /// <summary>Every raw score in every ITP section must map exactly once, within its scaled band.</summary>
+    private async Task<ReadinessCheckDto> ScoreBandsCheckAsync(Guid programId, CancellationToken ct)
+    {
+        const string key = "score_bands_complete";
+        const string title = "Tabel konversi skor lengkap";
+
+        var bands = await db.ScoreBandMappings
+            .Where(b => b.ProgramId == programId)
+            .Select(b => new { b.Section, b.MinRaw, b.MaxRaw, b.ScaledScore })
+            .ToListAsync(ct);
+
+        if (bands.Count == 0)
+            return new(key, title, false, true, "Tabel konversi skor belum diisi.");
+
+        var problems = new List<string>();
+        foreach (var (section, maxRaw, scaledMax) in new[]
+        {
+            (QuestionSection.Listening, ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            (QuestionSection.Structure, ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            (QuestionSection.Reading,   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        })
+        {
+            var rows = bands.Where(b => b.Section == section).ToList();
+
+            var missing = Enumerable.Range(0, maxRaw + 1)
+                .Where(raw => !rows.Any(r => raw >= r.MinRaw && raw <= r.MaxRaw))
+                .ToList();
+            if (missing.Count > 0)
+                problems.Add($"{section}: skor {Describe(missing)} belum dipetakan");
+
+            var duplicated = Enumerable.Range(0, maxRaw + 1)
+                .Where(raw => rows.Count(r => raw >= r.MinRaw && raw <= r.MaxRaw) > 1)
+                .ToList();
+            if (duplicated.Count > 0)
+                problems.Add($"{section}: skor {Describe(duplicated)} dipetakan lebih dari sekali");
+
+            var outOfRange = rows.Count(r => !ToeflScoring.IsValidScaled(r.ScaledScore, scaledMax));
+            if (outOfRange > 0)
+                problems.Add($"{section}: {outOfRange} nilai skala di luar {ToeflScoring.ScaledMin}-{scaledMax}");
+        }
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0 ? string.Join("; ", problems) + "." : null);
+    }
+
+    private static string Describe(List<int> missing) =>
+        missing.Count <= 5 ? string.Join(", ", missing) : $"{missing[0]}-{missing[^1]} ({missing.Count} nilai)";
 
     // ---------------------------------------------------------------- enrollment support
 

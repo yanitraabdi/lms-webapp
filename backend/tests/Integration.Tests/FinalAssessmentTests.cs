@@ -78,7 +78,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         Assert.True(result.AutoSubmitted);
         // Answers saved before expiry still count — scored as-of expiry, not discarded.
-        Assert.Equal(c.PerSection, result.SectionScores[nameof(QuestionSection.Listening)]);
+        Assert.Equal(ToeflScoring.ListeningQuestions, result.SectionScores[nameof(QuestionSection.Listening)]);
         Assert.Equal(0, result.SectionScores[nameof(QuestionSection.Structure)]);
     }
 
@@ -169,7 +169,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var state = await Start(c);
         var result = await AnswerEverythingCorrectly(c, state.AttemptId);
 
-        Assert.Equal(c.PerSection * 3, result.Score);
+        Assert.Equal(ToeflScoring.TotalQuestions, result.Score);
         Assert.NotNull(result.TotalScaledScore);
         Assert.True(ToeflScoring.IsValidTotal(result.TotalScaledScore!.Value));
 
@@ -228,7 +228,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var result = await AnswerEverythingCorrectly(c, state.AttemptId);
 
         // The attempt is preserved and scored...
-        Assert.Equal(c.PerSection * 3, result.Score);
+        Assert.Equal(ToeflScoring.TotalQuestions, result.Score);
         // ...but no band is guessed and NO certificate is issued (KAK §9.9.4).
         Assert.Null(result.TotalScaledScore);
         Assert.Null(result.PredictedBand);
@@ -316,7 +316,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     // ================================================================ helpers
 
     private record Ctx(string Token, Guid UserId, string Admin, Guid ProgramId, Guid SessionId,
-                       Guid AssessmentId, int PerSection,
+                       Guid AssessmentId,
                        IReadOnlyDictionary<QuestionSection, List<(Guid Id, int Correct)>> Key);
 
     /// <summary>
@@ -325,85 +325,61 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     /// </summary>
     private async Task<Ctx> SetUp(int? retakeCap = 1, int? audioPlayLimit = null, bool bandsCoverOnlyZero = false)
     {
-        const int perSection = 2;
         var admin = await AdminToken();
         var suffix = Guid.NewGuid().ToString("N")[..8];
 
         var program = await PostJson<AdminProgramDto>("/api/admin/programs", admin, new
         {
             name = $"Final {suffix}", slug = $"final-{suffix}", description = "Uji M4",
-            summary = (string?)null, priceIdr = 100000m, published = true,
+            summary = (string?)null, priceIdr = 100000m, published = false,
         });
 
-        // Author perSection questions per ITP section.
-        var key = new Dictionary<QuestionSection, List<(Guid, int)>>();
-        var ordered = new List<Guid>();
-        foreach (var section in new[] { QuestionSection.Listening, QuestionSection.Structure, QuestionSection.Reading })
-        {
-            var list = new List<(Guid, int)>();
-            for (var i = 0; i < perSection; i++)
-            {
-                var correct = i % 2;
-                var q = await PostJson<AdminQuestionDto>("/api/admin/questions", admin, new
-                {
-                    section = section.ToString(),
-                    prompt = $"{section} {i} {Guid.NewGuid():N}",
-                    choices = new[] { "a", "b" },
-                    correct = new[] { correct },
-                    audioRef = section == QuestionSection.Listening ? "clip.mp3" : null,
-                    passageRef = (string?)null,
-                    tags = (string[]?)null,
-                });
-                list.Add((q.Id, correct));
-                ordered.Add(q.Id);
-            }
-            key[section] = list;
-        }
-
-        var assessment = await PostJson<AdminAssessmentDto>("/api/admin/assessments", admin, new
-        {
-            kind = "Final",
-            title = "Simulasi TOEFL ITP",
-            config = new
-            {
-                passThreshold = 0,
-                retakeCap,
-                proctoringEnabled = true,
-                audioPlayLimit,
-                sections = new[]
-                {
-                    new { section = "Listening", questions = perSection, minutes = 35 },
-                    new { section = "Structure", questions = perSection, minutes = 25 },
-                    new { section = "Reading",   questions = perSection, minutes = 55 },
-                },
-            },
-        });
-
-        (await Authed(HttpMethod.Put, $"/api/admin/assessments/{assessment.Id}/questions", admin,
-            new { questionIdsInOrder = ordered })).EnsureSuccessStatusCode();
+        // A full ITP-format sitting (50/40/50) — readiness refuses to publish anything smaller,
+        // and this file's assertions are about the sitting, not about question authoring.
+        var assessment = await ItpFinal.SeedAsync(factory, retakeCap: retakeCap, audioPlayLimit: audioPlayLimit);
+        var key = assessment.Key;
 
         var session = await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
         {
             type = "FinalAssessment", title = "Tes Akhir", description = (string?)null, orderIndex = 1,
             providerAssetId = (string?)null, durationSeconds = (int?)null,
             scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
-            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.Id,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.AssessmentId,
         });
 
-        // Score bands: full coverage, or (for the fail-loudly test) only raw 0.
-        var bands = new List<object>();
-        foreach (var section in new[] { "Listening", "Structure", "Reading" })
-            for (var raw = 0; raw <= perSection; raw++)
-            {
-                if (bandsCoverOnlyZero && raw > 0) continue;
-                bands.Add(new
-                {
-                    id = Guid.Empty, section, minRaw = raw, maxRaw = raw,
-                    scaledScore = ToeflScoring.ScaledMin + raw, predictedBand = (string?)null,
-                });
-            }
+        // Score bands must cover the FULL ITP raw-score range per section — full coverage so
+        // the program is publishable...
+        var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        };
+        var rows = new List<(string Section, int Raw, int MaxRaw, int ScaledMax)>();
+        foreach (var (section, maxRaw, scaledMax) in sectionSizes)
+            for (var raw = 0; raw <= maxRaw; raw++)
+                rows.Add((section, raw, maxRaw, scaledMax));
+        object BandRow((string Section, int Raw, int MaxRaw, int ScaledMax) r) => new
+        {
+            id = Guid.Empty, section = r.Section, minRaw = r.Raw, maxRaw = r.Raw,
+            scaledScore = ToeflScoring.ScaledMin
+                + (int)Math.Round((double)r.Raw / r.MaxRaw * (r.ScaledMax - ToeflScoring.ScaledMin)),
+            predictedBand = (string?)null,
+        };
         (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
-            new { bands })).EnsureSuccessStatusCode();
+            new { bands = rows.Select(BandRow) })).EnsureSuccessStatusCode();
+
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
+        {
+            name = program.Name, slug = program.Slug, description = program.Description,
+            summary = program.Summary, priceIdr = program.PriceIdr, published = true,
+        })).EnsureSuccessStatusCode();
+
+        // ...then, for the fail-loudly test, drift the table down to only raw 0 post-publish.
+        // Publish gates on readiness; it never re-checks bands an admin edits afterwards.
+        if (bandsCoverOnlyZero)
+            (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
+                new { bands = rows.Where(r => r.Raw == 0).Select(BandRow) })).EnsureSuccessStatusCode();
 
         var (token, userId) = await VerifiedUser();
         var checkout = await Authed(HttpMethod.Post, $"/api/programs/{program.Id}/enroll", token, new { });
@@ -412,7 +388,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         (await _client.PostAsync($"/api/dev/payments/{Uri.EscapeDataString(pay.ProviderRef)}/succeed", null))
             .EnsureSuccessStatusCode();
 
-        return new Ctx(token, userId, admin, program.Id, session.Id, assessment.Id, perSection, key);
+        return new Ctx(token, userId, admin, program.Id, session.Id, assessment.AssessmentId, key);
     }
 
     private async Task<AttemptStateDto> Start(Ctx c)

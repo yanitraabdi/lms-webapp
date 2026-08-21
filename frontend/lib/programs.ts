@@ -183,3 +183,11 @@ export const getAdminAttempt = (t: string, attemptId: string) =>
 
 export const runLiveReminders = (t: string) =>
   api<{ emailsSent: number }>("POST", "/api/admin/live-reminders/run", t, {});
+
+// ---------------------------------------------------------------- A3: publish readiness
+
+export type ProgramReadiness = components["schemas"]["ProgramReadinessDto"];
+export type ReadinessCheck = components["schemas"]["ReadinessCheckDto"];
+
+export const getProgramReadiness = (t: string, programId: string) =>
+  api<ProgramReadiness>("GET", `/api/admin/programs/${programId}/readiness`, t);

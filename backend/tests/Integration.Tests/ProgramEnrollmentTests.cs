@@ -238,7 +238,7 @@ public class ProgramEnrollmentTests(AuthApiFactory factory) : IClassFixture<Auth
         var created = await PostJson<AdminProgramDto>("/api/admin/programs", admin, new
         {
             name = "Program Uji", slug = (string?)null, description = "Uji", summary = (string?)null,
-            priceIdr = 250000m, published = true,
+            priceIdr = 250000m, published = false,
         });
 
         async Task<AdminSessionDto> AddSession(string title, int order) => await PostJson<AdminSessionDto>(

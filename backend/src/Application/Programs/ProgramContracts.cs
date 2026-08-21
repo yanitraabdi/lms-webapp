@@ -110,6 +110,12 @@ public interface ISessionCompletionService
     Task<bool> IsCompleteAsync(Guid userId, Guid sessionId, CancellationToken ct = default);
 }
 
+/// <summary>One publish-readiness condition. Blocking checks gate publishing; others inform.</summary>
+public record ReadinessCheckDto(string Key, string Title, bool Passed, bool Blocking, string? Detail);
+
+/// <summary>Whether a program may be published, and what is still missing if not.</summary>
+public record ProgramReadinessDto(bool Ready, IReadOnlyList<ReadinessCheckDto> Checks);
+
 public interface IProgramAdminService
 {
     Task<IReadOnlyList<AdminProgramDto>> ListAsync(CancellationToken ct = default);
@@ -128,6 +134,12 @@ public interface IProgramAdminService
     Task<AdminBatchDto> CreateBatchAsync(Guid actor, Guid programId, UpsertBatchRequest req, CancellationToken ct = default);
     Task UpdateBatchAsync(Guid actor, Guid batchId, UpsertBatchRequest req, CancellationToken ct = default);
     Task DeleteBatchAsync(Guid actor, Guid batchId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Content-completeness of a program. Publishing is gated on this so an incomplete score->band
+    /// table fails here rather than after a learner has already sat the final assessment.
+    /// </summary>
+    Task<ProgramReadinessDto> GetReadinessAsync(Guid programId, CancellationToken ct = default);
 
     /// <summary>Support path: revoke access without deleting any learner data (GR-7).</summary>
     Task RevokeEnrollmentAsync(Guid actor, Guid enrollmentId, CancellationToken ct = default);

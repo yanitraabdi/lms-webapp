@@ -64,9 +64,21 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             mapped.Count, mapped, attachedSessionId, attemptCount);
     }
 
+    /// <summary>
+    /// A retake cap of 0 would make <c>used &gt;= cap</c> true before the first attempt, locking the
+    /// test — and with it the linear program — permanently. Unlimited is expressed as null.
+    /// </summary>
+    private static void Validate(UpsertAssessmentRequest req)
+    {
+        if (req.Config.RetakeCap is int cap && cap < 1)
+            throw new AssessmentException(
+                "Batas percobaan minimal 1. Kosongkan untuk tanpa batas.");
+    }
+
     public async Task<AdminAssessmentDto> CreateAsync(
         Guid actor, UpsertAssessmentRequest req, CancellationToken ct = default)
     {
+        Validate(req);
         var assessment = new Assessment
         {
             Id = Guid.CreateVersion7(),
@@ -82,6 +94,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
 
     public async Task UpdateAsync(Guid actor, Guid id, UpsertAssessmentRequest req, CancellationToken ct = default)
     {
+        Validate(req);
         var a = await db.Assessments.FirstOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
         a.Kind = Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) ? k : a.Kind;

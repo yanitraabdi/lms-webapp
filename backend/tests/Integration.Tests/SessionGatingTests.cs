@@ -7,6 +7,7 @@ using Academy.Application.Assessments;
 using Academy.Application.Auth;
 using Academy.Application.Billing;
 using Academy.Application.Programs;
+using Academy.Domain;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
 using Academy.Infrastructure.Programs;
@@ -136,6 +137,34 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var view = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.Session1}/assessment", c.Token);
         Assert.False(view.CanAttempt);
         Assert.Equal(1, view.AttemptsUsed);
+    }
+
+    [Fact]
+    public async Task A_retake_cap_of_zero_is_refused_by_the_admin_api()
+    {
+        var admin = await AdminToken();
+
+        // cap 0 would make `used >= cap` true before the first attempt: the gating test could
+        // never be passed and the linear lock would jam for every learner on the program.
+        var res = await Authed(HttpMethod.Post, "/api/admin/assessments", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 1, retakeCap = 0, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+
+        // …and the same value cannot be smuggled in through an update either.
+        var ok = await PostJson<AdminAssessmentDto>("/api/admin/assessments", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 1, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        var update = await Authed(HttpMethod.Put, $"/api/admin/assessments/{ok.Id}", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 1, retakeCap = 0, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
     }
 
     [Fact]
@@ -294,7 +323,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var program = await PostJson<AdminProgramDto>("/api/admin/programs", admin, new
         {
             name = $"Program {suffix}", slug = $"prog-{suffix}", description = "Uji M3",
-            summary = (string?)null, priceIdr = 100000m, published = true,
+            summary = (string?)null, priceIdr = 100000m, published = false,
         });
 
         var sessionIds = new List<Guid>();
@@ -309,6 +338,46 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
             });
             sessionIds.Add(s.Id);
         }
+
+        // These three sessions are what each test drives; content-completeness (needed to
+        // publish, needed to enroll) is satisfied with a throwaway final-assessment session
+        // and a full score-band table, same as ProgramReadinessTests.BuildReadyProgram.
+        var finalAssessment = await ItpFinal.SeedAsync(factory, "Tes akhir");
+        await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
+        {
+            type = "FinalAssessment", title = "Sesi Akhir", description = (string?)null, orderIndex = 4,
+            providerAssetId = (string?)null, durationSeconds = (int?)null,
+            scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = finalAssessment.AssessmentId,
+        });
+
+        // Score bands must cover the FULL ITP raw-score range per section (not just the toy
+        // question count above) — the readiness check tests against the fixed ITP format sizes.
+        var bands = new List<object>();
+        foreach (var (section, maxRaw, scaledMax) in new[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        })
+            for (var raw = 0; raw <= maxRaw; raw++)
+            {
+                var scaled = ToeflScoring.ScaledMin
+                    + (int)Math.Round((double)raw / maxRaw * (scaledMax - ToeflScoring.ScaledMin));
+                bands.Add(new
+                {
+                    id = Guid.Empty, section, minRaw = raw, maxRaw = raw,
+                    scaledScore = scaled, predictedBand = (string?)null,
+                });
+            }
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
+            new { bands })).EnsureSuccessStatusCode();
+
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
+        {
+            name = program.Name, slug = program.Slug, description = program.Description,
+            summary = program.Summary, priceIdr = program.PriceIdr, published = true,
+        })).EnsureSuccessStatusCode();
 
         var (token, userId) = await VerifiedUser();
         var checkout = await Authed(HttpMethod.Post, $"/api/programs/{program.Id}/enroll", token, new { });

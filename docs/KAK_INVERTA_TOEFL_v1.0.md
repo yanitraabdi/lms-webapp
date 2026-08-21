@@ -546,6 +546,16 @@ All administrative capability is required in v1 — operations must not depend o
 | **Attempts** | List, filter by flagged; inspect answers and the proctor event trail; **reinstate**. |
 | **Audit** | Every administrative mutation writes an `audit_logs` row with actor, action, target, metadata. |
 
+> **Delivered 2026-08-20 (A3).** Assessment authoring and score-conversion editing originally
+> shipped as API-only — the admin UI for them was added by the A3 project, together with a
+> publish-blocking readiness check. See
+> `docs/superpowers/specs/2026-08-20-admin-content-authoring-design.md`.
+>
+> Still API-only after A3, and not editable from any admin screen: the proctoring on/off flag
+> and the audio play limit (both written as fixed values when an assessment is created), and
+> attaching listening audio to a question (the question form always posts `audioRef: null`).
+> The table rows above describe the capability, not the surface that exposes it.
+
 Publishing a program triggers on-demand revalidation of its static landing page.
 
 ## 9.13 Data model

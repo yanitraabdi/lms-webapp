@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Academy.Application.Auth;
 using Academy.Application.Billing;
 using Academy.Application.Programs;
+using Academy.Domain;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -271,7 +272,7 @@ public class LiveSessionAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var program = await PostJson<AdminProgramDto>("/api/admin/programs", admin, new
         {
             name = $"M5 {suffix}", slug = $"m5-{suffix}", description = "Uji M5",
-            summary = (string?)null, priceIdr = 100000m, published = true,
+            summary = (string?)null, priceIdr = 100000m, published = false,
         });
 
         var live = await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
@@ -283,26 +284,46 @@ public class LiveSessionAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             assessmentId = (Guid?)null,
         });
 
-        var question = await PostJson<QuestionIdDto>("/api/admin/questions", admin, new
-        {
-            section = "Reading", prompt = $"Q {suffix}", choices = new[] { "a", "b" },
-            correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
-        });
-        var assessment = await PostJson<AssessmentIdDto>("/api/admin/assessments", admin, new
-        {
-            kind = "Final", title = "Tes Akhir",
-            config = new { passThreshold = 0, retakeCap = 1, proctoringEnabled = true, sections = Array.Empty<object>() },
-        });
-        (await Authed(HttpMethod.Put, $"/api/admin/assessments/{assessment.Id}/questions", admin,
-            new { questionIdsInOrder = new[] { question.Id } })).EnsureSuccessStatusCode();
+        // A content-complete final assessment (all three sections populated, full score bands)
+        // is needed only because publishing (and therefore enrolling) now requires readiness —
+        // the tests in this file don't otherwise exercise the final assessment itself.
+        var assessment = await ItpFinal.SeedAsync(factory, "Tes Akhir");
 
         var next = await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new
         {
             type = "FinalAssessment", title = "Tes Akhir", description = (string?)null, orderIndex = 2,
             providerAssetId = (string?)null, durationSeconds = (int?)null,
             scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
-            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.Id,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = assessment.AssessmentId,
         });
+
+        // Score bands must cover the FULL ITP raw-score range per section (not just the toy
+        // question count above) — the readiness check tests against the fixed ITP format sizes.
+        var bands = new List<object>();
+        foreach (var (section, maxRaw, scaledMax) in new[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        })
+            for (var raw = 0; raw <= maxRaw; raw++)
+            {
+                var scaled = ToeflScoring.ScaledMin
+                    + (int)Math.Round((double)raw / maxRaw * (scaledMax - ToeflScoring.ScaledMin));
+                bands.Add(new
+                {
+                    id = Guid.Empty, section, minRaw = raw, maxRaw = raw,
+                    scaledScore = scaled, predictedBand = (string?)null,
+                });
+            }
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
+            new { bands })).EnsureSuccessStatusCode();
+
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
+        {
+            name = program.Name, slug = program.Slug, description = program.Description,
+            summary = program.Summary, priceIdr = program.PriceIdr, published = true,
+        })).EnsureSuccessStatusCode();
 
         var list = new List<Learner>();
         for (var i = 0; i < learners; i++)
@@ -316,7 +337,7 @@ public class LiveSessionAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             list.Add(new Learner(token, userId, await EmailOf(userId)));
         }
 
-        return new Ctx(admin, program.Id, live.Id, live.Title, next.Id, assessment.Id, list);
+        return new Ctx(admin, program.Id, live.Id, live.Title, next.Id, assessment.AssessmentId, list);
     }
 
     private record QuestionIdDto(Guid Id);
