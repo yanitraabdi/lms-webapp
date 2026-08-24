@@ -104,7 +104,14 @@ public class MediaDeliveryTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     [Fact]
     public async Task A_traversal_key_is_refused()
     {
-        var res = await _client.GetAsync("/api/media/..%2F..%2Fetc%2Fpasswd?exp=99999999999&sig=deadbeef");
+        // Signed with the real key, so the 404 can only come from key validation. A bogus
+        // signature would make this test pass even if IsValidKey were deleted from the route.
+        const string key = "../../etc/passwd";
+        const long exp = 99999999999;
+        var sig = Signer().SignatureFor(key, exp);
+
+        var res = await _client.GetAsync($"/api/media/..%2F..%2Fetc%2Fpasswd?exp={exp}&sig={sig}");
+
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 

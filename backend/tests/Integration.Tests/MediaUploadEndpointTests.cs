@@ -6,6 +6,7 @@ using Academy.Application.Auth;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Media;
 using Academy.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -80,6 +81,27 @@ public class MediaUploadEndpointTests(AuthApiFactory factory) : IClassFixture<Au
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         // Assert the message too: a bare 400 would also be satisfied by a binding failure.
         Assert.Contains("Berkas audio kosong", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task An_oversize_upload_is_refused_with_the_admin_facing_message()
+    {
+        // The endpoint path is the interesting half: DisableRequestSizeLimitAttribute and
+        // FormOptions.MultipartBodyLengthLimit together decide whether the admin gets this
+        // Indonesian problem-details message or an English framework InvalidDataException.
+        // 1 KB keeps the payload tiny; the production ceiling behaves the same way.
+        using var small = factory.WithWebHostBuilder(b => b.UseSetting("Media:MaxUploadBytes", "1024"));
+        var client = small.CreateClient();
+
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/admin/media/audio")
+        {
+            Content = Form(new byte[2048], "audio/mpeg", "big.mp3"),
+            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", await AdminToken()) },
+        };
+        var res = await client.SendAsync(req);
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("Berkas audio terlalu besar. Maksimum 1 KB.", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]

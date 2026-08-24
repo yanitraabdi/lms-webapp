@@ -360,11 +360,14 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
     ///
     /// A reference alone is not enough: an API-set ref, a database restored against a different
     /// bucket, or a storage lifecycle rule all leave a ref pointing at nothing, and the learner
-    /// gets the same dead player. So every ref is resolved against <see cref="IObjectStorage"/>.
+    /// gets the same dead player. So every ref is resolved against <see cref="IObjectStorage"/> —
+    /// including the per-question refs on top of a section recording, because
+    /// <see cref="AudioResolution.StorageKey"/> gives the question's clip precedence at exam time:
+    /// one dangling override on an otherwise good section recording still 404s mid-exam.
     ///
     /// COST: this is an admin-triggered, non-hot path, and at most 50 existence checks run
     /// (one per Listening question, deduplicated) — free against LocalObjectStorage, which is a
-    /// File.Exists. When Storage:Provider swaps to R2 each one becomes a network round trip, so
+    /// File.Exists. Against a remote store each one becomes a network round trip, so
     /// whoever does that swap should either batch them or list the prefix once instead.
     /// </summary>
     private async Task<ReadinessCheckDto> ListeningAudioCheckAsync(
@@ -380,21 +383,13 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         if (listening is null)
             return new(key, title, true, true, null);          // no Listening section, nothing to play
 
-        // One recording covers the whole section — but only if the file is actually there.
-        if (!string.IsNullOrWhiteSpace(listening.AudioRef))
-            return await StoredAsync(listening.AudioRef, ct)
-                ? new(key, title, true, true, null)
-                : new(key, title, false, true,
-                    $"Rekaman satu bagian listening tidak ditemukan di penyimpanan: {listening.AudioRef}. Unggah ulang rekamannya.");
+        // A section recording covers every question that has no clip of its own — but a question
+        // that DOES carry one overrides it, so both are checked on both paths.
+        var hasSectionRef = !string.IsNullOrWhiteSpace(listening.AudioRef);
 
         // AudioResolution treats blank as absent (IsNullOrWhiteSpace), so the check must too —
         // the API persists a trimmed string and can store "". Both tests are inlined because EF
         // Core cannot translate a helper method or IsNullOrWhiteSpace into SQL here.
-        var missing = await db.AssessmentQuestions
-            .CountAsync(q => q.AssessmentId == id
-                             && q.Question.Section == QuestionSection.Listening
-                             && (q.Question.AudioRef == null || q.Question.AudioRef == ""), ct);
-
         var refs = await db.AssessmentQuestions
             .Where(q => q.AssessmentId == id
                         && q.Question.Section == QuestionSection.Listening
@@ -407,12 +402,26 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         foreach (var r in refs)
             if (!await StoredAsync(r, ct)) unreachable.Add(r);
 
-        // The two failures need different actions, so they are reported separately.
+        // Three failures, three different actions for the admin, so they are reported separately.
         var problems = new List<string>();
-        if (missing > 0)
-            problems.Add($"{missing} soal listening belum memiliki audio. Unggah audio per soal, atau satu rekaman untuk seluruh bagian.");
-        if (unreachable.Count > 0)
-            problems.Add($"{unreachable.Count} berkas audio listening tidak ditemukan di penyimpanan: {Describe(unreachable)}. Unggah ulang audionya.");
+        if (hasSectionRef)
+        {
+            if (!await StoredAsync(listening.AudioRef!, ct))
+                problems.Add($"Rekaman satu bagian listening tidak ditemukan di penyimpanan: {listening.AudioRef}. Unggah ulang rekamannya.");
+            if (unreachable.Count > 0)
+                problems.Add($"{unreachable.Count} soal listening menimpa rekaman bagian dengan audio yang tidak ditemukan di penyimpanan: {Describe(unreachable)}. Unggah ulang audio soal tersebut, atau kosongkan agar memakai rekaman bagian.");
+        }
+        else
+        {
+            var missing = await db.AssessmentQuestions
+                .CountAsync(q => q.AssessmentId == id
+                                 && q.Question.Section == QuestionSection.Listening
+                                 && (q.Question.AudioRef == null || q.Question.AudioRef == ""), ct);
+            if (missing > 0)
+                problems.Add($"{missing} soal listening belum memiliki audio. Unggah audio per soal, atau satu rekaman untuk seluruh bagian.");
+            if (unreachable.Count > 0)
+                problems.Add($"{unreachable.Count} berkas audio listening tidak ditemukan di penyimpanan: {Describe(unreachable)}. Unggah ulang audionya.");
+        }
 
         return new(key, title, problems.Count == 0, true,
             problems.Count > 0 ? string.Join(" ", problems) : null);

@@ -410,6 +410,50 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.False(r.Ready);
     }
 
+    [Fact]
+    public async Task A_dangling_question_override_on_top_of_a_good_section_recording_blocks_publishing()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+        await ClearListeningAudioAsync(program);
+
+        // The section recording is perfect — but AudioResolution gives a question's own clip
+        // precedence over it, so ONE dangling override still 404s that question mid-exam.
+        const string section = "audio/override-section.mp3";
+        const string phantom = "audio/override-never-uploaded.mp3";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var final = await FinalOf(db, program);
+
+            var config = JsonSerializer.Deserialize<AssessmentConfig>(final.Config, Json)!;
+            config.Sections.First(s => s.Section == QuestionSection.Listening).AudioRef = section;
+            final.Config = JsonSerializer.Serialize(config, Json);
+            await ItpFinal.StoreAsync(scope.ServiceProvider.GetRequiredService<IObjectStorage>(), section);
+
+            var questionId = await db.AssessmentQuestions
+                .Where(aq => aq.AssessmentId == final.Id && aq.Question.Section == QuestionSection.Listening)
+                .Select(aq => aq.QuestionId)
+                .FirstAsync();
+            (await db.Questions.FirstAsync(q => q.Id == questionId)).AudioRef = phantom;
+            await db.SaveChangesAsync();
+        }
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+        var check = Check(r, "listening_audio_present");
+
+        Assert.False(check.Passed);
+        Assert.True(check.Blocking);
+        Assert.Contains(phantom, check.Detail);
+        // Its own wording: the section recording is fine, one question points at nothing.
+        Assert.Contains("menimpa rekaman bagian", check.Detail);
+        Assert.False(r.Ready);
+
+        var publish = await Publish(admin, program, published: true);
+        Assert.Equal(HttpStatusCode.Conflict, publish.StatusCode);
+        Assert.Contains(phantom, await publish.Content.ReadAsStringAsync());
+    }
+
     private async Task<HttpResponseMessage> Publish(string admin, Guid program, bool published)
     {
         var p = (await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin))

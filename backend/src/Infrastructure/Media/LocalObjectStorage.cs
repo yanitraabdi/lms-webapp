@@ -5,7 +5,7 @@ namespace Academy.Infrastructure.Media;
 
 /// <summary>
 /// Stores objects as files beneath <see cref="MediaOptions.Root"/>. Swapped for an R2 adapter
-/// when Storage:Provider = "r2".
+/// when an R2 adapter is written.
 /// </summary>
 public partial class LocalObjectStorage(MediaOptions options) : IObjectStorage
 {

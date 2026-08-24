@@ -64,8 +64,8 @@ public static class DependencyInjection
 
         // Player / progress / certificates (M4)
         services.AddSingleton(VideoOptionsFactory.Build(configuration));
-        // Media storage (audio). LocalObjectStorage is the dev-sim; swap to an R2 adapter
-        // when Storage:Provider = "r2".
+        // Media storage (audio). LocalObjectStorage is the dev-sim; when an R2 adapter exists,
+        // swap this registration (and add a config switch then, not before).
         services.AddSingleton(MediaOptionsFactory.Build(configuration));
         services.AddSingleton<IObjectStorage, LocalObjectStorage>();
         services.AddSingleton<MediaSigner>();

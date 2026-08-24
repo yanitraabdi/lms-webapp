@@ -11,9 +11,6 @@ public class MediaOptions
     public const string StorageSection = "Storage";
     public const string MediaSection = "Media";
 
-    /// <summary>Active object-storage provider: "local" (disk dev-sim) or "r2" (later).</summary>
-    public string Provider { get; set; } = "local";
-
     /// <summary>Filesystem root for the local provider. Mounted as a docker volume.</summary>
     public string Root { get; set; } = "/data/media";
 

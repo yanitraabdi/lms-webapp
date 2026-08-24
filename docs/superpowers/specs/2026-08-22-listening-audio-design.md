@@ -90,7 +90,7 @@ when there is a concrete reason to, not before.
 
 Writes beneath a configured root, following the dev-sim pattern the other providers use.
 
-- Config: `Storage:Provider` (default `"local"`), `Storage:Root` (default `/data/media`).
+- Config: `Storage:Root` (default `/data/media`). No provider switch until a second provider exists.
 - Keys are generated server-side as `audio/{uuidv7}{ext}` — the client never chooses a key.
 - **Path traversal is refused.** A key must match `^[a-z0-9]+/[A-Za-z0-9._-]+$`; anything
   containing `..`, a leading `/`, a backslash, or a rooted path is rejected before it
