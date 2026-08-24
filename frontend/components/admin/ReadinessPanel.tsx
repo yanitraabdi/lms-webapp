@@ -11,6 +11,7 @@ const FIX: Record<string, (p: AdminProgram) => { href: string; label: string } |
   gating_tests_populated: () => null,
   final_sections_populated: () => null,
   final_sections_match_itp: () => null,
+  listening_audio_present: () => null,
   has_sessions: () => null,
   final_assessment_present: () => null,
   price_set: () => null,

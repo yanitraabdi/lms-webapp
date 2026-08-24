@@ -271,6 +271,7 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
 
         checks.Add(FinalFormatCheck(finalConfig));
         checks.Add(await FinalSectionsCheckAsync(finalAssessmentId, finalConfig, ct));
+        checks.Add(await ListeningAudioCheckAsync(finalAssessmentId, finalConfig, ct));
         checks.Add(await ScoreBandsCheckAsync(programId, ct));
 
         checks.Add(new("price_set", "Harga sudah diisi", program.PriceIdr > 0, false,
@@ -349,6 +350,39 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
 
         return new(key, title, problems.Count == 0, true,
             problems.Count > 0 ? $"Jumlah soal belum sesuai: {string.Join(", ", problems)}." : null);
+    }
+
+    /// <summary>
+    /// A Listening section must be playable before the program can be published. Either the
+    /// section carries one recording, or every Listening question carries its own clip —
+    /// otherwise a learner hits a 400 mid-exam, which is exactly the failure readiness exists
+    /// to move forward in time.
+    /// </summary>
+    private async Task<ReadinessCheckDto> ListeningAudioCheckAsync(
+        Guid? assessmentId, AssessmentConfig? config, CancellationToken ct)
+    {
+        const string key = "listening_audio_present";
+        const string title = "Audio listening tersedia";
+
+        if (assessmentId is not Guid id || config is null)
+            return new(key, title, false, true, "Tes akhir belum terpasang.");
+
+        var listening = config.Sections.FirstOrDefault(s => s.Section == QuestionSection.Listening);
+        if (listening is null)
+            return new(key, title, true, true, null);          // no Listening section, nothing to play
+
+        if (!string.IsNullOrWhiteSpace(listening.AudioRef))
+            return new(key, title, true, true, null);          // one recording covers the whole section
+
+        var missing = await db.AssessmentQuestions
+            .CountAsync(q => q.AssessmentId == id
+                             && q.Question.Section == QuestionSection.Listening
+                             && q.Question.AudioRef == null, ct);
+
+        return new(key, title, missing == 0, true,
+            missing > 0
+                ? $"{missing} soal listening belum memiliki audio. Unggah audio per soal, atau satu rekaman untuk seluruh bagian."
+                : null);
     }
 
     /// <summary>Every raw score in every ITP section must map exactly once, within its scaled band.</summary>

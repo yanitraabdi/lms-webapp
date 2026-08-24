@@ -263,6 +263,76 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.Equal("Deskripsi diperbarui", after.Description);
     }
 
+    [Fact]
+    public async Task Listening_questions_without_audio_block_publishing()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+
+        // Strip the audio from this program's Listening questions ONLY. Scoping matters: the
+        // integration suite shares one database, and a global
+        // `db.Questions.Where(q => q.Section == Listening)` would silently break other tests.
+        await ClearListeningAudioAsync(program);
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+        var check = r.Checks.Single(c => c.Key == "listening_audio_present");
+
+        Assert.False(check.Passed);
+        Assert.True(check.Blocking);
+        Assert.False(r.Ready);
+        Assert.Equal(HttpStatusCode.Conflict, (await Publish(admin, program, published: true)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Section_level_audio_alone_satisfies_the_check()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+
+        // No question has its own clip …
+        await ClearListeningAudioAsync(program);
+
+        // … but the section carries one recording, which covers all of them.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var final = await FinalOf(db, program);
+
+            var config = JsonSerializer.Deserialize<AssessmentConfig>(final.Config, Json)!;
+            config.Sections.First(s => s.Section == QuestionSection.Listening).AudioRef = "audio/section.mp3";
+            final.Config = JsonSerializer.Serialize(config, Json);
+
+            await db.SaveChangesAsync();
+        }
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+
+        Assert.True(Check(r, "listening_audio_present").Passed);
+        Assert.True(r.Ready);
+        (await Publish(admin, program, published: true)).EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task A_final_without_a_listening_section_is_unaffected()
+    {
+        var admin = await AdminToken();
+        var program = await NewProgram(admin);
+
+        // A final assessment with no Listening section at all: nothing to play, nothing to check.
+        var final = await NewAssessment(admin, "Final", new
+        {
+            passThreshold = 0, retakeCap = 1, proctoringEnabled = false,
+            sections = new[] { new { section = "Reading", questions = 1, minutes = 55 } },
+        });
+        var q = await NewQuestion(admin, "Reading");
+        await SetQuestions(admin, final, [q]);
+        await NewSession(admin, program, "FinalAssessment", 1, final);
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+
+        Assert.True(Check(r, "listening_audio_present").Passed);
+    }
+
     private async Task<HttpResponseMessage> Publish(string admin, Guid program, bool published)
     {
         var p = (await AuthedGet<List<AdminProgramDto>>("/api/admin/programs", admin))
@@ -373,6 +443,37 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         });
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<AdminSessionDto>(Json))!.Id;
+    }
+
+    /// <summary>The final assessment attached to one program's sessions.</summary>
+    private static async Task<Assessment> FinalOf(AppDbContext db, Guid program)
+    {
+        var ids = await db.ProgramSessions
+            .Where(s => s.ProgramId == program && s.AssessmentId != null)
+            .Select(s => s.AssessmentId!.Value)
+            .ToListAsync();
+        return await db.Assessments.FirstAsync(a => ids.Contains(a.Id) && a.Kind == AssessmentKind.Final);
+    }
+
+    /// <summary>
+    /// Clears AudioRef on the Listening questions of ONE program's final assessment.
+    /// Scoped deliberately: the integration suite shares a database, so a query filtered only
+    /// by section would strip audio from other tests' fixtures too.
+    /// </summary>
+    private async Task ClearListeningAudioAsync(Guid program)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var final = await FinalOf(db, program);
+
+        var ids = await db.AssessmentQuestions
+            .Where(aq => aq.AssessmentId == final.Id && aq.Question.Section == QuestionSection.Listening)
+            .Select(aq => aq.QuestionId)
+            .ToListAsync();
+
+        var questions = await db.Questions.Where(q => ids.Contains(q.Id)).ToListAsync();
+        foreach (var q in questions) q.AudioRef = null;
+        await db.SaveChangesAsync();
     }
 
     private record AssessmentIdDto(Guid Id);
