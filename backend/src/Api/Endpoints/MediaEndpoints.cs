@@ -44,8 +44,13 @@ public static class MediaEndpoints
             .RequireAuthorization("Admin")
             .WithTags("Media")
             .DisableAntiforgery()          // required for IFormFile binding in minimal APIs
-            // our own MaxUploadBytes is the limit; Kestrel's default is 30 MB. There is no
-            // minimal-API DisableRequestSizeLimit(), so the MVC metadata carries the same meaning.
+            // Kestrel's 30 MB default would reject a legitimate section recording before the
+            // handler runs, and MaxUploadBytes can only be checked after model binding. There is
+            // no minimal-API DisableRequestSizeLimit(), so the MVC metadata carries the same
+            // meaning. What bounds this route is FormOptions.MultipartBodyLengthLimit (128 MB by
+            // default) and nothing else: it is admin-only but NOT rate-limited, so an authenticated
+            // admin can stream up to that ceiling, fully buffered, before MaxUploadBytes is read.
+            // Acceptable for the admin surface; do not copy it onto an anonymous route.
             .WithMetadata(new DisableRequestSizeLimitAttribute());
 
         return app;

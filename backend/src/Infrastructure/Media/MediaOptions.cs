@@ -26,7 +26,9 @@ public class MediaOptions
     /// partway through. Two hours exceeds the longest ITP section (Reading, 55 minutes).</summary>
     public int UrlTtlMinutes { get; set; } = 120;
 
-    /// <summary>Largest accepted upload. A 35-minute MP3 is roughly 30 MB.</summary>
+    /// <summary>Largest accepted upload. A 35-minute MP3 is roughly 30 MB. Keep this below
+    /// FormOptions.MultipartBodyLengthLimit (128 MB by default): above that the framework throws
+    /// InvalidDataException in English before the handler can return the Indonesian message.</summary>
     public long MaxUploadBytes { get; set; } = 104_857_600;
 }
 

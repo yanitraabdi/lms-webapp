@@ -14,13 +14,16 @@ type SectionRow = {
   section: NonNullable<NonNullable<AssessmentConfig["sections"]>[number]["section"]>;
   questions: number;
   minutes: number;
+  /** Whole-section recording, set on /admin/assessments/{id}. Carried through untouched here —
+   *  the whole config is replaced on save, so dropping it would delete the recording. */
+  audioRef: string | null;
 };
 
 /** ITP layout (KAK §9.7.1) — the starting point for a new final assessment. */
 const DEFAULT_SECTIONS: SectionRow[] = [
-  { section: "Listening", questions: 50, minutes: 35 },
-  { section: "Structure", questions: 40, minutes: 25 },
-  { section: "Reading", questions: 50, minutes: 55 },
+  { section: "Listening", questions: 50, minutes: 35, audioRef: null },
+  { section: "Structure", questions: 40, minutes: 25, audioRef: null },
+  { section: "Reading", questions: 50, minutes: 55, audioRef: null },
 ];
 
 /**
@@ -65,7 +68,14 @@ export function GatingTestEditor({
           // into the config as if an operator had chosen it).
           setSections(DEFAULT_SECTIONS.map((d) => {
             const found = saved.find((s) => s.section === d.section);
-            return found ? { ...d, questions: num(found.questions ?? 0), minutes: num(found.minutes ?? 0) } : d;
+            return found
+              ? {
+                  ...d,
+                  questions: num(found.questions ?? 0),
+                  minutes: num(found.minutes ?? 0),
+                  audioRef: found.audioRef ?? null,
+                }
+              : d;
           }));
           const stray = saved
             .filter((s) => !DEFAULT_SECTIONS.some((d) => d.section === s.section))
