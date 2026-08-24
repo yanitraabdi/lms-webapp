@@ -22,6 +22,161 @@ namespace Academy.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Academy.Domain.Entities.Assessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Config")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("config");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assessments");
+
+                    b.ToTable("assessments", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.AssessmentQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assessment_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_index");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("question_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assessment_questions");
+
+                    b.HasIndex("QuestionId")
+                        .HasDatabaseName("ix_assessment_questions_question_id");
+
+                    b.HasIndex("AssessmentId", "OrderIndex")
+                        .IsUnique()
+                        .HasDatabaseName("ix_assessment_questions_assessment_id_order_index");
+
+                    b.ToTable("assessment_questions", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Attempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("answers");
+
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assessment_id");
+
+                    b.Property<bool>("AutoSubmitted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_submitted");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("MaxScore")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_score");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("passed");
+
+                    b.Property<bool>("ProctorFlagged")
+                        .HasColumnType("boolean")
+                        .HasColumnName("proctor_flagged");
+
+                    b.Property<bool>("Reinstated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("reinstated");
+
+                    b.Property<string>("SectionScores")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("section_scores");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<int>("TotalScore")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_score");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_attempts");
+
+                    b.HasIndex("AssessmentId")
+                        .HasDatabaseName("ix_attempts_assessment_id");
+
+                    b.HasIndex("UserId", "AssessmentId")
+                        .HasDatabaseName("ix_attempts_user_id_assessment_id");
+
+                    b.ToTable("attempts", (string)null);
+                });
+
             modelBuilder.Entity("Academy.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -189,6 +344,10 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
                     b.PrimitiveCollection<string>("CompletedModuleIds")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -202,13 +361,33 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("issued_at");
 
-                    b.Property<Guid>("LevelId")
+                    b.Property<Guid?>("LevelId")
                         .HasColumnType("uuid")
                         .HasColumnName("level_id");
 
                     b.Property<string>("PdfUrl")
                         .HasColumnType("text")
                         .HasColumnName("pdf_url");
+
+                    b.Property<string>("PredictedBand")
+                        .HasColumnType("text")
+                        .HasColumnName("predicted_band");
+
+                    b.Property<Guid?>("ProgramId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("program_id");
+
+                    b.Property<string>("ScaledScores")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("scaled_scores");
+
+                    b.Property<string>("SectionScores")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("section_scores");
+
+                    b.Property<int?>("TotalScaledScore")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_scaled_score");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -226,8 +405,14 @@ namespace Academy.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_certificates");
 
+                    b.HasIndex("AttemptId")
+                        .HasDatabaseName("ix_certificates_attempt_id");
+
                     b.HasIndex("LevelId")
                         .HasDatabaseName("ix_certificates_level_id");
+
+                    b.HasIndex("ProgramId")
+                        .HasDatabaseName("ix_certificates_program_id");
 
                     b.HasIndex("VerificationCode")
                         .IsUnique()
@@ -235,7 +420,11 @@ namespace Academy.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "LevelId")
                         .IsUnique()
-                        .HasDatabaseName("ix_certificates_user_id_level_id");
+                        .HasDatabaseName("ix_certificates_user_id_level_id")
+                        .HasFilter("level_id IS NOT NULL");
+
+                    b.HasIndex("UserId", "ProgramId")
+                        .HasDatabaseName("ix_certificates_user_id_program_id");
 
                     b.ToTable("certificates", (string)null);
                 });
@@ -273,6 +462,69 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasName("pk_contact_submissions");
 
                     b.ToTable("contact_submissions", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Enrollment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AmountPaidIdr")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount_paid_idr");
+
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("EnrolledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enrolled_at");
+
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("program_id");
+
+                    b.Property<string>("ProviderRef")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_ref");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_enrollments");
+
+                    b.HasIndex("BatchId")
+                        .HasDatabaseName("ix_enrollments_batch_id");
+
+                    b.HasIndex("ProgramId")
+                        .HasDatabaseName("ix_enrollments_program_id");
+
+                    b.HasIndex("ProviderRef")
+                        .HasDatabaseName("ix_enrollments_provider_ref");
+
+                    b.HasIndex("UserId", "ProgramId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_enrollments_user_id_program_id");
+
+                    b.ToTable("enrollments", (string)null);
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.FaqItem", b =>
@@ -394,6 +646,52 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_levels_slug");
 
                     b.ToTable("levels", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.LiveAttendance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Attended")
+                        .HasColumnType("boolean")
+                        .HasColumnName("attended");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("MarkedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("marked_by_user_id");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_live_attendances");
+
+                    b.HasIndex("MarkedByUserId")
+                        .HasDatabaseName("ix_live_attendances_marked_by_user_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_live_attendances_user_id");
+
+                    b.HasIndex("SessionId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_live_attendances_session_id_user_id");
+
+                    b.ToTable("live_attendances", (string)null);
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.Module", b =>
@@ -926,6 +1224,287 @@ namespace Academy.Infrastructure.Persistence.Migrations
                     b.ToTable("plans", (string)null);
                 });
 
+            modelBuilder.Entity("Academy.Domain.Entities.ProctorEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<string>("ClientMeta")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("client_meta");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_proctor_events");
+
+                    b.HasIndex("AttemptId", "OccurredAt")
+                        .HasDatabaseName("ix_proctor_events_attempt_id_occurred_at");
+
+                    b.ToTable("proctor_events", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Program", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("PriceIdr")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("price_idr");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text")
+                        .HasColumnName("summary");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_programs");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_programs_slug");
+
+                    b.ToTable("programs", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.ProgramBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("program_id");
+
+                    b.Property<DateTimeOffset>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_program_batches");
+
+                    b.HasIndex("ProgramId", "StartDate")
+                        .HasDatabaseName("ix_program_batches_program_id_start_date");
+
+                    b.ToTable("program_batches", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.ProgramSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssessmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assessment_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<string>("JoinUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("join_url");
+
+                    b.Property<string>("LiveMode")
+                        .HasColumnType("text")
+                        .HasColumnName("live_mode");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text")
+                        .HasColumnName("location");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_index");
+
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("program_id");
+
+                    b.Property<string>("ProviderAssetId")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_asset_id");
+
+                    b.Property<DateTimeOffset?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_sent_at");
+
+                    b.Property<DateTimeOffset?>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_program_sessions");
+
+                    b.HasIndex("AssessmentId")
+                        .HasDatabaseName("ix_program_sessions_assessment_id");
+
+                    b.HasIndex("ProgramId", "OrderIndex")
+                        .IsUnique()
+                        .HasDatabaseName("ix_program_sessions_program_id_order_index");
+
+                    b.ToTable("program_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Question", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AudioRef")
+                        .HasColumnType("text")
+                        .HasColumnName("audio_ref");
+
+                    b.Property<string>("Choices")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("choices");
+
+                    b.Property<string>("Correct")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("correct");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("PassageRef")
+                        .HasColumnType("text")
+                        .HasColumnName("passage_ref");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("prompt");
+
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("section");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tags");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_questions");
+
+                    b.HasIndex("Section")
+                        .HasDatabaseName("ix_questions_section");
+
+                    b.ToTable("questions", (string)null);
+                });
+
             modelBuilder.Entity("Academy.Domain.Entities.Quiz", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1138,6 +1717,98 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_resources_module_id");
 
                     b.ToTable("resources", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.ScoreBandMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("MaxRaw")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_raw");
+
+                    b.Property<int>("MinRaw")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_raw");
+
+                    b.Property<string>("PredictedBand")
+                        .HasColumnType("text")
+                        .HasColumnName("predicted_band");
+
+                    b.Property<Guid>("ProgramId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("program_id");
+
+                    b.Property<int>("ScaledScore")
+                        .HasColumnType("integer")
+                        .HasColumnName("scaled_score");
+
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("section");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_score_band_mappings");
+
+                    b.HasIndex("ProgramId", "Section", "MinRaw")
+                        .HasDatabaseName("ix_score_band_mappings_program_id_section_min_raw");
+
+                    b.ToTable("score_band_mappings", (string)null);
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.SessionCompletion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("method");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_session_completions");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_session_completions_session_id");
+
+                    b.HasIndex("UserId", "SessionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_session_completions_user_id_session_id");
+
+                    b.ToTable("session_completions", (string)null);
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.Subscription", b =>
@@ -1595,7 +2266,7 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_watched_at");
 
-                    b.Property<Guid>("ModuleId")
+                    b.Property<Guid?>("ModuleId")
                         .HasColumnType("uuid")
                         .HasColumnName("module_id");
 
@@ -1607,6 +2278,10 @@ namespace Academy.Infrastructure.Persistence.Migrations
                     b.Property<int>("ResumePositionSeconds")
                         .HasColumnType("integer")
                         .HasColumnName("resume_position_seconds");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1622,11 +2297,23 @@ namespace Academy.Infrastructure.Persistence.Migrations
                     b.HasIndex("ModuleId")
                         .HasDatabaseName("ix_watch_progress_module_id");
 
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_watch_progress_session_id");
+
                     b.HasIndex("UserId", "ModuleId")
                         .IsUnique()
-                        .HasDatabaseName("ix_watch_progress_user_id_module_id");
+                        .HasDatabaseName("ix_watch_progress_user_id_module_id")
+                        .HasFilter("module_id IS NOT NULL");
 
-                    b.ToTable("watch_progress", (string)null);
+                    b.HasIndex("UserId", "SessionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_watch_progress_user_id_session_id")
+                        .HasFilter("session_id IS NOT NULL");
+
+                    b.ToTable("watch_progress", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_watch_progress_one_target", "(module_id IS NULL) <> (session_id IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.WebhookEvent", b =>
@@ -1676,6 +2363,46 @@ namespace Academy.Infrastructure.Persistence.Migrations
                     b.ToTable("webhook_events", (string)null);
                 });
 
+            modelBuilder.Entity("Academy.Domain.Entities.AssessmentQuestion", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.Assessment", "Assessment")
+                        .WithMany("Questions")
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_assessment_questions_assessments_assessment_id");
+
+                    b.HasOne("Academy.Domain.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_assessment_questions_questions_question_id");
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Attempt", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.Assessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_attempts_assessments_assessment_id");
+
+                    b.HasOne("Academy.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_attempts_users_user_id");
+
+                    b.Navigation("Assessment");
+                });
+
             modelBuilder.Entity("Academy.Domain.Entities.AuditLog", b =>
                 {
                     b.HasOne("Academy.Domain.Entities.User", null)
@@ -1716,12 +2443,23 @@ namespace Academy.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Academy.Domain.Entities.Certificate", b =>
                 {
+                    b.HasOne("Academy.Domain.Entities.Attempt", null)
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_certificates_attempts_attempt_id");
+
                     b.HasOne("Academy.Domain.Entities.Level", null)
                         .WithMany()
                         .HasForeignKey("LevelId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_certificates_levels_level_id");
+
+                    b.HasOne("Academy.Domain.Entities.Program", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_certificates_programs_program_id");
 
                     b.HasOne("Academy.Domain.Entities.User", null)
                         .WithMany()
@@ -1729,6 +2467,35 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_certificates_users_user_id");
+
+                    b.Navigation("Program");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Enrollment", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.ProgramBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_enrollments_program_batches_batch_id");
+
+                    b.HasOne("Academy.Domain.Entities.Program", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_enrollments_programs_program_id");
+
+                    b.HasOne("Academy.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_enrollments_users_user_id");
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Program");
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.FeedbackSubmission", b =>
@@ -1738,6 +2505,31 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_feedback_submissions_users_user_id");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.LiveAttendance", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("MarkedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_live_attendances_users_marked_by_user_id");
+
+                    b.HasOne("Academy.Domain.Entities.ProgramSession", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_live_attendances_program_sessions_session_id");
+
+                    b.HasOne("Academy.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_live_attendances_users_user_id");
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.Module", b =>
@@ -1891,6 +2683,50 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_payment_transactions_users_user_id");
                 });
 
+            modelBuilder.Entity("Academy.Domain.Entities.ProctorEvent", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.Attempt", "Attempt")
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_proctor_events_attempts_attempt_id");
+
+                    b.Navigation("Attempt");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.ProgramBatch", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.Program", "Program")
+                        .WithMany("Batches")
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_program_batches_programs_program_id");
+
+                    b.Navigation("Program");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.ProgramSession", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.Assessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_program_sessions_assessments_assessment_id");
+
+                    b.HasOne("Academy.Domain.Entities.Program", "Program")
+                        .WithMany("Sessions")
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_program_sessions_programs_program_id");
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("Program");
+                });
+
             modelBuilder.Entity("Academy.Domain.Entities.Quiz", b =>
                 {
                     b.HasOne("Academy.Domain.Entities.Module", "Module")
@@ -1954,6 +2790,37 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_resources_modules_module_id");
 
                     b.Navigation("Module");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.ScoreBandMapping", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.Program", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_score_band_mappings_programs_program_id");
+
+                    b.Navigation("Program");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.SessionCompletion", b =>
+                {
+                    b.HasOne("Academy.Domain.Entities.ProgramSession", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_session_completions_program_sessions_session_id");
+
+                    b.HasOne("Academy.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_session_completions_users_user_id");
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.Subscription", b =>
@@ -2060,8 +2927,13 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ModuleId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_watch_progress_modules_module_id");
+
+                    b.HasOne("Academy.Domain.Entities.ProgramSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_watch_progress_program_sessions_session_id");
 
                     b.HasOne("Academy.Domain.Entities.User", null)
                         .WithMany()
@@ -2069,6 +2941,11 @@ namespace Academy.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_watch_progress_users_user_id");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Assessment", b =>
+                {
+                    b.Navigation("Questions");
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.Level", b =>
@@ -2088,6 +2965,13 @@ namespace Academy.Infrastructure.Persistence.Migrations
                     b.Navigation("Memberships");
 
                     b.Navigation("Seats");
+                });
+
+            modelBuilder.Entity("Academy.Domain.Entities.Program", b =>
+                {
+                    b.Navigation("Batches");
+
+                    b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("Academy.Domain.Entities.Quiz", b =>

@@ -5,7 +5,7 @@ import { SuccessClient } from "./SuccessClient";
 export const dynamic = "force-dynamic";
 
 // Informational only — entitlement is granted by the verified webhook, never here (GR-2).
-export const metadata: Metadata = { title: "Status pembayaran — AI Productivity Academy" };
+export const metadata: Metadata = { title: "Status pembayaran — INVERTA" };
 
 export default function CheckoutSuccessPage() {
   return (

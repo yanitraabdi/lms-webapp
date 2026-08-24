@@ -32,10 +32,12 @@ public class CertificateService(
             .ToListAsync(ct);
         if (published.Count == 0) return;
 
-        var completed = await db.WatchProgress
-            .Where(w => w.UserId == userId && w.Completed && published.Contains(w.ModuleId))
+        var completed = (await db.WatchProgress
+            .Where(w => w.UserId == userId && w.Completed && w.ModuleId != null && published.Contains(w.ModuleId.Value))
             .Select(w => w.ModuleId)
-            .ToListAsync(ct);
+            .ToListAsync(ct))
+            .Select(id => id!.Value)
+            .ToList();
 
         if (!LevelCompletion.IsComplete(published, completed.ToHashSet())) return;
 
@@ -69,7 +71,7 @@ public class CertificateService(
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.IssuedAt)
             .Select(c => new CertificateDto(
-                c.Id, c.LevelId,
+                c.Id, c.LevelId ?? Guid.Empty,
                 db.Levels.Where(l => l.Id == c.LevelId).Select(l => l.Name).FirstOrDefault() ?? "Level",
                 c.IssuedAt, c.VerificationCode, c.CompletedModuleIds.Count))
             .ToListAsync(ct);

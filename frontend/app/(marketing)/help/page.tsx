@@ -8,7 +8,7 @@ import { FaqAccordion } from "./FaqAccordion";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Bantuan & FAQ — AI Productivity Academy",
+  title: "Bantuan & FAQ — INVERTA",
   description: "Pertanyaan yang sering diajukan tentang akun, langganan, sertifikat, dan pembayaran.",
 };
 

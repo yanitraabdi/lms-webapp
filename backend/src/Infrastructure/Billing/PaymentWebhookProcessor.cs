@@ -2,6 +2,7 @@ using System.Text.Json;
 using Academy.Application.Abstractions;
 using Academy.Application.Billing;
 using Academy.Application.Engagement;
+using Academy.Domain;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
@@ -72,10 +73,19 @@ public class PaymentWebhookProcessor(
 
         var intent = JsonSerializer.Deserialize<CheckoutIntentSnapshot>(tx.RawPayload)!;
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == tx.UserId, ct);
-        var plan = await db.Plans.FirstAsync(p => p.Id == intent.PlanId, ct);
 
         tx.Method = evt.Method;
         tx.XenditIds = MergeEventId(tx.XenditIds, evt.ExternalId);
+
+        // ---- INVERTA: one-time program purchase. The ONLY place an enrollment is activated (GR-2).
+        if (intent.Kind == CheckoutKind.ProgramPurchase)
+        {
+            await ApplyProgramPurchaseAsync(evt, tx, intent, user, ct);
+            return;
+        }
+
+        // ---- Dormant (archived product): subscription billing.
+        var plan = await db.Plans.FirstAsync(p => p.Id == intent.PlanId, ct);
 
         if (evt.Type == PaymentWebhookType.Failed)
         {
@@ -135,6 +145,60 @@ public class PaymentWebhookProcessor(
             if (user is not null)
                 await email.SendSubscriptionConfirmationAsync(user.Email, user.Name, plan.Name, tx.AmountIdr, sub.CurrentPeriodEnd, ct);
         }
+    }
+
+    /// <summary>
+    /// Activates an enrollment after verified payment (KAK §9.4 R4). Idempotent by construction:
+    /// the caller already deduped on webhook_events.external_id, and an already-active enrollment
+    /// is left untouched so a replay cannot double-send the receipt.
+    /// </summary>
+    private async Task ApplyProgramPurchaseAsync(
+        PaymentWebhook evt, PaymentTransaction tx, CheckoutIntentSnapshot intent, User? user, CancellationToken ct)
+    {
+        var enrollment = intent.EnrollmentId is Guid eid
+            ? await db.Enrollments.FirstOrDefaultAsync(e => e.Id == eid, ct)
+            : await db.Enrollments.FirstOrDefaultAsync(
+                e => e.UserId == tx.UserId && e.ProgramId == intent.ProgramId, ct);
+
+        if (enrollment is null)
+        {
+            logger.LogWarning("Program-purchase webhook {Ref} has no matching enrollment.", evt.ProviderRef);
+            return;
+        }
+
+        var programName = await db.Programs.Where(p => p.Id == enrollment.ProgramId)
+            .Select(p => p.Name).FirstOrDefaultAsync(ct) ?? "Program";
+
+        if (evt.Type == PaymentWebhookType.Failed)
+        {
+            tx.Status = PaymentStatus.Failed;
+            // Enrollment stays PendingPayment — it grants nothing and the learner may retry.
+            if (user is not null) await email.SendPaymentFailedAsync(user.Email, user.Name, programName, ct);
+            return;
+        }
+
+        tx.Status = PaymentStatus.Paid;
+
+        if (enrollment.GrantsAccess)
+        {
+            logger.LogInformation("Enrollment {Id} already active; skipping duplicate grant.", enrollment.Id);
+            return;
+        }
+
+        if (!EnrollmentStateMachine.CanTransition(enrollment.Status, EnrollmentStatus.Active))
+        {
+            logger.LogWarning("Enrollment {Id} cannot transition {From}→Active; ignoring.",
+                enrollment.Id, enrollment.Status);
+            return;
+        }
+
+        enrollment.Status = EnrollmentStatus.Active;
+        enrollment.AmountPaidIdr = tx.AmountIdr;
+        enrollment.EnrolledAt = DateTimeOffset.UtcNow;
+        enrollment.ProviderRef = evt.ProviderRef;
+
+        if (user is not null)
+            await email.SendEnrollmentReceiptAsync(user.Email, user.Name, programName, tx.AmountIdr, ct);
     }
 
     private static string MergeEventId(string xenditIds, string externalId)

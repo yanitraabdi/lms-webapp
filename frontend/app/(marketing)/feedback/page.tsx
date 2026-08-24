@@ -5,7 +5,7 @@ import { FeedbackForm } from "./FeedbackForm";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Masukan — AI Productivity Academy",
+  title: "Masukan — INVERTA",
   description: "Bagikan saran, laporkan masalah, atau beri tahu kami apa yang Anda sukai.",
 };
 

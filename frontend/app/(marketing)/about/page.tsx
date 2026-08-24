@@ -5,15 +5,15 @@ import { PublicShell } from "@/components/PublicShell";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Tentang — AI Productivity Academy",
+  title: "Tentang — INVERTA",
   description:
-    "Kami membantu profesional Indonesia menguasai AI praktis lewat video singkat berbahasa Indonesia, latihan langsung, dan sertifikat yang dapat diverifikasi.",
+    "INVERTA membantu peserta Indonesia bersiap menghadapi TOEFL lewat program terstruktur berbahasa Indonesia, tes bertahap, dan prediksi skor sebelum tes resmi.",
 };
 
 const stats = [
-  { value: "12.000+", label: "Peserta belajar" },
-  { value: "55+", label: "Modul video" },
-  { value: "4,8★", label: "Rata-rata penilaian" },
+  { value: "3 bagian", label: "Format TOEFL ITP" },
+  { value: "Sekali bayar", label: "Bukan langganan" },
+  { value: "Instan", label: "Prediksi skor" },
 ];
 
 export default function AboutPage() {
@@ -24,7 +24,7 @@ export default function AboutPage() {
           <span className="text-xs font-bold uppercase tracking-widest text-primary">Tentang kami</span>
           <h1 className="text-4xl font-extrabold tracking-tight">AI praktis, dalam Bahasa Indonesia</h1>
           <p className="max-w-2xl text-[16.5px] leading-relaxed text-ink-muted">
-            AI Productivity Academy membantu profesional Indonesia menerapkan AI dalam pekerjaan sehari-hari —
+            INVERTA membantu profesional Indonesia menerapkan AI dalam pekerjaan sehari-hari —
             tanpa jargon, langsung bisa dipraktikkan, dan diakhiri sertifikat yang bisa diverifikasi.
           </p>
         </div>

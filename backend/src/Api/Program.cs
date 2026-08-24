@@ -11,6 +11,7 @@ using Academy.Infrastructure.Billing;
 using Academy.Infrastructure.Catalog;
 using Academy.Infrastructure.Engagement;
 using Academy.Infrastructure.Persistence;
+using Academy.Infrastructure.Programs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -57,6 +58,26 @@ builder.Services.AddRateLimiter(options =>
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
+
+    // Media streaming gets its own, wider policy: a single <audio> element issues several range
+    // requests per play (seek = new request), so the 20/min "playback" budget (sized for one
+    // fetch per page view) would 429 mid-playback. The signature already authorizes *what* can be
+    // requested and the TTL bounds *for how long*, so this limiter isn't authenticating — it's
+    // only there to cap bulk enumeration of the key space. 300/min (5/sec) comfortably covers
+    // normal seeking while still bounding a scripted sweep.
+    // NOTE: partitioned on RemoteIpAddress, same as the policies above. Behind the tunnel
+    // topology the API only ever sees the frontend container's IP (no UseForwardedHeaders is
+    // configured), so in that deployment this budget is shared by every concurrent listener
+    // rather than per-student. Tracked as a follow-up; see the task report.
+    options.AddPolicy("media", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(permitLimit, 300),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
 });
 
 // FluentValidation validators (from the Application assembly).
@@ -119,6 +140,14 @@ app.MapAdminQuizEndpoints();
 app.MapEngagementEndpoints();
 app.MapNotificationEndpoints();
 app.MapLearnerEngagementEndpoints();
+// INVERTA (M2)
+app.MapProgramEndpoints();
+app.MapProgramAdminEndpoints();
+app.MapSessionEndpoints();
+app.MapAssessmentAdminEndpoints();
+app.MapFinalAssessmentEndpoints();
+app.MapMediaEndpoints();
+app.MapAdminOperationsEndpoints();
 // Dev-only payment simulation endpoints (active when Billing:Provider = "dev").
 if (app.Services.GetRequiredService<BillingOptions>().IsDev)
     app.MapDevPaymentEndpoints();
@@ -139,6 +168,7 @@ if (app.Configuration.GetValue<bool>("SeedSampleData"))
     await scope.ServiceProvider.GetRequiredService<CatalogSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<DevAdminSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<FaqSeeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<ProgramSeeder>().SeedAsync();
 }
 
 app.Run();

@@ -4,11 +4,18 @@ using Academy.Domain.Enums;
 
 namespace Academy.Domain.Entities;
 
-/// <summary>NEVER hard-deleted on downgrade/expiry (GR-7). UNIQUE(UserId, ModuleId).</summary>
+/// <summary>
+/// Video progress. NEVER hard-deleted (GR-7).
+/// Targets EXACTLY ONE of <see cref="ModuleId"/> (dormant AI Academy catalog) or
+/// <see cref="SessionId"/> (INVERTA program session) — enforced by a DB CHECK constraint.
+/// Reused rather than replaced so the delivered player/resume/completion code stays intact
+/// (see docs/TSD_Delta_INVERTA_v0.1.md §3.1).
+/// </summary>
 public class WatchProgress : Entity
 {
     public Guid UserId { get; set; }
-    public Guid ModuleId { get; set; }
+    public Guid? ModuleId { get; set; }                        // dormant — archived product
+    public Guid? SessionId { get; set; }                       // INVERTA program session
     public int ResumePositionSeconds { get; set; }
     public decimal PercentComplete { get; set; }
     public bool Completed { get; set; }
@@ -62,15 +69,26 @@ public class CapstoneSubmission : Entity
 }
 
 /// <summary>
-/// Immutable once issued (GR-6). Level is never re-evaluated afterward.
-/// CompletedModuleIds snapshots the qualifying set at issuance. Retained indefinitely.
+/// Immutable once issued (GR-6). Retained indefinitely.
+/// INVERTA issuance is SCORE-based and anchored to <see cref="AttemptId"/>: a granted retake
+/// inserts a NEW certificate and never mutates this one (hence no unique on user+program).
+/// <see cref="LevelId"/>/<see cref="CompletedModuleIds"/> are dormant (archived product).
 /// </summary>
 public class Certificate : Entity
 {
     public Guid UserId { get; set; }
-    public Guid LevelId { get; set; }
+    public Guid? LevelId { get; set; }                          // dormant — archived product
     public DateTimeOffset IssuedAt { get; set; }
-    public string VerificationCode { get; set; } = default!; // UNIQUE — public /verify/{code}
+    public string VerificationCode { get; set; } = default!;    // UNIQUE — public /verify/{code}
     public string? PdfUrl { get; set; }
-    public List<Guid> CompletedModuleIds { get; set; } = new(); // jsonb snapshot
+    public List<Guid> CompletedModuleIds { get; set; } = new(); // jsonb snapshot (dormant)
+
+    // ---- INVERTA: score-based issuance ----
+    public Guid? ProgramId { get; set; }
+    public Program? Program { get; set; }
+    public Guid? AttemptId { get; set; }                        // immutability anchor
+    public string? SectionScores { get; set; }                  // jsonb section → raw score
+    public string? ScaledScores { get; set; }                   // jsonb section → scaled score
+    public int? TotalScaledScore { get; set; }                  // ITP total, 310–677
+    public string? PredictedBand { get; set; }                  // "TOEFL Prediction" — never an ETS score
 }

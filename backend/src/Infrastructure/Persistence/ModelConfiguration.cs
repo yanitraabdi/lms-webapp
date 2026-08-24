@@ -211,11 +211,18 @@ public class WatchProgressConfig : IEntityTypeConfiguration<WatchProgress>
 {
     public void Configure(EntityTypeBuilder<WatchProgress> e)
     {
-        e.HasIndex(x => new { x.UserId, x.ModuleId }).IsUnique();
+        // Targets exactly one of module_id (dormant catalog) or session_id (INVERTA) —
+        // hence partial uniques + a CHECK. See docs/TSD_Delta_INVERTA_v0.1.md §3.1.
+        e.HasIndex(x => new { x.UserId, x.ModuleId }).IsUnique().HasFilter("module_id IS NOT NULL");
+        e.HasIndex(x => new { x.UserId, x.SessionId }).IsUnique().HasFilter("session_id IS NOT NULL");
+        e.ToTable(t => t.HasCheckConstraint(
+            "ck_watch_progress_one_target", "(module_id IS NULL) <> (session_id IS NULL)"));
         e.Property(x => x.PercentComplete).HasPrecision(5, 2);
         e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
         e.HasOne<Module>().WithMany().HasForeignKey(x => x.ModuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+        e.HasOne<ProgramSession>().WithMany().HasForeignKey(x => x.SessionId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -271,11 +278,21 @@ public class CertificateConfig : IEntityTypeConfiguration<Certificate>
     public void Configure(EntityTypeBuilder<Certificate> e)
     {
         e.HasIndex(x => x.VerificationCode).IsUnique();
-        e.HasIndex(x => new { x.UserId, x.LevelId }).IsUnique();   // one cert per (user, level)
-        e.Property(x => x.CompletedModuleIds).HasColumnType("jsonb"); // snapshot
+        // Dormant catalog rule: one cert per (user, level). Partial — INVERTA certs have no level.
+        e.HasIndex(x => new { x.UserId, x.LevelId }).IsUnique().HasFilter("level_id IS NOT NULL");
+        // Deliberately NO unique on (user_id, program_id): a granted retake issues a NEW
+        // certificate rather than mutating the old one (GR-6). attempt_id is the anchor.
+        e.HasIndex(x => new { x.UserId, x.ProgramId });
+        e.Property(x => x.CompletedModuleIds).HasColumnType("jsonb"); // snapshot (dormant)
+        e.Property(x => x.SectionScores).HasColumnType("jsonb");
+        e.Property(x => x.ScaledScores).HasColumnType("jsonb");
         e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
         e.HasOne<Level>().WithMany().HasForeignKey(x => x.LevelId)
+            .OnDelete(DeleteBehavior.Restrict);
+        e.HasOne(x => x.Program).WithMany().HasForeignKey(x => x.ProgramId)
+            .OnDelete(DeleteBehavior.Restrict);
+        e.HasOne<Attempt>().WithMany().HasForeignKey(x => x.AttemptId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

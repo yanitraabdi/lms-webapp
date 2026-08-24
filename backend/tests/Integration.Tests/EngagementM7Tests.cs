@@ -50,17 +50,25 @@ public class EngagementM7Tests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         Assert.Equal(2, quiz.QuestionCount);
         Assert.False(quiz.Passed);
 
+        // Answers are positional against the SERVED order, exactly as a real client builds them.
+        // Serving and scoring both order by question Id, so they always agree — but that order is
+        // not the authoring order (uuid v7 is not monotonic within a millisecond), so the test must
+        // derive its answers from what it was served rather than assume "Q1 first".
+        var key = new Dictionary<string, int> { ["Q1"] = 0, ["Q2"] = 1 };
+        var correct = quiz.Questions.Select(q => key[q.Prompt]).ToArray();
+        var wrong = correct.Select((c, i) => 1 - c).ToArray();   // 2 choices → flip each
+
         // Watching to 100% does NOT complete the module while the quiz is unsatisfied.
         var watched = await SaveProgress(token, moduleId, 600, 100m);
         Assert.False(watched.Completed);
 
         // Wrong answers: not passed, still not completed.
-        var failed = await SubmitQuiz(token, moduleId, [1, 0]);
+        var failed = await SubmitQuiz(token, moduleId, wrong);
         Assert.False(failed.Passed);
         Assert.False(failed.ModuleCompleted);
 
         // Correct answers: passes the gate → module completes.
-        var passed = await SubmitQuiz(token, moduleId, [0, 1]);
+        var passed = await SubmitQuiz(token, moduleId, correct);
         Assert.True(passed.Passed);
         Assert.Equal(2, passed.Score);
         Assert.True(passed.ModuleCompleted);

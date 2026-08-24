@@ -6,7 +6,11 @@ using Academy.Application.Billing;
 using Academy.Application.Catalog;
 using Academy.Application.Engagement;
 using Academy.Application.Learning;
+using Academy.Application.Assessments;
+using Academy.Application.Programs;
 using Academy.Infrastructure.Admin;
+using Academy.Infrastructure.Assessments;
+using Academy.Infrastructure.Programs;
 using Academy.Infrastructure.Engagement;
 using Academy.Infrastructure.Auth;
 using Academy.Infrastructure.Billing;
@@ -14,6 +18,7 @@ using Academy.Infrastructure.Catalog;
 using Academy.Infrastructure.Email;
 using Academy.Infrastructure.Jobs;
 using Academy.Infrastructure.Learning;
+using Academy.Infrastructure.Media;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -59,6 +64,11 @@ public static class DependencyInjection
 
         // Player / progress / certificates (M4)
         services.AddSingleton(VideoOptionsFactory.Build(configuration));
+        // Media storage (audio). LocalObjectStorage is the dev-sim; when an R2 adapter exists,
+        // swap this registration (and add a config switch then, not before).
+        services.AddSingleton(MediaOptionsFactory.Build(configuration));
+        services.AddSingleton<IObjectStorage, LocalObjectStorage>();
+        services.AddSingleton<MediaSigner>();
         // DevVideoProvider simulates Bunny signed playback; swap to BunnyVideoProvider when Video:Provider="bunny".
         services.AddScoped<IVideoProvider, DevVideoProvider>();
         services.AddSingleton<CertificatePdf>();
@@ -78,6 +88,33 @@ public static class DependencyInjection
         services.AddScoped<IContentService, ContentService>();
         services.AddScoped<IOnboardingService, OnboardingService>();
         services.AddScoped<FaqSeeder>();
+
+        // INVERTA (M2): programs, enrollment, the access gate, completion
+        services.AddScoped<IProgramService, ProgramService>();
+        services.AddScoped<IEnrollmentService, EnrollmentService>();
+        services.AddScoped<ISessionAccessService, SessionAccessService>();
+        services.AddScoped<ISessionCompletionService, SessionCompletionService>();
+        services.AddScoped<IProgramAdminService, ProgramAdminService>();
+        services.AddScoped<ProgramSeeder>();
+
+        // INVERTA (M3): session playback/progress + the assessment engine
+        services.AddScoped<ISessionLearningService, SessionLearningService>();
+        services.AddScoped<IAssessmentService, AssessmentService>();
+        services.AddScoped<IQuestionBankService, QuestionBankService>();
+        services.AddScoped<IAssessmentAdminService, AssessmentAdminService>();
+
+        // INVERTA (M4): sectional sitting, proctoring, ITP scoring, certificates
+        services.AddScoped<IFinalAssessmentService, FinalAssessmentService>();
+        services.AddScoped<IProctorService, ProctorService>();
+        services.AddScoped<IScoreConversionService, ScoreConversionService>();
+        services.AddScoped<IProgramCertificateService, ProgramCertificateService>();
+        services.AddScoped<IScoreBandAdminService, ScoreBandAdminService>();
+
+        // INVERTA (M5): live attendance, H-1 reminders, operational dashboards
+        services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<ILiveSessionReminder, LiveSessionReminder>();
+        services.AddScoped<IAdminOperationsService, AdminOperationsService>();
+        services.AddHostedService<LiveReminderService>();
 
         // Engagement (M7): notifications, notes, ratings, quizzes, completion gating
         services.AddScoped<INotificationSender, NotificationSender>();

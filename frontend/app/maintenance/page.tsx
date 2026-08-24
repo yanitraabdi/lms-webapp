@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Sedang pemeliharaan — AI Productivity Academy",
+  title: "Sedang pemeliharaan — INVERTA",
   robots: { index: false },
 };
 

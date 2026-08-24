@@ -4,11 +4,13 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/components/auth/AuthProvider";
 
+// INVERTA is a single-program product — the program landing replaces catalog/pricing
+// as primary navigation (KAK §9.15). Those routes remain in-repo but are unlinked.
 const links = [
-  { href: "/catalog", label: "Katalog" },
-  { href: "/pricing", label: "Harga" },
-  { href: "/for-business", label: "Untuk Bisnis" },
+  { href: "/program/toefl-preparation", label: "Program" },
   { href: "/how-it-works", label: "Cara Kerja" },
+  { href: "/about", label: "Tentang" },
+  { href: "/help", label: "Bantuan" },
 ];
 
 // CTAs are anchors styled as buttons (avoid invalid <a><button> nesting).
@@ -32,7 +34,7 @@ export function PublicNav({ className }: { className?: string }) {
           <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-primary text-sm font-extrabold text-primary-ink">
             A
           </span>
-          <span className="text-sm font-bold text-ink">AI Productivity Academy</span>
+          <span className="text-sm font-bold text-ink">INVERTA</span>
         </Link>
 
         <div className="hidden items-center gap-5 md:flex">

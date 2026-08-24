@@ -36,7 +36,7 @@ export function SiteFooter() {
             <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-primary text-[15px] font-extrabold text-primary-ink">
               A
             </span>
-            <span className="text-[15px] font-extrabold">AI Productivity Academy</span>
+            <span className="text-[15px] font-extrabold">INVERTA</span>
           </div>
           <p className="max-w-[280px] text-[13.5px] leading-relaxed text-white/60">
             Belajar AI praktis dalam Bahasa Indonesia. Untuk profesional yang ingin lebih produktif.
@@ -54,7 +54,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="mx-auto mt-9 flex max-w-6xl flex-wrap justify-between gap-3 border-t border-white/10 px-6 pt-5 text-[12.5px] text-white/55">
-        <span>© 2025 AI Productivity Academy. Hak cipta dilindungi.</span>
+        <span>© 2026 INVERTA. Hak cipta dilindungi.</span>
         <span>Dibuat di Indonesia 🇮🇩</span>
       </div>
     </footer>

@@ -5,8 +5,8 @@ import { ContactForm } from "./ContactForm";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Kontak — AI Productivity Academy",
-  description: "Hubungi tim AI Productivity Academy untuk pertanyaan tentang langganan, tagihan, atau kerja sama.",
+  title: "Kontak — INVERTA",
+  description: "Hubungi tim INVERTA untuk pertanyaan tentang langganan, tagihan, atau kerja sama.",
 };
 
 export default function ContactPage() {
