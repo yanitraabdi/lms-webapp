@@ -50,6 +50,8 @@ services:
     # Internal only — reached exclusively via the frontend same-origin proxy.
     expose:
       - "8080"
+    volumes:
+      - media:/data/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,3 +81,4 @@ services:
 
 volumes:
   pgdata:
+  media:
