@@ -103,6 +103,20 @@ export const updateAssessment = (t: string, id: string, b: { kind: string; title
 export const deleteAssessment = (t: string, id: string) => api<void>("DELETE", `/api/admin/assessments/${id}`, t);
 export const setAssessmentQuestions = (t: string, id: string, questionIdsInOrder: string[]) =>
   api<void>("PUT", `/api/admin/assessments/${id}/questions`, t, { questionIdsInOrder });
+/** Multipart — cannot use api(), which JSON-stringifies its body and sets a JSON content type. */
+export async function uploadAudio(t: string, file: File): Promise<{ key: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API}/api/admin/media/audio`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${t}` }, // let the browser set the multipart boundary
+    body: form,
+    cache: "no-store",
+  });
+  if (!res.ok) throw await problem(res, "Unggah audio gagal.");
+  return await res.json();
+}
+
 export const attachAssessment = (t: string, sessionId: string, assessmentId: string | null) =>
   api<void>("PUT", `/api/admin/sessions/${sessionId}/assessment`, t, { assessmentId });
 

@@ -47,9 +47,12 @@ services:
       # On-demand ISR revalidation: API → Next over the compose network.
       Revalidate__FrontendUrl: "http://frontend:3000"
       Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
+      Media__SigningKey: "${MEDIA_SIGNING_KEY:?set MEDIA_SIGNING_KEY in .env}"
     # Internal only — reached exclusively via the frontend same-origin proxy.
     expose:
       - "8080"
+    volumes:
+      - media:/data/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,3 +82,4 @@ services:
 
 volumes:
   pgdata:
+  media:

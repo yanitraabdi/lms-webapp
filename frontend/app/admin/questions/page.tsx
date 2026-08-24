@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState, SearchIcon, XIcon } from "@/components/ui";
+import { AudioUpload } from "@/components/admin/AudioUpload";
 import {
   listQuestions, createQuestion, updateQuestion, deleteQuestion,
   QUESTION_SECTIONS, num, type AdminQuestion, type UpsertQuestion,
@@ -145,6 +146,7 @@ function QuestionForm({
   const [choices, setChoices] = useState<string[]>(question?.choices ?? ["", ""]);
   const [correct, setCorrect] = useState<number>(question ? num(question.correct[0] ?? 0) : 0);
   const [passage, setPassage] = useState(question?.passageRef ?? "");
+  const [audioRef, setAudioRef] = useState<string | null>(question?.audioRef ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,7 +162,7 @@ function QuestionForm({
         prompt: prompt.trim(),
         choices: choices.map((c) => c.trim()),
         correct: [correct],
-        audioRef: null,
+        audioRef: section === "Listening" ? audioRef : null,
         passageRef: passage.trim() || null,
         tags: null,
       };
@@ -200,6 +202,13 @@ function QuestionForm({
           <span className="text-[12px] font-bold text-ink-muted">Pertanyaan</span>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} className={inputCls} />
         </label>
+
+        {section === "Listening" && (
+          <div className="flex flex-col gap-1">
+            <span className="text-[12px] font-bold text-ink-muted">Audio (Listening)</span>
+            <AudioUpload token={token} value={audioRef} onChange={setAudioRef} />
+          </div>
+        )}
 
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-bold text-ink-muted">Teks bacaan (opsional)</span>

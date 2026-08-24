@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Academy.Api.Endpoints;
+using Academy.Application.Abstractions;
 using Academy.Application.Assessments;
 using Academy.Application.Auth;
 using Academy.Application.Billing;
@@ -298,6 +300,126 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
 
+    // ---- audio resolution: question clip, or one section recording ----
+
+    [Fact]
+    public async Task A_questions_own_clip_is_served_through_a_signed_url()
+    {
+        var c = await SetUp();
+        await SeedObjectAsync("audio/clip.mp3", "per-question"u8.ToArray());
+        var state = await Start(c);
+        var audioQ = state.Questions.First(q => q.HasAudio).Id;
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{audioQ}", c.Token);
+        res.EnsureSuccessStatusCode();
+        var url = (await res.Content.ReadFromJsonAsync<AudioUrlResponse>(Json))!.Url;
+
+        // The minted URL must actually serve — the previous implementation returned a dead path.
+        var played = await _client.GetAsync(url);
+        played.EnsureSuccessStatusCode();
+        Assert.Equal("per-question", await played.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_question_without_its_own_clip_falls_back_to_the_section_recording()
+    {
+        var c = await SetUp(sectionAudioRef: "audio/section.mp3");
+        await SeedObjectAsync("audio/section.mp3", "whole-section"u8.ToArray());
+        await ClearQuestionAudioAsync(c.AssessmentId);
+
+        var state = await Start(c);
+        var q = state.Questions.First().Id;
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{q}", c.Token);
+        res.EnsureSuccessStatusCode();
+        var url = (await res.Content.ReadFromJsonAsync<AudioUrlResponse>(Json))!.Url;
+
+        var played = await _client.GetAsync(url);
+        Assert.Equal("whole-section", await played.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_question_with_neither_still_reports_no_audio()
+    {
+        var c = await SetUp();
+        await ClearQuestionAudioAsync(c.AssessmentId);
+
+        var state = await Start(c);
+        var q = state.Questions.First().Id;
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{q}", c.Token);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Section_audio_shares_one_allowance_across_its_questions()
+    {
+        var c = await SetUp(audioPlayLimit: 1, sectionAudioRef: "audio/section.mp3");
+        await SeedObjectAsync("audio/section.mp3", [1, 2, 3]);
+        await ClearQuestionAudioAsync(c.AssessmentId);
+
+        var state = await Start(c);
+        var a = state.Questions[0].Id;
+        var b = state.Questions[1].Id;
+
+        (await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{a}", c.Token))
+            .EnsureSuccessStatusCode();
+
+        // There is only ONE recording, so the second question has no allowance left.
+        var second = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{b}", c.Token);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task Per_question_clips_have_separate_allowances()
+    {
+        var c = await SetUp(audioPlayLimit: 1);
+        var state = await Start(c);
+        var a = state.Questions[0].Id;
+        var b = state.Questions[1].Id;
+
+        (await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{a}", c.Token))
+            .EnsureSuccessStatusCode();
+        (await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{b}", c.Token))
+            .EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Section_audio_is_visible_to_the_player()
+    {
+        var c = await SetUp(sectionAudioRef: "audio/section.mp3");
+        await ClearQuestionAudioAsync(c.AssessmentId);
+
+        var state = await Start(c);
+
+        // hasAudio drives whether the play button renders at all — section audio that the
+        // client cannot see is audio that is never offered.
+        Assert.All(state.Questions, q => Assert.True(q.HasAudio));
+    }
+
+    // ---- helpers for the audio facts ----
+
+    private async Task SeedObjectAsync(string key, byte[] bytes)
+    {
+        using var scope = factory.Services.CreateScope();
+        var storage = scope.ServiceProvider.GetRequiredService<IObjectStorage>();
+        await storage.PutAsync(key, new MemoryStream(bytes), "audio/mpeg");
+    }
+
+    /// <summary>Strips per-question audio so only the section recording (if any) can resolve.</summary>
+    private async Task ClearQuestionAudioAsync(Guid assessmentId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var ids = await db.AssessmentQuestions
+            .Where(aq => aq.AssessmentId == assessmentId)
+            .Select(aq => aq.QuestionId)
+            .ToListAsync();
+        var questions = await db.Questions.Where(q => ids.Contains(q.Id)).ToListAsync();
+        foreach (var q in questions) q.AudioRef = null;
+        await db.SaveChangesAsync();
+    }
+
     // ---- ownership & gating ----
 
     [Fact]
@@ -323,7 +445,8 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     /// Builds an isolated program whose ONLY session is a 3-section final assessment, enrolls a
     /// learner, and seeds a complete score-conversion table.
     /// </summary>
-    private async Task<Ctx> SetUp(int? retakeCap = 1, int? audioPlayLimit = null, bool bandsCoverOnlyZero = false)
+    private async Task<Ctx> SetUp(int? retakeCap = 1, int? audioPlayLimit = null, bool bandsCoverOnlyZero = false,
+                                  string? sectionAudioRef = null)
     {
         var admin = await AdminToken();
         var suffix = Guid.NewGuid().ToString("N")[..8];
@@ -336,7 +459,8 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         // A full ITP-format sitting (50/40/50) — readiness refuses to publish anything smaller,
         // and this file's assertions are about the sitting, not about question authoring.
-        var assessment = await ItpFinal.SeedAsync(factory, retakeCap: retakeCap, audioPlayLimit: audioPlayLimit);
+        var assessment = await ItpFinal.SeedAsync(factory, retakeCap: retakeCap, audioPlayLimit: audioPlayLimit,
+            sectionAudioRef: sectionAudioRef);
         var key = assessment.Key;
 
         var session = await PostJson<AdminSessionDto>($"/api/admin/programs/{program.Id}/sessions", admin, new

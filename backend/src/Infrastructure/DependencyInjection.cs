@@ -18,6 +18,7 @@ using Academy.Infrastructure.Catalog;
 using Academy.Infrastructure.Email;
 using Academy.Infrastructure.Jobs;
 using Academy.Infrastructure.Learning;
+using Academy.Infrastructure.Media;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -63,6 +64,11 @@ public static class DependencyInjection
 
         // Player / progress / certificates (M4)
         services.AddSingleton(VideoOptionsFactory.Build(configuration));
+        // Media storage (audio). LocalObjectStorage is the dev-sim; when an R2 adapter exists,
+        // swap this registration (and add a config switch then, not before).
+        services.AddSingleton(MediaOptionsFactory.Build(configuration));
+        services.AddSingleton<IObjectStorage, LocalObjectStorage>();
+        services.AddSingleton<MediaSigner>();
         // DevVideoProvider simulates Bunny signed playback; swap to BunnyVideoProvider when Video:Provider="bunny".
         services.AddScoped<IVideoProvider, DevVideoProvider>();
         services.AddSingleton<CertificatePdf>();

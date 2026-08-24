@@ -44,10 +44,18 @@ public interface IEmailSender
         DateTimeOffset scheduledAt, string? joinUrl, string? location, CancellationToken ct = default);
 }
 
-/// <summary>Object storage (Cloudflare R2 adapter). Signed URLs for entitled downloads + cert PDFs/thumbnails.</summary>
+/// <summary>Object storage (local-disk dev-sim; Cloudflare R2 adapter later).
+/// Deliberately minimal: no Delete and no Exists. Replacing an upload orphans the previous
+/// object, which costs disk and nothing else, whereas a delete could remove a file another
+/// question still references — keys are free-form strings with no reference counting.
+/// OpenReadAsync returning null answers the existence question at the only point that asks it.</summary>
 public interface IObjectStorage
 {
-    // M4/M5: Task<string> GetSignedUrlAsync(string key, TimeSpan ttl); Task PutAsync(...);
+    /// <summary>Stores the stream under <paramref name="key"/>, overwriting any existing object.</summary>
+    Task PutAsync(string key, Stream content, string contentType, CancellationToken ct = default);
+
+    /// <summary>Opens the object for reading, or null when the key does not exist.</summary>
+    Task<Stream?> OpenReadAsync(string key, CancellationToken ct = default);
 }
 
 /// <summary>Dispatches an engagement notification to a user across enabled channels

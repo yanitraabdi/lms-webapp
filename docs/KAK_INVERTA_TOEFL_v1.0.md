@@ -551,10 +551,12 @@ All administrative capability is required in v1 — operations must not depend o
 > publish-blocking readiness check. See
 > `docs/superpowers/specs/2026-08-20-admin-content-authoring-design.md`.
 >
-> Still API-only after A3, and not editable from any admin screen: the proctoring on/off flag
-> and the audio play limit (both written as fixed values when an assessment is created), and
-> attaching listening audio to a question (the question form always posts `audioRef: null`).
-> The table rows above describe the capability, not the surface that exposes it.
+> Still API-only, and not editable from any admin screen: the proctoring on/off flag and the
+> audio play limit (both written as fixed values when an assessment is created). Listening
+> audio is no longer among them — it is uploaded from the question form and from the
+> assessment composer's Listening section, and a Listening section with no playable audio now
+> blocks publishing. The table rows above describe the capability, not the surface that
+> exposes it.
 
 Publishing a program triggers on-demand revalidation of its static landing page.
 

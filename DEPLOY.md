@@ -29,6 +29,7 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 | Var | Purpose |
 |-----|---------|
 | `ADMIN_PASSWORD` | SuperAdmin password (replaces the well-known dev default). **Required.** |
+| `MEDIA_SIGNING_KEY` | HMAC key for signed media (listening audio) URLs (replaces the well-known dev default). **Required.** |
 | `PUBLIC_SITE_URL` | Public origin for sitemap/robots/canonical, e.g. `https://academy.example.com`. Optional. |
 | `FRONTEND_PORT` | Host port the frontend is published on (default `3001`). The tunnel binds this. |
 | `REVALIDATE_SECRET` | Shared secret for the API→Next ISR revalidation call. Change for a real deploy. |

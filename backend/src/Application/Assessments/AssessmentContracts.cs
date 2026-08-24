@@ -36,6 +36,10 @@ public class AssessmentSectionConfig
     public QuestionSection Section { get; set; }
     public int Questions { get; set; }
     public int Minutes { get; set; }
+
+    /// <summary>Optional whole-section recording (Listening). A question's own AudioRef wins.
+    /// Lives in the config jsonb, so adding it needs no migration.</summary>
+    public string? AudioRef { get; set; }
 }
 
 // ---------------------------------------------------------------- learner DTOs
