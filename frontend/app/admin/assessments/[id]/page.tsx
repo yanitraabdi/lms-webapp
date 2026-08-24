@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Spinner, ErrorState, ChevronRightIcon } from "@/components/ui";
 import { SectionComposer } from "@/components/admin/SectionComposer";
-import { getAssessment, setAssessmentQuestions, num } from "@/lib/sessions";
+import { getAssessment, setAssessmentQuestions, updateAssessment, num } from "@/lib/sessions";
 
 export default function AssessmentComposerPage() {
   const token = useAuth().accessToken;
@@ -22,6 +22,8 @@ export default function AssessmentComposerPage() {
 
   // sectionName -> selected question ids, seeded from what is already composed.
   const [bySection, setBySection] = useState<Record<string, string[]>>({});
+  // sectionName -> whole-section recording, seeded from the stored config.
+  const [audioBySection, setAudioBySection] = useState<Record<string, string | null>>({});
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,12 @@ export default function AssessmentComposerPage() {
   useEffect(() => {
     if (!q.data) return;
     const seeded: Record<string, string[]> = {};
-    for (const s of q.data.config.sections ?? []) seeded[String(s.section)] = [];
+    const audio: Record<string, string | null> = {};
+    for (const s of q.data.config.sections ?? []) {
+      seeded[String(s.section)] = [];
+      audio[String(s.section)] = s.audioRef ?? null;
+    }
+    setAudioBySection(audio);
     for (const question of q.data.questions) {
       (seeded[question.section] ??= []).push(question.id);
     }
@@ -58,6 +65,16 @@ export default function AssessmentComposerPage() {
       // runtime uses when it filters questions per section.
       const ordered = sections.flatMap((s) => bySection[String(s.section)] ?? []);
       await setAssessmentQuestions(token!, id, ordered);
+      // The whole config is replaced on PUT, so carry the stored one through and change
+      // only audioRef — rebuilding it here would silently drop fields this page ignores.
+      await updateAssessment(token!, id, {
+        kind: q.data!.kind,
+        title: q.data!.title,
+        config: {
+          ...q.data!.config,
+          sections: sections.map((s) => ({ ...s, audioRef: audioBySection[String(s.section)] ?? null })),
+        },
+      });
       await q.refetch();
       setSaved(true);
     } catch (e) {
@@ -110,6 +127,15 @@ export default function AssessmentComposerPage() {
               required={num(s.questions ?? 0)}
               selected={bySection[name] ?? []}
               onChange={(ids) => { setSaved(false); setBySection((b) => ({ ...b, [name]: ids })); }}
+              {...(name === "Listening"
+                ? {
+                    audioRef: audioBySection[name] ?? null,
+                    onAudioChange: (key: string | null) => {
+                      setSaved(false);
+                      setAudioBySection((a) => ({ ...a, [name]: key }));
+                    },
+                  }
+                : {})}
             />
           );
         })

@@ -1,6 +1,8 @@
 using Academy.Application.Abstractions;
+using Academy.Application.Assessments;
 using Academy.Infrastructure.Media;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Academy.Api.Endpoints;
 
@@ -27,6 +29,25 @@ public static class MediaEndpoints
             .WithTags("Media")
             .RequireRateLimiting("media");
 
+        app.MapPost("/api/admin/media/audio", async Task<Results<Ok<MediaKeyResponse>, ProblemHttpResult>> (
+                IFormFile file, IObjectStorage storage, MediaOptions options, CancellationToken ct) =>
+            {
+                if (MediaUpload.Validate(file.ContentType, file.Length, options.MaxUploadBytes) is string error)
+                    return TypedResults.Problem(title: error, statusCode: 400);
+
+                var key = $"audio/{Guid.CreateVersion7():N}{MediaUpload.ExtensionFor(file.ContentType)}";
+                await using var stream = file.OpenReadStream();
+                await storage.PutAsync(key, stream, file.ContentType, ct);
+
+                return TypedResults.Ok(new MediaKeyResponse(key));
+            })
+            .RequireAuthorization("Admin")
+            .WithTags("Media")
+            .DisableAntiforgery()          // required for IFormFile binding in minimal APIs
+            // our own MaxUploadBytes is the limit; Kestrel's default is 30 MB. There is no
+            // minimal-API DisableRequestSizeLimit(), so the MVC metadata carries the same meaning.
+            .WithMetadata(new DisableRequestSizeLimitAttribute());
+
         return app;
     }
 
@@ -41,3 +62,5 @@ public static class MediaEndpoints
             _ => "application/octet-stream",
         };
 }
+
+public record MediaKeyResponse(string Key);
