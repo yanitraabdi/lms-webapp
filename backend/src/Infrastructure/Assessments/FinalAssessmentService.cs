@@ -3,6 +3,7 @@ using Academy.Application.Assessments;
 using Academy.Application.Programs;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
+using Academy.Infrastructure.Media;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,8 @@ public class FinalAssessmentService(
     AppDbContext db,
     ISessionAccessService access,
     ISessionCompletionService completion,
-    IProgramCertificateService certificates) : IFinalAssessmentService
+    IProgramCertificateService certificates,
+    MediaSigner signer) : IFinalAssessmentService
 {
     /// <summary>Two strikes ends the sitting (KAK §9.8.1).</summary>
     public const int StrikeLimit = 2;
@@ -91,8 +93,6 @@ public class FinalAssessmentService(
             .Select(q => new { q.Id, q.AudioRef, q.Section })
             .FirstOrDefaultAsync(ct)
             ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
-        if (string.IsNullOrWhiteSpace(question.AudioRef))
-            throw new AssessmentException("Soal ini tidak memiliki audio.", 400);
 
         // The question must belong to this assessment AND the active section.
         var state = AttemptState.Parse(attempt.State);
@@ -104,10 +104,14 @@ public class FinalAssessmentService(
         var config = AssessmentService.ParseConfig(
             await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
 
+        // A question's own clip wins; otherwise the section recording, if there is one.
+        var storageKey = AudioResolution.StorageKey(question.AudioRef, question.Section, config)
+            ?? throw new AssessmentException("Soal ini tidak memiliki audio.", 400);
+
         // Play limit is counted SERVER-side; the client cannot grant itself another play.
         if (config.AudioPlayLimit is int limit)
         {
-            var key = questionId.ToString();
+            var key = AudioResolution.PlayKey(questionId, question.AudioRef, question.Section, config)!;
             state.AudioPlays.TryGetValue(key, out var used);
             if (used >= limit)
                 throw new AssessmentException("Batas pemutaran audio untuk soal ini sudah tercapai.", 409);
@@ -116,8 +120,8 @@ public class FinalAssessmentService(
             await db.SaveChangesAsync(ct);
         }
 
-        // Signed, short-TTL, minted per play (GR-3). Dev storage returns a deterministic dev URL.
-        return $"/media/audio/{Uri.EscapeDataString(question.AudioRef)}";
+        // Signed, short-TTL, minted per play (GR-3).
+        return signer.Sign(storageKey);
     }
 
     // ================================================================ internals
@@ -239,23 +243,41 @@ public class FinalAssessmentService(
         {
             // Only the ACTIVE section's questions are ever serialized — and never with answers (GR-11).
             var currentSection = ParseSection(current.Section);
-            questions = await db.AssessmentQuestions
+            // AudioResolution is a C# helper, so the rows come back first and resolve in memory.
+            var rows = await db.AssessmentQuestions
                 .Where(q => q.AssessmentId == attempt.AssessmentId
                             && q.Question.Section == currentSection)
                 .OrderBy(q => q.OrderIndex)
-                .Select(q => new StudentQuestionDto(
-                    q.QuestionId, q.Question.Section.ToString(), q.Question.Prompt,
-                    ParseStrings(q.Question.Choices), q.Question.PassageRef, q.Question.AudioRef != null))
+                .Select(q => new
+                {
+                    q.QuestionId,
+                    q.Question.Section,
+                    q.Question.Prompt,
+                    q.Question.Choices,
+                    q.Question.PassageRef,
+                    q.Question.AudioRef,
+                })
                 .ToListAsync(ct);
 
+            questions = rows
+                .Select(r => new StudentQuestionDto(
+                    r.QuestionId, r.Section.ToString(), r.Prompt, ParseStrings(r.Choices), r.PassageRef,
+                    AudioResolution.StorageKey(r.AudioRef, r.Section, config) is not null))
+                .ToList();
+
             var saved = ParseInts(attempt.Answers);
-            foreach (var q in questions)
+            foreach (var r in rows)
             {
-                if (saved.TryGetValue(q.Id.ToString(), out var v)) answers[q.Id.ToString()] = v;
-                if (config.AudioPlayLimit is int limit && q.HasAudio)
+                var id = r.QuestionId.ToString();
+                if (saved.TryGetValue(id, out var v)) answers[id] = v;
+
+                if (config.AudioPlayLimit is int limit
+                    && AudioResolution.PlayKey(r.QuestionId, r.AudioRef, r.Section, config) is string playKey)
                 {
-                    state.AudioPlays.TryGetValue(q.Id.ToString(), out var used);
-                    audioLeft[q.Id.ToString()] = Math.Max(0, limit - used);
+                    state.AudioPlays.TryGetValue(playKey, out var used);
+                    // Keyed by question id for the client, even when the allowance is shared,
+                    // so every question in the section shows the same remaining count.
+                    audioLeft[id] = Math.Max(0, limit - used);
                 }
             }
         }

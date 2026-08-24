@@ -24,9 +24,9 @@ internal static class ItpFinal
         IReadOnlyDictionary<QuestionSection, List<(Guid Id, int Correct)>> Key);
 
     /// <summary>The ITP section layout as an anonymous object, for tests that POST a config.</summary>
-    public static object[] SectionConfig() =>
+    public static object[] SectionConfig(string? listeningAudioRef = null) =>
     [
-        new { section = nameof(QuestionSection.Listening), questions = ToeflScoring.ListeningQuestions, minutes = ToeflScoring.ListeningMinutes },
+        new { section = nameof(QuestionSection.Listening), questions = ToeflScoring.ListeningQuestions, minutes = ToeflScoring.ListeningMinutes, audioRef = listeningAudioRef },
         new { section = nameof(QuestionSection.Structure), questions = ToeflScoring.StructureQuestions, minutes = ToeflScoring.StructureMinutes },
         new { section = nameof(QuestionSection.Reading),   questions = ToeflScoring.ReadingQuestions,   minutes = ToeflScoring.ReadingMinutes },
     ];
@@ -35,7 +35,8 @@ internal static class ItpFinal
         AuthApiFactory factory,
         string title = "Simulasi TOEFL ITP",
         int? retakeCap = 1,
-        int? audioPlayLimit = null)
+        int? audioPlayLimit = null,
+        string? sectionAudioRef = null)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -51,7 +52,7 @@ internal static class ItpFinal
                 retakeCap,
                 proctoringEnabled = true,
                 audioPlayLimit,
-                sections = SectionConfig(),
+                sections = SectionConfig(sectionAudioRef),
                 timeLimitMinutes = (int?)null,
             }, Json),
         };
@@ -80,7 +81,7 @@ internal static class ItpFinal
                     Prompt = $"{section} {i} {suffix}",
                     Choices = """["a","b"]""",
                     Correct = $"[{correct}]",
-                    AudioRef = section == QuestionSection.Listening ? "clip.mp3" : null,
+                    AudioRef = section == QuestionSection.Listening ? "audio/clip.mp3" : null,
                     PassageRef = null,
                     Tags = "[]",
                 };
