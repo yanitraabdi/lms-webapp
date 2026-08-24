@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Academy.Infrastructure.Programs;
 
 /// <summary>Program/session/batch authoring (KAK §9.12). Every mutation is audit-logged.</summary>
-public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidator) : IProgramAdminService
+public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidator, IObjectStorage storage) : IProgramAdminService
 {
     // ---------------------------------------------------------------- programs
 
@@ -357,6 +357,15 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
     /// section carries one recording, or every Listening question carries its own clip —
     /// otherwise a learner hits a 400 mid-exam, which is exactly the failure readiness exists
     /// to move forward in time.
+    ///
+    /// A reference alone is not enough: an API-set ref, a database restored against a different
+    /// bucket, or a storage lifecycle rule all leave a ref pointing at nothing, and the learner
+    /// gets the same dead player. So every ref is resolved against <see cref="IObjectStorage"/>.
+    ///
+    /// COST: this is an admin-triggered, non-hot path, and at most 50 existence checks run
+    /// (one per Listening question, deduplicated) — free against LocalObjectStorage, which is a
+    /// File.Exists. When Storage:Provider swaps to R2 each one becomes a network round trip, so
+    /// whoever does that swap should either batch them or list the prefix once instead.
     /// </summary>
     private async Task<ReadinessCheckDto> ListeningAudioCheckAsync(
         Guid? assessmentId, AssessmentConfig? config, CancellationToken ct)
@@ -371,19 +380,54 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         if (listening is null)
             return new(key, title, true, true, null);          // no Listening section, nothing to play
 
+        // One recording covers the whole section — but only if the file is actually there.
         if (!string.IsNullOrWhiteSpace(listening.AudioRef))
-            return new(key, title, true, true, null);          // one recording covers the whole section
+            return await StoredAsync(listening.AudioRef, ct)
+                ? new(key, title, true, true, null)
+                : new(key, title, false, true,
+                    $"Rekaman satu bagian listening tidak ditemukan di penyimpanan: {listening.AudioRef}. Unggah ulang rekamannya.");
 
+        // AudioResolution treats blank as absent (IsNullOrWhiteSpace), so the check must too —
+        // the API persists a trimmed string and can store "". Both tests are inlined because EF
+        // Core cannot translate a helper method or IsNullOrWhiteSpace into SQL here.
         var missing = await db.AssessmentQuestions
             .CountAsync(q => q.AssessmentId == id
                              && q.Question.Section == QuestionSection.Listening
-                             && q.Question.AudioRef == null, ct);
+                             && (q.Question.AudioRef == null || q.Question.AudioRef == ""), ct);
 
-        return new(key, title, missing == 0, true,
-            missing > 0
-                ? $"{missing} soal listening belum memiliki audio. Unggah audio per soal, atau satu rekaman untuk seluruh bagian."
-                : null);
+        var refs = await db.AssessmentQuestions
+            .Where(q => q.AssessmentId == id
+                        && q.Question.Section == QuestionSection.Listening
+                        && q.Question.AudioRef != null && q.Question.AudioRef != "")
+            .Select(q => q.Question.AudioRef!)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var unreachable = new List<string>();
+        foreach (var r in refs)
+            if (!await StoredAsync(r, ct)) unreachable.Add(r);
+
+        // The two failures need different actions, so they are reported separately.
+        var problems = new List<string>();
+        if (missing > 0)
+            problems.Add($"{missing} soal listening belum memiliki audio. Unggah audio per soal, atau satu rekaman untuk seluruh bagian.");
+        if (unreachable.Count > 0)
+            problems.Add($"{unreachable.Count} berkas audio listening tidak ditemukan di penyimpanan: {Describe(unreachable)}. Unggah ulang audionya.");
+
+        return new(key, title, problems.Count == 0, true,
+            problems.Count > 0 ? string.Join(" ", problems) : null);
     }
+
+    /// <summary>Existence only — the stream is opened and disposed immediately.</summary>
+    private async Task<bool> StoredAsync(string objectKey, CancellationToken ct)
+    {
+        await using var stream = await storage.OpenReadAsync(objectKey, ct);
+        return stream is not null;
+    }
+
+    /// <summary>Names a few offending keys without letting a 50-question section flood the panel.</summary>
+    private static string Describe(List<string> keys) =>
+        keys.Count <= 3 ? string.Join(", ", keys) : $"{string.Join(", ", keys.Take(3))} (+{keys.Count - 3} lainnya)";
 
     /// <summary>Every raw score in every ITP section must map exactly once, within its scaled band.</summary>
     private async Task<ReadinessCheckDto> ScoreBandsCheckAsync(Guid programId, CancellationToken ct)

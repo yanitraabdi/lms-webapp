@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Academy.Application.Abstractions;
 using Academy.Application.Assessments;
 using Academy.Application.Auth;
 using Academy.Application.Programs;
@@ -302,6 +303,8 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
             config.Sections.First(s => s.Section == QuestionSection.Listening).AudioRef = "audio/section.mp3";
             final.Config = JsonSerializer.Serialize(config, Json);
 
+            // The object has to actually be there: a ref pointing at nothing is a dead player.
+            await ItpFinal.StoreAsync(scope.ServiceProvider.GetRequiredService<IObjectStorage>(), "audio/section.mp3");
             await db.SaveChangesAsync();
         }
 
@@ -331,6 +334,80 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
 
         Assert.True(Check(r, "listening_audio_present").Passed);
+    }
+
+    [Fact]
+    public async Task A_blank_audio_ref_counts_as_no_audio()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+
+        // The API stores a trimmed string, so posting audioRef: "" persists "" rather than null.
+        // AudioResolution treats blank as absent; if the check did not, the panel would go green
+        // and the learner would get "Soal ini tidak memiliki audio." mid-exam.
+        await SetListeningAudioAsync(program, "");
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+        var check = Check(r, "listening_audio_present");
+
+        Assert.False(check.Passed);
+        Assert.Contains("50 soal listening belum memiliki audio", check.Detail);
+        Assert.False(r.Ready);
+        Assert.Equal(HttpStatusCode.Conflict, (await Publish(admin, program, published: true)).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_section_recording_that_is_not_in_storage_blocks_publishing()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+        await ClearListeningAudioAsync(program);
+
+        // A ref that never had an object behind it: an API-set value, a database restored against
+        // a different bucket, or a lifecycle rule that swept the file.
+        const string phantom = "audio/never-uploaded.mp3";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var final = await FinalOf(db, program);
+            var config = JsonSerializer.Deserialize<AssessmentConfig>(final.Config, Json)!;
+            config.Sections.First(s => s.Section == QuestionSection.Listening).AudioRef = phantom;
+            final.Config = JsonSerializer.Serialize(config, Json);
+            await db.SaveChangesAsync();
+        }
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+        var check = Check(r, "listening_audio_present");
+
+        Assert.False(check.Passed);
+        // The detail must name the file, and must not read like "no audio configured" — the two
+        // need different actions from an admin.
+        Assert.Contains(phantom, check.Detail);
+        Assert.Contains("tidak ditemukan di penyimpanan", check.Detail);
+        Assert.False(r.Ready);
+
+        var publish = await Publish(admin, program, published: true);
+        Assert.Equal(HttpStatusCode.Conflict, publish.StatusCode);
+        Assert.Contains(phantom, await publish.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_question_clip_that_is_not_in_storage_blocks_publishing()
+    {
+        var admin = await AdminToken();
+        var program = await BuildReadyProgram(admin);
+
+        const string phantom = "audio/gone.mp3";
+        await SetListeningAudioAsync(program, phantom);
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{program}/readiness", admin);
+        var check = Check(r, "listening_audio_present");
+
+        Assert.False(check.Passed);
+        Assert.Contains(phantom, check.Detail);
+        // Deduplicated: 50 questions share one ref, so one file is named, not fifty.
+        Assert.Contains("1 berkas audio listening tidak ditemukan", check.Detail);
+        Assert.False(r.Ready);
     }
 
     private async Task<HttpResponseMessage> Publish(string admin, Guid program, bool published)
@@ -460,7 +537,10 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
     /// Scoped deliberately: the integration suite shares a database, so a query filtered only
     /// by section would strip audio from other tests' fixtures too.
     /// </summary>
-    private async Task ClearListeningAudioAsync(Guid program)
+    private Task ClearListeningAudioAsync(Guid program) => SetListeningAudioAsync(program, null);
+
+    /// <summary>Same scoping, for the blank-string and dangling-reference cases.</summary>
+    private async Task SetListeningAudioAsync(Guid program, string? audioRef)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -472,7 +552,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
             .ToListAsync();
 
         var questions = await db.Questions.Where(q => ids.Contains(q.Id)).ToListAsync();
-        foreach (var q in questions) q.AudioRef = null;
+        foreach (var q in questions) q.AudioRef = audioRef;
         await db.SaveChangesAsync();
     }
 

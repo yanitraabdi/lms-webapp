@@ -2,6 +2,7 @@ using System.Text.Json;
 using Academy.Domain;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
+using Academy.Application.Abstractions;
 using Academy.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +19,13 @@ namespace Academy.Integration.Tests;
 internal static class ItpFinal
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <summary>The per-question clip every seeded Listening question points at.</summary>
+    public const string QuestionAudioRef = "audio/clip.mp3";
+
+    /// <summary>A few bytes are enough — readiness only asks whether the object exists.</summary>
+    public static Task StoreAsync(IObjectStorage storage, string key) =>
+        storage.PutAsync(key, new MemoryStream([0x49, 0x44, 0x33]), "audio/mpeg");
 
     internal sealed record Seeded(
         Guid AssessmentId,
@@ -40,6 +48,12 @@ internal static class ItpFinal
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        // Readiness now resolves every listening AudioRef against object storage, so the fixture
+        // has to put the referenced objects there — a ref alone no longer makes a program ready.
+        var storage = scope.ServiceProvider.GetRequiredService<IObjectStorage>();
+        await StoreAsync(storage, QuestionAudioRef);
+        if (!string.IsNullOrWhiteSpace(sectionAudioRef)) await StoreAsync(storage, sectionAudioRef);
 
         var assessment = new Assessment
         {
@@ -81,7 +95,7 @@ internal static class ItpFinal
                     Prompt = $"{section} {i} {suffix}",
                     Choices = """["a","b"]""",
                     Correct = $"[{correct}]",
-                    AudioRef = section == QuestionSection.Listening ? "audio/clip.mp3" : null,
+                    AudioRef = section == QuestionSection.Listening ? QuestionAudioRef : null,
                     PassageRef = null,
                     Tags = "[]",
                 };
