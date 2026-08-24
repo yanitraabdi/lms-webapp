@@ -68,6 +68,7 @@ public static class DependencyInjection
         // when Storage:Provider = "r2".
         services.AddSingleton(MediaOptionsFactory.Build(configuration));
         services.AddSingleton<IObjectStorage, LocalObjectStorage>();
+        services.AddSingleton<MediaSigner>();
         // DevVideoProvider simulates Bunny signed playback; swap to BunnyVideoProvider when Video:Provider="bunny".
         services.AddScoped<IVideoProvider, DevVideoProvider>();
         services.AddSingleton<CertificatePdf>();

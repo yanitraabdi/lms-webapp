@@ -126,6 +126,7 @@ app.MapProgramAdminEndpoints();
 app.MapSessionEndpoints();
 app.MapAssessmentAdminEndpoints();
 app.MapFinalAssessmentEndpoints();
+app.MapMediaEndpoints();
 app.MapAdminOperationsEndpoints();
 // Dev-only payment simulation endpoints (active when Billing:Provider = "dev").
 if (app.Services.GetRequiredService<BillingOptions>().IsDev)

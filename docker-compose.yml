@@ -32,6 +32,7 @@ services:
       # On-demand ISR revalidation: API → Next (over the compose network).
       Revalidate__FrontendUrl: "http://frontend:3000"
       Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
+      Media__SigningKey: "${MEDIA_SIGNING_KEY:-dev-media-signing-key-change-me}"
     ports:
       - "${API_PORT:-8080}:8080"
     volumes:

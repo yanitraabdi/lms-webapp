@@ -25,10 +25,15 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public CapturingEmailSender Email { get; } = new();
 
+    // The default Storage:Root ("/data/media") is a docker volume mount that doesn't exist
+    // (and isn't writable) on the test host, so media-backed tests get their own temp folder.
+    private readonly string _mediaRoot = Directory.CreateTempSubdirectory("academy-media-tests-").FullName;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Default", _pg.GetConnectionString());
         builder.UseSetting("Jwt:SigningKey", "test-only-signing-key-that-is-comfortably-over-32-bytes");
+        builder.UseSetting("Storage:Root", _mediaRoot);
         builder.UseSetting("RateLimits:PermitLimit", "100000"); // don't throttle the test suite
         builder.ConfigureServices(services =>
         {
@@ -50,6 +55,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     async Task IAsyncLifetime.DisposeAsync()
     {
         await _pg.DisposeAsync();
+        try { Directory.Delete(_mediaRoot, recursive: true); } catch (IOException) { /* best-effort cleanup */ }
         await base.DisposeAsync();
     }
 }
