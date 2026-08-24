@@ -51,6 +51,9 @@ public class LocalObjectStorageTests : IDisposable
     [InlineData("audio/")]
     [InlineData("nofolder.mp3")]
     [InlineData("")]
+    [InlineData("audio/..")]
+    [InlineData("audio/.")]
+    [InlineData("audio/clip.mp3\n")]
     public async Task Traversal_and_malformed_keys_are_refused(string key)
     {
         var s = Storage();
@@ -65,8 +68,18 @@ public class LocalObjectStorageTests : IDisposable
     {
         var s = Storage();
         await s.PutAsync("audio/clip.mp3", new MemoryStream([1, 2, 3]), "audio/mpeg");
-
         Assert.True(File.Exists(Path.Combine(_root, "audio", "clip.mp3")));
+
+        // A rejected key must not write anything at the location it was aiming for either —
+        // "audio/../../escaped.txt" targets the storage root's parent directory if traversal
+        // were not blocked.
+        var escapeTarget = Path.Combine(Path.GetDirectoryName(_root)!, "escaped.txt");
+        if (File.Exists(escapeTarget)) File.Delete(escapeTarget);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => s.PutAsync("audio/../../escaped.txt", new MemoryStream([1, 2, 3]), "audio/mpeg"));
+
+        Assert.False(File.Exists(escapeTarget));
     }
 
     public void Dispose()
