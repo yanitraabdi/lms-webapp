@@ -55,7 +55,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     async Task IAsyncLifetime.DisposeAsync()
     {
         await _pg.DisposeAsync();
-        try { Directory.Delete(_mediaRoot, recursive: true); } catch (IOException) { /* best-effort cleanup */ }
+        try { Directory.Delete(_mediaRoot, recursive: true); } catch (Exception) { /* best-effort cleanup; OS temp reaper is the backstop */ }
         await base.DisposeAsync();
     }
 }

@@ -107,4 +107,13 @@ public class MediaDeliveryTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var res = await _client.GetAsync("/api/media/..%2F..%2Fetc%2Fpasswd?exp=99999999999&sig=deadbeef");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
+
+    [Fact]
+    public async Task An_exp_past_DateTimeOffsets_range_is_refused_not_500()
+    {
+        // DateTimeOffset.FromUnixTimeSeconds throws above 253402300799; the route must still
+        // reject this with a uniform 404, not let the exception surface as a 500.
+        var res = await _client.GetAsync("/api/media/audio/absent.mp3?exp=253402300800&sig=deadbeef");
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
 }

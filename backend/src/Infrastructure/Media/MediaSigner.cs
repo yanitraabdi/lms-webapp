@@ -19,12 +19,18 @@ public class MediaSigner(MediaOptions options)
     public string SignatureFor(string key, long exp)
     {
         using var h = new HMACSHA256(Encoding.UTF8.GetBytes(options.SigningKey));
-        return Convert.ToHexStringLower(h.ComputeHash(Encoding.UTF8.GetBytes($"{key}.{exp}")));
+        // Invariant formatting: minimal-API model binding parses `exp` with invariant rules, and a
+        // signing payload must never depend on ambient culture.
+        return Convert.ToHexStringLower(h.ComputeHash(
+            Encoding.UTF8.GetBytes($"{key}.{exp.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
     }
 
     public bool Verify(string key, long exp, string sig)
     {
-        if (DateTimeOffset.FromUnixTimeSeconds(exp) < DateTimeOffset.UtcNow) return false;
+        // Compare raw seconds — DateTimeOffset.FromUnixTimeSeconds throws ArgumentOutOfRangeException
+        // outside [-62135596800, 253402300799], which would turn an out-of-range exp into a 500 on
+        // this anonymous route instead of the uniform 404 every other rejection returns.
+        if (exp < DateTimeOffset.UtcNow.ToUnixTimeSeconds()) return false;
 
         // Fixed-time comparison: a byte-by-byte early exit leaks the signature one nibble at a time.
         var expected = Encoding.UTF8.GetBytes(SignatureFor(key, exp));

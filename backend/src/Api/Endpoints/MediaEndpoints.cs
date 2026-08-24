@@ -25,7 +25,7 @@ public static class MediaEndpoints
                 return TypedResults.Stream(stream, ContentTypeFor(key), enableRangeProcessing: true);
             })
             .WithTags("Media")
-            .RequireRateLimiting("playback");
+            .RequireRateLimiting("media");
 
         return app;
     }
