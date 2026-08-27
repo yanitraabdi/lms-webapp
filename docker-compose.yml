@@ -44,10 +44,19 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # NEXT_PUBLIC_* are INLINED INTO THE CLIENT BUNDLE at build time, so they must be passed
+        # here — a runtime `environment:` entry cannot change them. Building with "" makes every
+        # browser call relative (/api/*), which Next proxies to API_INTERNAL_URL via the
+        # afterFiles rewrite in next.config.ts. That keeps the browser independent of API_PORT;
+        # baking http://localhost:${API_PORT} instead would break every call the moment the port
+        # changed, with no error until the browser tried to fetch.
+        NEXT_PUBLIC_API_BASE_URL: ""
+        API_INTERNAL_URL: "http://api:8080"
     environment:
       NODE_ENV: production
-      # Browser → API (direct public calls: verify/forgot/reset).
-      NEXT_PUBLIC_API_BASE_URL: "http://localhost:${API_PORT:-8080}"
+      # Same-origin: the browser calls /api/* on this host and Next proxies it.
+      NEXT_PUBLIC_API_BASE_URL: ""
       # Next BFF (server-side) → API over the compose network (login/register/refresh/logout).
       API_INTERNAL_URL: "http://api:8080"
       # Shared secret for the /api/revalidate route the .NET API calls on content changes.

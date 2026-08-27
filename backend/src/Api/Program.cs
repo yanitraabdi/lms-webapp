@@ -11,6 +11,7 @@ using Academy.Infrastructure.Billing;
 using Academy.Infrastructure.Catalog;
 using Academy.Infrastructure.Engagement;
 using Academy.Infrastructure.Persistence;
+using Academy.Infrastructure.Assessments;
 using Academy.Infrastructure.Programs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -169,6 +170,8 @@ if (app.Configuration.GetValue<bool>("SeedSampleData"))
     await scope.ServiceProvider.GetRequiredService<DevAdminSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<FaqSeeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<ProgramSeeder>().SeedAsync();
+    // Runnable sample test on session 1 — depends on ProgramSeeder having created the program.
+    await scope.ServiceProvider.GetRequiredService<SampleTestSeeder>().SeedAsync();
 }
 
 app.Run();
