@@ -68,23 +68,33 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
     /// A retake cap of 0 would make <c>used &gt;= cap</c> true before the first attempt, locking the
     /// test — and with it the linear program — permanently. Unlimited is expressed as null.
     /// </summary>
-    private static void Validate(UpsertAssessmentRequest req)
+    private static void Validate(AssessmentConfig config)
     {
-        if (req.Config.RetakeCap is int cap && cap < 1)
+        if (config.RetakeCap is int cap && cap < 1)
             throw new AssessmentException(
                 "Batas percobaan minimal 1. Kosongkan untuk tanpa batas.");
+    }
+
+    /// <summary>Merges the partial request over what is stored, then validates the RESULT — a
+    /// request that omits retakeCap must still be judged on the cap that will actually apply.</summary>
+    private static (string Json, AssessmentConfig Config) Resolve(string? storedJson, UpsertAssessmentRequest req)
+    {
+        var json = AssessmentConfigMerge.Merge(storedJson, req.Config);
+        var config = AssessmentConfigMerge.ToConfig(json, JsonOpts);
+        Validate(config);
+        return (json, config);
     }
 
     public async Task<AdminAssessmentDto> CreateAsync(
         Guid actor, UpsertAssessmentRequest req, CancellationToken ct = default)
     {
-        Validate(req);
+        var (configJson, _) = Resolve(null, req);
         var assessment = new Assessment
         {
             Id = Guid.CreateVersion7(),
             Kind = Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) ? k : AssessmentKind.Gating,
             Title = req.Title.Trim(),
-            Config = JsonSerializer.Serialize(req.Config, JsonOpts),
+            Config = configJson,
         };
         db.Assessments.Add(assessment);
         Audit(actor, "assessment_created", assessment.Id, new { assessment.Title, Kind = assessment.Kind.ToString() });
@@ -94,13 +104,13 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
 
     public async Task UpdateAsync(Guid actor, Guid id, UpsertAssessmentRequest req, CancellationToken ct = default)
     {
-        Validate(req);
         var a = await db.Assessments.FirstOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
+        var (configJson, config) = Resolve(a.Config, req);
         a.Kind = Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) ? k : a.Kind;
         a.Title = req.Title.Trim();
-        a.Config = JsonSerializer.Serialize(req.Config, JsonOpts);
-        Audit(actor, "assessment_updated", id, new { a.Title, req.Config.PassThreshold, req.Config.RetakeCap });
+        a.Config = configJson;
+        Audit(actor, "assessment_updated", id, new { a.Title, config.PassThreshold, config.RetakeCap });
         await db.SaveChangesAsync(ct);
     }
 
