@@ -19,6 +19,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
+using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 // RFC-7807 problem details (+ handler that maps AuthException / validation errors).
@@ -45,6 +48,30 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
 
 // Rate limiter: per-client-IP fixed window for auth/payment/playback (auth → /api/auth/*).
 // PermitLimit is configurable (raised in tests) so it throttles real clients, not the whole app.
+// The API never faces the internet directly: the browser reaches it through the Next
+// same-origin proxy (and, in the tunnel deploy, Cloudflare before that). Without this,
+// Connection.RemoteIpAddress is the FRONTEND CONTAINER's address for every request, so all
+// per-IP rate limits collapse into one bucket shared by every user — brute-force protection
+// on /api/auth becomes meaningless and one cohort starting an exam together can exhaust the
+// media limit for everyone.
+//
+// ForwardLimit = 1 takes only the rightmost X-Forwarded-For entry. Cloudflare APPENDS the true
+// client IP to whatever the caller sent, so the rightmost entry is the one it vouches for and a
+// spoofed header cannot displace it. KnownNetworks is restricted to private ranges so a request
+// arriving from a public address cannot present itself as a trusted proxy.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("192.168.0.0"), 16));
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("127.0.0.0"), 8));
+    options.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.IPv6Loopback, 128));
+});
+
 var permitLimit = builder.Configuration.GetValue<int?>("RateLimits:PermitLimit") ?? 20;
 builder.Services.AddRateLimiter(options =>
 {
@@ -117,6 +144,21 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// A localhost FrontendBaseUrl in Production means every verification link, reset link and
+// certificate verify URL is unreachable. Certificates are immutable, so a bad URL cannot be
+// corrected after issue — fail at startup instead of discovering it from a learner.
+if (app.Environment.IsProduction())
+{
+    var frontendBase = app.Services.GetRequiredService<IOptions<AuthOptions>>().Value.FrontendBaseUrl;
+    if (frontendBase.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException(
+            $"FrontendBaseUrl is '{frontendBase}' in Production. Set FrontendBaseUrl (or " +
+            "Cors__AllowedOrigins__0) to the public origin, e.g. https://your-domain.");
+}
+
+// Must run before UseRateLimiter: the limiter partitions on RemoteIpAddress.
+app.UseForwardedHeaders();
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -148,6 +190,7 @@ app.MapSessionEndpoints();
 app.MapAssessmentAdminEndpoints();
 app.MapFinalAssessmentEndpoints();
 app.MapMediaEndpoints();
+
 app.MapAdminOperationsEndpoints();
 // Dev-only payment simulation endpoints (active when Billing:Provider = "dev").
 if (app.Services.GetRequiredService<BillingOptions>().IsDev)

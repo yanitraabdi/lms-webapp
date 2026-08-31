@@ -48,6 +48,10 @@ services:
       Revalidate__FrontendUrl: "http://frontend:3000"
       Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
       Media__SigningKey: "${MEDIA_SIGNING_KEY:?set MEDIA_SIGNING_KEY in .env}"
+      # Base for verify/reset email links and the certificate verify URL. Without it these fall
+      # back to http://localhost:3001 — links no learner can open, and a wrong URL printed onto
+      # an immutable certificate (GR-6), which can only be superseded, never corrected.
+      FrontendBaseUrl: "${PUBLIC_SITE_URL:?set PUBLIC_SITE_URL in .env}"
     # Internal only — reached exclusively via the frontend same-origin proxy.
     expose:
       - "8080"
