@@ -5778,6 +5778,7 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        JsonObject: Record<string, never>;
         LevelDto: {
             /** Format: uuid */
             id: string;
@@ -6373,7 +6374,7 @@ export interface components {
         UpsertAssessmentRequest: {
             kind: string;
             title: string;
-            config: components["schemas"]["AssessmentConfig"];
+            config: null | components["schemas"]["JsonObject"];
         };
         UpsertBatchRequest: {
             name: string;

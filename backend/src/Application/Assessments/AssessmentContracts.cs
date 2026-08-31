@@ -110,7 +110,13 @@ public record AdminAssessmentDto(
     int QuestionCount, IReadOnlyList<AdminQuestionDto> Questions,
     Guid? AttachedSessionId, int AttemptCount);
 
-public record UpsertAssessmentRequest(string Kind, string Title, AssessmentConfig Config);
+/// <summary>
+/// Config is a PARTIAL document, merged over the stored one by key presence
+/// (<see cref="AssessmentConfigMerge"/>): omit a key to keep it, send it to change it, send it as
+/// null to clear it. A screen that models only part of the config can therefore save safely
+/// without destroying the fields it does not know about. The response DTO stays fully typed.
+/// </summary>
+public record UpsertAssessmentRequest(string Kind, string Title, System.Text.Json.Nodes.JsonObject? Config);
 
 public record SetAssessmentQuestionsRequest(IReadOnlyList<Guid> QuestionIdsInOrder);
 

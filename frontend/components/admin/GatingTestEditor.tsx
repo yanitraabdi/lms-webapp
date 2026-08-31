@@ -108,23 +108,21 @@ export function GatingTestEditor({
     if (!valid) return;
     setBusy(true); setError(null);
     try {
-      const config = isFinal
-        ? {
-            passThreshold: null,
-            retakeCap: retakeCap.trim() === "" ? null : Number(retakeCap),
-            proctoringEnabled: true,
-            audioPlayLimit: 1,
-            sections,
-            timeLimitMinutes: null,
-          }
-        : {
-            passThreshold,
-            retakeCap: retakeCap.trim() === "" ? null : Number(retakeCap),
-            proctoringEnabled: false,
-            audioPlayLimit: null,
-            sections: [],
-            timeLimitMinutes: null,
-          };
+      const cap = retakeCap.trim() === "" ? null : Number(retakeCap);
+
+      // The API merges the config by key presence, so send ONLY what this editor actually models.
+      // Sending a hard-coded value for a field the editor does not expose would reset it on every
+      // save — which is how audioPlayLimit was being forced back to 1 on each layout edit.
+      const updateConfig = isFinal
+        ? { retakeCap: cap, sections }
+        : { passThreshold, retakeCap: cap, sections: [] };
+
+      // On create there is nothing to merge over, so the defaults must be stated in full.
+      const createConfig = isFinal
+        ? { ...updateConfig, passThreshold: null, proctoringEnabled: true, audioPlayLimit: 1, timeLimitMinutes: null }
+        : { ...updateConfig, proctoringEnabled: false, audioPlayLimit: null, timeLimitMinutes: null };
+
+      const config = assessmentId ? updateConfig : createConfig;
       let id = assessmentId;
       if (id) {
         await updateAssessment(token, id, { kind, title: title.trim(), config });
