@@ -1,5 +1,6 @@
 // INVERTA M3 — session playback/progress + gating tests. Types from the generated OpenAPI client.
 import type { components } from "@/api-client/schema";
+import { apiFetch } from "@/lib/auth/session";
 
 export type SessionContext = components["schemas"]["SessionContextDto"];
 export type SessionPlayback = components["schemas"]["SessionPlaybackDto"];
@@ -16,10 +17,6 @@ export type UpsertQuestion = components["schemas"]["UpsertQuestionRequest"];
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
-function auth(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}`, "content-type": "application/json" };
-}
-
 async function problem(res: Response, fallback: string): Promise<Error> {
   const body = await res.json().catch(() => null);
   const title =
@@ -30,12 +27,14 @@ async function problem(res: Response, fallback: string): Promise<Error> {
 }
 
 async function api<T>(method: string, path: string, token: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  // Goes through apiFetch so an expired access token is refreshed and the call retried
+  // once, instead of surfacing a bare 401 the user can only clear by reloading.
+  const res = await apiFetch(`${API}${path}`, {
     method,
-    headers: auth(token),
+    headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
-  });
+  }, token);
   if (!res.ok) throw await problem(res, "Operasi gagal.");
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -59,7 +58,7 @@ export const saveSessionProgress = (t: string, id: string, positionSeconds: numb
 
 /** The session's gating test, WITHOUT answers. Null when the session has none (204). */
 export async function getSessionAssessment(t: string, id: string): Promise<StudentAssessment | null> {
-  const res = await fetch(`${API}/api/sessions/${id}/assessment`, { headers: auth(t), cache: "no-store" });
+  const res = await apiFetch(`${API}/api/sessions/${id}/assessment`, { cache: "no-store" }, t);
   if (res.status === 204) return null;
   if (!res.ok) throw await problem(res, "Gagal memuat tes.");
   return res.json();
@@ -166,9 +165,7 @@ export const reinstateAttempt = (t: string, attemptId: string) =>
   api<void>("POST", `/api/admin/attempts/${attemptId}/reinstate`, t);
 
 export async function downloadCertificate(t: string, certId: string, fileName: string): Promise<void> {
-  const res = await fetch(`${API}/api/program-certificates/${certId}/pdf`, {
-    headers: { Authorization: `Bearer ${t}` },
-  });
+  const res = await apiFetch(`${API}/api/program-certificates/${certId}/pdf`, {}, t);
   if (!res.ok) throw await problem(res, "Gagal mengunduh sertifikat.");
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
