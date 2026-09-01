@@ -32,7 +32,12 @@ public class LearningFlowTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var (token, _) = await VerifiedUser();
 
         var previewId = await ModuleId(m => m.IsPreview);
-        var lockedId = await ModuleId(m => !m.IsPreview && m.RequiredPlanTier >= 1);
+        // Tier 1 exactly, not ">= 1": the seeded catalog also carries Intermediate (2) and
+        // Advanced (3) modules, and the assertion below subscribes to BEGINNER. A tier-2 module
+        // satisfies the "forbidden while free" half and then correctly stays forbidden after a
+        // tier-1 subscription, so the looser predicate turned a real entitlement rule into a
+        // coin flip decided by whichever row Postgres happened to return.
+        var lockedId = await ModuleId(m => !m.IsPreview && m.RequiredPlanTier == 1);
 
         // Free user: preview plays, paid module is forbidden.
         var preview = await Authed(HttpMethod.Post, $"/api/modules/{previewId}/playback", token);
@@ -48,6 +53,23 @@ public class LearningFlowTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         await SubscribeBeginner(token);
         Assert.Equal(HttpStatusCode.OK,
             (await Authed(HttpMethod.Post, $"/api/modules/{lockedId}/playback", token)).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_subscription_does_not_unlock_a_higher_tier_than_it_paid_for()
+    {
+        // The rule the flaky version of the test above was accidentally half-checking: entitlement
+        // is per TIER, not "paid or not". A Beginner subscriber reaching Advanced content is the
+        // failure mode worth a test of its own, and nothing else covered it.
+        await Seed();
+        var (token, _) = await VerifiedUser();
+
+        var advancedId = await ModuleId(m => !m.IsPreview && m.RequiredPlanTier == 3);
+
+        await SubscribeBeginner(token);   // tier 1
+
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Authed(HttpMethod.Post, $"/api/modules/{advancedId}/playback", token)).StatusCode);
     }
 
     [Fact]
@@ -204,7 +226,11 @@ public class LearningFlowTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // Ordered, because an unordered FirstAsync returns whatever the scan yields first — which
+        // changes as rows are inserted and as the planner switches strategy. A test that picks
+        // "a module" must pick the SAME module on every run, or a passing suite proves nothing.
         return await db.Modules.Where(m => m.Status == ModuleStatus.Published).Where(predicate)
+            .OrderBy(m => m.RequiredPlanTier).ThenBy(m => m.OrderIndex).ThenBy(m => m.Id)
             .Select(m => m.Id).FirstAsync();
     }
 
@@ -214,6 +240,7 @@ public class LearningFlowTests(AuthApiFactory factory) : IClassFixture<AuthApiFa
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await db.Modules
             .Where(m => m.Status == ModuleStatus.Published && m.Track.Level.Slug == "basic")
+            .OrderBy(m => m.OrderIndex).ThenBy(m => m.Id)
             .Select(m => m.Id).ToListAsync();
     }
 
