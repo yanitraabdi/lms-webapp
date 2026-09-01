@@ -1181,11 +1181,36 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["UserDto"];
+                    };
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateProfileRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserDto"];
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;
@@ -6357,6 +6382,9 @@ export interface components {
         UpdatePreferencesRequest: {
             preferences: components["schemas"]["NotificationPrefDto"][];
         };
+        UpdateProfileRequest: {
+            name: string;
+        };
         UpgradePreviewDto: {
             /** Format: uuid */
             currentPlanId: string;
@@ -6481,6 +6509,14 @@ export interface components {
             slug: null | string;
             /** Format: int32 */
             orderIndex: number | string;
+        };
+        UserDto: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            role: string;
+            emailVerified: boolean;
         };
         VerifyEmailRequest: {
             token: string;

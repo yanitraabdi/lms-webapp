@@ -1,6 +1,7 @@
 // Engagement client (M7): notifications + preferences, notes/bookmarks, quizzes, module ratings.
 // Types come from the generated OpenAPI client.
 import type { components } from "@/api-client/schema";
+import { apiFetch } from "@/lib/auth/session";
 
 export type Notification = components["schemas"]["NotificationDto"];
 export type NotificationList = components["schemas"]["NotificationListDto"];
@@ -27,12 +28,14 @@ async function problem(res: Response, fallback: string): Promise<Error> {
 }
 
 async function api<T>(method: string, path: string, token: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  // Goes through apiFetch so an expired access token is refreshed and the call retried
+  // once, instead of surfacing a bare 401 the user can only clear by reloading.
+  const res = await apiFetch(`${API}${path}`, {
     method,
-    headers: auth(token),
+    headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
-  });
+  }, token);
   if (!res.ok) throw await problem(res, "Operasi gagal.");
   return (res.status === 204 ? undefined : await res.json()) as T;
 }

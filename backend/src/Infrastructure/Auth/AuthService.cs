@@ -192,6 +192,17 @@ public class AuthService(
         return ToDto(user);
     }
 
+    public async Task<UserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest req, CancellationToken ct = default)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new AuthException("not_found", "Pengguna tidak ditemukan.", 404);
+
+        user.Name = req.Name.Trim();
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return ToDto(user);
+    }
+
     public async Task DeleteAccountAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)

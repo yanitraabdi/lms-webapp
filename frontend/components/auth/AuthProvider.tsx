@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AuthSession, AuthUser } from "@/lib/auth/types";
+import { registerSession } from "@/lib/auth/session";
 
 type Status = "loading" | "authenticated" | "unauthenticated";
 
@@ -31,13 +32,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  // Latest token, readable by non-React callers (see lib/auth/session.ts) without a re-render.
+  const tokenRef = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshRef = useRef<() => Promise<boolean>>(async () => false);
+
   const apply = useCallback((s: AuthSession) => {
+    tokenRef.current = s.accessToken;
     setAccessToken(s.accessToken);
     setUser(s.user);
     setStatus("authenticated");
+
+    // Refresh a minute before expiry rather than waiting to be rejected. Without this the token
+    // simply died after 15 minutes and every later call 401'd until the page was reloaded — which
+    // would strand a learner part-way through a 115-minute exam.
+    if (timer.current) clearTimeout(timer.current);
+    const lead = Math.max((s.expiresInSeconds ?? 900) - 60, 30);
+    timer.current = setTimeout(() => { void refreshRef.current(); }, lead * 1000);
   }, []);
 
   const clear = useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    tokenRef.current = null;
     setAccessToken(null);
     setUser(null);
     setStatus("unauthenticated");
@@ -58,10 +74,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [apply, clear]);
 
+  // Let plain modules (lib/*) read the live token and trigger a refresh on a 401.
+  refreshRef.current = refresh;
+  useEffect(() => {
+    registerSession(() => tokenRef.current, () => refreshRef.current());
+  }, []);
+
   // Bootstrap the session from the httpOnly refresh cookie on first load.
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
