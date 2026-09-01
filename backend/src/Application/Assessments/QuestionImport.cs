@@ -43,9 +43,6 @@ public static partial class AudioKey
     {
         if (string.IsNullOrWhiteSpace(filename)) return null;
 
-        // Reject filenames with ".." to prevent directory traversal attempts, even after basename extraction.
-        if (filename.Contains("..")) return null;
-
         // Split on both separators by hand: Path.GetFileName does not treat '\' as a separator on
         // Linux, and a sheet authored on Windows can carry either.
         var name = filename.Trim();
