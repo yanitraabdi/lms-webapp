@@ -48,6 +48,11 @@ public static class EnrollmentStateMachine
     public static bool GrantsAccess(EnrollmentStatus status)
         => status is EnrollmentStatus.Active or EnrollmentStatus.Completed;
 
+    /// <summary>
+    /// Transitions a verified PAYMENT WEBHOOK may perform (GR-2). Deliberately has no path out of
+    /// Revoked: a replayed or late-arriving paid event for a refunded enrollment must never hand
+    /// access back. Reinstating is a human decision — see <see cref="CanReinstate"/>.
+    /// </summary>
     public static bool CanTransition(EnrollmentStatus from, EnrollmentStatus to) => (from, to) switch
     {
         (EnrollmentStatus.PendingPayment, EnrollmentStatus.Active) => true,   // verified webhook
@@ -57,4 +62,18 @@ public static class EnrollmentStateMachine
         (EnrollmentStatus.Completed, EnrollmentStatus.Revoked) => true,
         _ => false,
     };
+
+    /// <summary>
+    /// Whether an ADMIN may put this enrollment back into Active — a revoke made in error, or a
+    /// payment dispute resolved in the learner's favour.
+    ///
+    /// Kept separate from <see cref="CanTransition"/> on purpose. The webhook processor gates
+    /// solely on that method, so folding reinstatement into it would mean any replayed paid event
+    /// could resurrect a refunded enrollment. Two rules, two callers: widening the support path
+    /// can never widen what a webhook is allowed to do.
+    ///
+    /// Completed is absent because it already grants access; there is nothing to reinstate.
+    /// </summary>
+    public static bool CanReinstate(EnrollmentStatus from)
+        => from is EnrollmentStatus.Revoked or EnrollmentStatus.PendingPayment;
 }

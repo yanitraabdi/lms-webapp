@@ -228,6 +228,78 @@ public class ProgramEnrollmentTests(AuthApiFactory factory) : IClassFixture<Auth
         });
     }
 
+    [Fact]
+    public async Task An_admin_can_restore_access_after_revoking_it()
+    {
+        // Revoking has to be reversible: an admin can revoke the wrong learner, and a payment
+        // dispute can be resolved in the learner's favour. Restoring returns the SAME enrollment
+        // to Active — it never creates a second one — and the progress that survived the revoke
+        // is still there afterwards.
+        await Seed();
+        var (token, userId) = await VerifiedUser();
+        var programId = await ProgramId();
+        await Enroll(token, programId);
+
+        var ordered = (await AuthedGet<StudentProgramDto>($"/api/me/programs/{programId}", token))
+            .Sessions.OrderBy(s => s.OrderIndex).ToList();
+        await CompleteSession(userId, ordered[0].Id);
+
+        var enrollmentId = await WithDbResult(db => db.Enrollments
+            .Where(e => e.UserId == userId && e.ProgramId == programId).Select(e => e.Id).FirstAsync());
+        var email = await WithDbResult(db => db.Users.Where(u => u.Id == userId).Select(u => u.Email).FirstAsync());
+
+        var admin = await AdminToken();
+        (await Authed(HttpMethod.Post, $"/api/admin/enrollments/{enrollmentId}/revoke", admin))
+            .EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Authed(HttpMethod.Get, $"/api/me/programs/{programId}", token)).StatusCode);
+
+        // Restore.
+        (await Authed(HttpMethod.Post, "/api/admin/enrollments/grant", admin, new { email, programId }))
+            .EnsureSuccessStatusCode();
+
+        (await Authed(HttpMethod.Get, $"/api/me/programs/{programId}", token)).EnsureSuccessStatusCode();
+        Assert.True(await CanAccess(userId, ordered[0].Id));
+
+        await WithDb(async db =>
+        {
+            var enrollments = await db.Enrollments
+                .Where(e => e.UserId == userId && e.ProgramId == programId).ToListAsync();
+            Assert.Single(enrollments);                                  // restored, not duplicated
+            Assert.Equal(enrollmentId, enrollments[0].Id);
+            Assert.Equal(EnrollmentStatus.Active, enrollments[0].Status);
+            Assert.True(await db.SessionCompletions.AnyAsync(c => c.UserId == userId));
+        });
+    }
+
+    [Fact]
+    public async Task A_replayed_payment_webhook_cannot_resurrect_a_revoked_enrollment()
+    {
+        // The reason reinstatement is a separate rule from the webhook's transition table. If the
+        // two were merged, a late or replayed paid event for a refunded learner would hand access
+        // straight back, with no human involved — exactly what GR-2 exists to prevent.
+        await Seed();
+        var (token, userId) = await VerifiedUser();
+        var programId = await ProgramId();
+
+        var session = await Checkout(token, programId);
+        await PayDev(session.ProviderRef);
+
+        var enrollmentId = await WithDbResult(db => db.Enrollments
+            .Where(e => e.UserId == userId && e.ProgramId == programId).Select(e => e.Id).FirstAsync());
+
+        var admin = await AdminToken();
+        (await Authed(HttpMethod.Post, $"/api/admin/enrollments/{enrollmentId}/revoke", admin))
+            .EnsureSuccessStatusCode();
+
+        await PayDev(session.ProviderRef);   // the replay
+
+        await WithDb(async db => Assert.Equal(EnrollmentStatus.Revoked,
+            await db.Enrollments.Where(e => e.Id == enrollmentId).Select(e => e.Status).FirstAsync()));
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Authed(HttpMethod.Get, $"/api/me/programs/{programId}", token)).StatusCode);
+    }
+
     // ---- admin ----
 
     [Fact]
