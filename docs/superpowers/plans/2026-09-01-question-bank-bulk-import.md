@@ -240,8 +240,6 @@ public class AudioKeyTests
     }
 
     [Theory]
-    [InlineData("../../etc/passwd.mp3")]     // directory traversal
-    [InlineData("audio/../x.mp3")]
     [InlineData("..mp3")]
     [InlineData("...")]
     [InlineData("---.mp3")]                  // sanitises to nothing usable
@@ -249,15 +247,30 @@ public class AudioKeyTests
     [InlineData("   ")]
     [InlineData("noextension")]
     [InlineData("bad.")]
-    public void An_unusable_or_escaping_filename_yields_null(string filename)
+    public void An_unusable_filename_yields_null(string filename)
         => Assert.Null(AudioKey.FromFilename(filename));
 
-    [Fact]
-    public void A_traversal_attempt_never_keeps_its_path_segments()
+    [Theory]
+    [InlineData("../../etc/passwd.mp3", "audio/passwd.mp3")]
+    [InlineData("audio/../x.mp3", "audio/x.mp3")]
+    [InlineData("evil/../../L01.mp3", "audio/l01.mp3")]
+    [InlineData("C:\\clips\\L01.mp3", "audio/l01.mp3")]
+    public void A_traversal_attempt_keeps_only_its_last_segment(string filename, string expected)
     {
-        // Even if a future change made the leading dots survivable, the key must stay one segment.
-        var key = AudioKey.FromFilename("evil/../../L01.mp3");
-        Assert.True(key is null || key == "audio/l01.mp3");
+        // Path segments are DROPPED, never resolved, so a key is always one folder plus one
+        // filename. Rejecting these outright would be the wrong fix: it is the stripping plus
+        // Build's must-start-alphanumeric rule that makes escape impossible, and a blanket ".."
+        // ban would ALSO have to live in Build, or the two callers stop agreeing — which is the
+        // one thing this helper exists to guarantee.
+        Assert.Equal(expected, AudioKey.FromFilename(filename));
+    }
+
+    [Fact]
+    public void Build_and_FromFilename_agree_even_on_a_basename_containing_dots()
+    {
+        // "L01..mp3" is a plausible slip of the finger. Whatever the two do with it, they must do
+        // the SAME thing, or an uploaded recording and the sheet that references it part ways.
+        Assert.Equal(AudioKey.Build("L01.", ".mp3"), AudioKey.FromFilename("L01..mp3"));
     }
 
     [Fact]
@@ -380,7 +393,7 @@ The heart of the feature, and pure: rows of trimmed strings in, questions and er
   - `record PassageRow(int RowNumber, string PassageId, string Text)`
   - `record ImportWorkbook(IReadOnlyList<string> Columns, IReadOnlyList<QuestionRow> Rows, IReadOnlyList<PassageRow> Passages)`
   - `record ImportError(int Row, string Column, string Message)`
-  - `record ParsedQuestion(string ExternalId, QuestionSection Section, string Prompt, IReadOnlyList<string> Choices, int CorrectIndex, string? PassageText, string? AudioKey, IReadOnlyList<string> Tags)`
+  - `record ParsedQuestion(string ExternalId, QuestionSection Section, string Prompt, IReadOnlyList<string> Choices, int CorrectIndex, string? PassageText, string? AudioRef, IReadOnlyList<string> Tags)`
   - `record ImportParseResult(IReadOnlyList<ParsedQuestion> Questions, IReadOnlyList<ImportError> Errors)`
   - `QuestionImportParser.Parse(ImportWorkbook) -> ImportParseResult`
   - `QuestionImportParser.RequiredColumns` / `.OptionalColumns` — `string[]`, used by the template builder in Task 4.

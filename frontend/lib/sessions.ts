@@ -119,6 +119,49 @@ export async function uploadAudio(t: string, file: File): Promise<{ key: string 
 export const attachAssessment = (t: string, sessionId: string, assessmentId: string | null) =>
   api<void>("PUT", `/api/admin/sessions/${sessionId}/assessment`, t, { assessmentId });
 
+export type ImportResult = components["schemas"]["ImportResultDto"];
+export type BulkAudioResult = components["schemas"]["BulkAudioResponse"];
+
+/** Multipart — cannot use api(), which JSON-stringifies its body. apiFetch still applies the
+ *  token and retries once after a refresh, and deliberately does NOT set a content type, so the
+ *  browser writes its own multipart boundary. */
+async function upload<T>(path: string, token: string, form: FormData, fallback: string): Promise<T> {
+  const res = await apiFetch(`${API}${path}`, { method: "POST", body: form, cache: "no-store" }, token);
+  if (!res.ok) throw await problem(res, fallback);
+  return res.json() as Promise<T>;
+}
+
+export async function downloadImportTemplate(token: string): Promise<void> {
+  const res = await apiFetch(`${API}/api/admin/questions/import/template`, {}, token);
+  if (!res.ok) throw await problem(res, "Gagal mengunduh template.");
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "inverta-bank-soal-template.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function previewQuestionImport(token: string, file: File): Promise<ImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  return upload<ImportResult>("/api/admin/questions/import/preview", token, form, "Gagal membaca berkas.");
+}
+
+export function commitQuestionImport(token: string, file: File): Promise<ImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  return upload<ImportResult>("/api/admin/questions/import", token, form, "Gagal mengimpor soal.");
+}
+
+export function uploadAudioBulk(token: string, files: File[]): Promise<BulkAudioResult> {
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  return upload<BulkAudioResult>("/api/admin/media/audio/bulk", token, form, "Gagal mengunggah audio.");
+}
+
 export const QUESTION_SECTIONS = ["Listening", "Reading", "Vocabulary", "Structure", "General"] as const;
 
 export function num(v: number | string): number {

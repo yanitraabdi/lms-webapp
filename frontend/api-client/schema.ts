@@ -794,6 +794,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/media/audio/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        files: components["schemas"]["IFormFileCollection"];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BulkAudioResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -4537,6 +4578,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/questions/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/questions/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        file: components["schemas"]["IFormFile"];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportResultDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/questions/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        file: components["schemas"]["IFormFile"];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportResultDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/attempts/{id}/state": {
         parameters: {
             query?: never;
@@ -5643,6 +5799,14 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        BulkAudioItem: {
+            filename: string;
+            key: null | string;
+            error: null | string;
+        };
+        BulkAudioResponse: {
+            items: components["schemas"]["BulkAudioItem"][];
+        };
         CatalogFacetsDto: {
             levels: components["schemas"]["FacetLevel"][];
             categories: components["schemas"]["FacetCategory"][];
@@ -5803,6 +5967,31 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        IFormFileCollection: components["schemas"]["IFormFile"][];
+        ImportError: {
+            /** Format: int32 */
+            row: number | string;
+            column: string;
+            message: string;
+        };
+        ImportPlanItem: {
+            externalId: string;
+            section: string;
+            prompt: string;
+            isUpdate: boolean;
+        };
+        ImportResultDto: {
+            committed: boolean;
+            /** Format: int32 */
+            createCount: number | string;
+            /** Format: int32 */
+            updateCount: number | string;
+            perSection: {
+                [key: string]: number | string;
+            };
+            items: components["schemas"]["ImportPlanItem"][];
+            errors: components["schemas"]["ImportError"][];
+        };
         JsonObject: Record<string, never>;
         LevelDto: {
             /** Format: uuid */
