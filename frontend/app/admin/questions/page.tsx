@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState, SearchIcon, XIcon } from "@/components/ui";
@@ -64,6 +65,12 @@ export default function AdminQuestionsPage() {
               className="w-[200px] rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
             />
           </div>
+          <Link
+            href="/admin/questions/import"
+            className="rounded-sm border border-border px-3 py-2 text-[13px] font-bold text-ink hover:bg-surface-2"
+          >
+            Impor massal
+          </Link>
           <Button size="sm" onClick={() => setCreating(true)}>+ Soal baru</Button>
         </div>
       </div>
