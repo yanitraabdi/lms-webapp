@@ -102,6 +102,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionLearningService, SessionLearningService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
         services.AddScoped<IQuestionBankService, QuestionBankService>();
+        services.AddScoped<IQuestionImportService, QuestionImportService>();
         services.AddScoped<IAssessmentAdminService, AssessmentAdminService>();
 
         // INVERTA (M4): sectional sitting, proctoring, ITP scoring, certificates
