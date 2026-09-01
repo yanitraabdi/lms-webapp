@@ -54,6 +54,19 @@ export default function AdminEnrollmentsPage() {
     }
   }
 
+  // Revoking must be reversible — an admin can revoke the wrong learner, and a payment dispute can
+  // be resolved in the learner's favour. This reuses the grant endpoint, which returns the SAME
+  // enrollment to Active rather than creating a second one, so the learner's progress is unchanged.
+  async function restore(e: AdminEnrollment) {
+    if (!token || !confirm(`Pulihkan akses ${e.userName} ke ${e.programName}?`)) return;
+    try {
+      await grantEnrollment(token, e.userEmail, e.programId);
+      qc.invalidateQueries({ queryKey: ["admin-enrollments"] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal memulihkan akses.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -130,7 +143,9 @@ export default function AdminEnrollmentsPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end">
-                        {e.status !== "Revoked" && (
+                        {e.status === "Revoked" ? (
+                          <Button variant="neutral" size="sm" onClick={() => restore(e)}>Pulihkan</Button>
+                        ) : (
                           <Button variant="neutral" size="sm" onClick={() => revoke(e)}>Cabut</Button>
                         )}
                       </div>

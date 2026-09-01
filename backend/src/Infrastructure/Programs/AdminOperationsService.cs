@@ -79,6 +79,14 @@ public class AdminOperationsService(AppDbContext db) : IAdminOperationsService
         {
             throw new ProgramException("Pengguna sudah terdaftar aktif pada program ini.", 409);
         }
+        else if (!Domain.EnrollmentStateMachine.CanReinstate(enrollment.Status))
+        {
+            // Previously this path set Status directly without consulting the state machine at
+            // all, so reinstatement worked only by not asking. Asking explicitly is what keeps it
+            // working if the webhook's rules are ever tightened.
+            throw new ProgramException(
+                $"Pendaftaran berstatus {enrollment.Status} tidak dapat diaktifkan kembali.", 409);
+        }
 
         enrollment.Status = EnrollmentStatus.Active;
         enrollment.EnrolledAt ??= DateTimeOffset.UtcNow;

@@ -71,4 +71,22 @@ public class EnrollmentStateMachineTests
     [InlineData(EnrollmentStatus.PendingPayment, EnrollmentStatus.Completed, false)]
     public void Transitions_are_constrained(EnrollmentStatus from, EnrollmentStatus to, bool expected)
         => Assert.Equal(expected, EnrollmentStateMachine.CanTransition(from, to));
+
+    [Theory]
+    [InlineData(EnrollmentStatus.Revoked, true)]           // revoked in error, or a dispute resolved
+    [InlineData(EnrollmentStatus.PendingPayment, true)]    // comp grant while an invoice is open
+    [InlineData(EnrollmentStatus.Active, false)]           // nothing to reinstate
+    [InlineData(EnrollmentStatus.Completed, false)]
+    public void An_admin_can_reinstate_a_revoked_enrollment(EnrollmentStatus from, bool expected)
+        => Assert.Equal(expected, EnrollmentStateMachine.CanReinstate(from));
+
+    [Fact]
+    public void Reinstating_stays_out_of_the_webhook_path()
+    {
+        // The whole reason these are two methods. The webhook processor gates only on
+        // CanTransition, so if reinstatement ever leaked into it, a replayed paid event could
+        // hand access back to a refunded learner. This test fails the moment someone merges them.
+        Assert.True(EnrollmentStateMachine.CanReinstate(EnrollmentStatus.Revoked));
+        Assert.False(EnrollmentStateMachine.CanTransition(EnrollmentStatus.Revoked, EnrollmentStatus.Active));
+    }
 }
