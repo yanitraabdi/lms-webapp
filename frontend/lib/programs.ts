@@ -1,5 +1,6 @@
 // INVERTA program & enrollment client (M2). Types come from the generated OpenAPI client.
 import type { components } from "@/api-client/schema";
+import { apiFetch } from "@/lib/auth/session";
 
 export type PublicProgram = components["schemas"]["PublicProgramDto"];
 export type PublicSession = components["schemas"]["PublicSessionDto"];
@@ -24,10 +25,6 @@ function baseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 }
 
-function auth(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}`, "content-type": "application/json" };
-}
-
 async function problem(res: Response, fallback: string): Promise<Error> {
   const body = await res.json().catch(() => null);
   const title =
@@ -38,12 +35,14 @@ async function problem(res: Response, fallback: string): Promise<Error> {
 }
 
 async function api<T>(method: string, path: string, token: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${baseUrl()}${path}`, {
+  // Goes through apiFetch so an expired access token is refreshed and the call retried
+  // once, instead of surfacing a bare 401 the user can only clear by reloading.
+  const res = await apiFetch(`${baseUrl()}${path}`, {
     method,
-    headers: auth(token),
+    headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
-  });
+  }, token);
   if (!res.ok) throw await problem(res, "Operasi gagal.");
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -191,3 +190,16 @@ export type ReadinessCheck = components["schemas"]["ReadinessCheckDto"];
 
 export const getProgramReadiness = (t: string, programId: string) =>
   api<ProgramReadiness>("GET", `/api/admin/programs/${programId}/readiness`, t);
+
+// ---- account / profile ----
+
+export type Me = components["schemas"]["UserDto"];
+
+/** Change the signed-in user's display name. Email is not editable — it is the login identity. */
+export const updateProfile = (t: string, name: string) =>
+  api<Me>("PUT", "/api/auth/me", t, { name });
+
+/** Change password. The server rotates tokens, so the caller must apply the returned session. */
+export const changePassword = (t: string, currentPassword: string, newPassword: string) =>
+  api<{ accessToken: string; expiresInSeconds: number; user: Me }>(
+    "POST", "/api/auth/change-password", t, { currentPassword, newPassword });

@@ -3,6 +3,10 @@ namespace Academy.Application.Auth;
 public record RegisterRequest(string Name, string Email, string Password);
 public record LoginRequest(string Email, string Password);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+/// <summary>Self-service profile edit. Email is deliberately NOT changeable here: it is the
+/// login identity and is tied to email verification, so changing it needs its own re-verify flow.</summary>
+public record UpdateProfileRequest(string Name);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 public record VerifyEmailRequest(string Token);

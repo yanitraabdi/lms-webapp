@@ -48,3 +48,11 @@ public class ResendVerificationRequestValidator : AbstractValidator<ResendVerifi
 {
     public ResendVerificationRequestValidator() => RuleFor(x => x.Email).NotEmpty().EmailAddress();
 }
+
+public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequest>
+{
+    public UpdateProfileRequestValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MinimumLength(2).MaximumLength(120);
+    }
+}

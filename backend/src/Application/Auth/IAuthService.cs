@@ -17,5 +17,6 @@ public interface IAuthService
     Task ResetPasswordAsync(ResetPasswordRequest req, CancellationToken ct = default);
 
     Task<UserDto> GetMeAsync(Guid userId, CancellationToken ct = default);
+    Task<UserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest req, CancellationToken ct = default);
     Task DeleteAccountAsync(Guid userId, CancellationToken ct = default);
 }

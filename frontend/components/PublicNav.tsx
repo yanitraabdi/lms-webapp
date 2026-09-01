@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { AccountMenu } from "@/components/app/AccountMenu";
 
 // INVERTA is a single-program product — the program landing replaces catalog/pricing
 // as primary navigation (KAK §9.15). Those routes remain in-repo but are unlinked.
@@ -51,14 +52,9 @@ export function PublicNav({ className }: { className?: string }) {
             <Link href="/app/dashboard" className={cn(ctaBase, "text-ink hover:bg-surface-2")}>
               Dasbor
             </Link>
-            <Link
-              href="/app/account"
-              aria-label="Akun saya"
-              title={user?.name ?? "Akun saya"}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary"
-            >
-              {initials}
-            </Link>
+            {/* Was a bare link to /app/account, which sent signed-in visitors to the archived
+                subscription page. Same dropdown as the in-app header: profile, then sign out. */}
+            <AccountMenu initials={initials} />
           </div>
         ) : (
           <div className="flex items-center gap-2">

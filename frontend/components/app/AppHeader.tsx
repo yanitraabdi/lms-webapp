@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/app/NotificationBell";
+import { AccountMenu } from "@/components/app/AccountMenu";
 import { WrenchIcon } from "@/components/ui";
 import { isAdminRole } from "@/lib/admin";
 import { cn } from "@/lib/cn";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/cn";
 const links: Array<{ href: string; label: string; tour?: string }> = [
   { href: "/app/dashboard", label: "Dasbor", tour: "nav-program" },
   { href: "/app/certificates", label: "Sertifikat", tour: "nav-certificates" },
+  { href: "/app/account", label: "Profil & tagihan" },
   { href: "/help", label: "Bantuan" },
 ];
 
@@ -67,9 +69,7 @@ export function AppHeader() {
         </div>
         <div className="flex items-center gap-1.5">
           <NotificationBell />
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary">
-            {initials}
-          </span>
+          <AccountMenu initials={initials} />
         </div>
       </div>
     </header>
