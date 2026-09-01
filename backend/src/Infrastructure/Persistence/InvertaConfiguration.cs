@@ -97,6 +97,9 @@ public class QuestionConfig : IEntityTypeConfiguration<Question>
     public void Configure(EntityTypeBuilder<Question> e)
     {
         e.HasIndex(x => x.Section);
+        e.Property(x => x.ExternalId).HasMaxLength(64);
+        // Filtered: hand-authored questions all have NULL and must not collide with one another.
+        e.HasIndex(x => x.ExternalId).IsUnique().HasFilter("external_id IS NOT NULL");
         e.Property(x => x.Choices).HasColumnType("jsonb");
         e.Property(x => x.Correct).HasColumnType("jsonb");   // server-only — never in a student DTO
         e.Property(x => x.Tags).HasColumnType("jsonb");

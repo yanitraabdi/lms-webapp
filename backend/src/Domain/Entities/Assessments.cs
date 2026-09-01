@@ -29,6 +29,15 @@ public class Question : Entity
     public string? AudioRef { get; set; }                       // R2 key (listening) — signed on serve
     public string? PassageRef { get; set; }                     // reading passage
     public string Tags { get; set; } = "[]";                    // jsonb string[]
+
+    /// <summary>
+    /// Author-assigned id from a bulk-import sheet ("L01", "R07") — the upsert key, so re-uploading
+    /// a corrected sheet updates in place instead of duplicating the bank. Null for a question
+    /// authored by hand in the admin UI, and many of those must coexist, so the unique index is
+    /// filtered to non-null values. Stored uppercase: the sheet dedupes case-insensitively, and a
+    /// case-sensitive index would otherwise let "L01" and "l01" become two questions.
+    /// </summary>
+    public string? ExternalId { get; set; }
 }
 
 public class AssessmentQuestion : Entity
