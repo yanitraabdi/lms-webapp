@@ -393,7 +393,7 @@ The heart of the feature, and pure: rows of trimmed strings in, questions and er
   - `record PassageRow(int RowNumber, string PassageId, string Text)`
   - `record ImportWorkbook(IReadOnlyList<string> Columns, IReadOnlyList<QuestionRow> Rows, IReadOnlyList<PassageRow> Passages)`
   - `record ImportError(int Row, string Column, string Message)`
-  - `record ParsedQuestion(string ExternalId, QuestionSection Section, string Prompt, IReadOnlyList<string> Choices, int CorrectIndex, string? PassageText, string? AudioKey, IReadOnlyList<string> Tags)`
+  - `record ParsedQuestion(string ExternalId, QuestionSection Section, string Prompt, IReadOnlyList<string> Choices, int CorrectIndex, string? PassageText, string? AudioRef, IReadOnlyList<string> Tags)`
   - `record ImportParseResult(IReadOnlyList<ParsedQuestion> Questions, IReadOnlyList<ImportError> Errors)`
   - `QuestionImportParser.Parse(ImportWorkbook) -> ImportParseResult`
   - `QuestionImportParser.RequiredColumns` / `.OptionalColumns` — `string[]`, used by the template builder in Task 4.
