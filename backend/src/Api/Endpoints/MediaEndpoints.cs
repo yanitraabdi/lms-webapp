@@ -53,6 +53,48 @@ public static class MediaEndpoints
             // Acceptable for the admin surface; do not copy it onto an anonymous route.
             .WithMetadata(new DisableRequestSizeLimitAttribute());
 
+        app.MapPost("/api/admin/media/audio/bulk", async Task<Ok<BulkAudioResponse>> (
+                IFormFileCollection files, IObjectStorage storage, MediaOptions options,
+                CancellationToken ct) =>
+            {
+                var items = new List<BulkAudioItem>();
+
+                // Per-file, not all-or-nothing: unlike a sheet, uploads are independent, and
+                // refusing 49 good recordings over one stray PDF helps nobody at 140 questions.
+                foreach (var file in files)
+                {
+                    if (MediaUpload.Validate(file.ContentType, file.Length, options.MaxUploadBytes) is string error)
+                    {
+                        items.Add(new BulkAudioItem(file.FileName, null, error));
+                        continue;
+                    }
+
+                    // The key the IMPORTER will compute from the sheet's audio_file column. Same
+                    // rule, one implementation — otherwise every Listening question points at an
+                    // object stored under a different name.
+                    var key = AudioKey.ForUpload(file.FileName, MediaUpload.ExtensionFor(file.ContentType));
+                    if (key is null)
+                    {
+                        items.Add(new BulkAudioItem(file.FileName, null,
+                            "Nama berkas tidak dapat dipakai. Gunakan nama seperti L01.mp3."));
+                        continue;
+                    }
+
+                    await using var stream = file.OpenReadStream();
+                    await storage.PutAsync(key, stream, file.ContentType, ct);
+                    items.Add(new BulkAudioItem(file.FileName, key, null));
+                }
+
+                return TypedResults.Ok(new BulkAudioResponse(items));
+            })
+            .RequireAuthorization("Admin")
+            .WithTags("Media")
+            .DisableAntiforgery()
+            // Same reasoning as the single-file route above: MaxUploadBytes can only be checked
+            // after model binding, and a batch of section recordings would trip Kestrel's default
+            // long before the handler runs.
+            .WithMetadata(new DisableRequestSizeLimitAttribute());
+
         return app;
     }
 
@@ -69,3 +111,8 @@ public static class MediaEndpoints
 }
 
 public record MediaKeyResponse(string Key);
+
+/// <summary>One uploaded file: its stored key, or the reason it was refused. Never both.</summary>
+public record BulkAudioItem(string Filename, string? Key, string? Error);
+
+public record BulkAudioResponse(IReadOnlyList<BulkAudioItem> Items);

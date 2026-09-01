@@ -188,6 +188,7 @@ app.MapProgramEndpoints();
 app.MapProgramAdminEndpoints();
 app.MapSessionEndpoints();
 app.MapAssessmentAdminEndpoints();
+app.MapQuestionImportEndpoints();
 app.MapFinalAssessmentEndpoints();
 app.MapMediaEndpoints();
 

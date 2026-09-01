@@ -73,4 +73,24 @@ public class AudioKeyTests
     [Fact]
     public void Null_is_tolerated()
         => Assert.Null(AudioKey.FromFilename(null));
+
+    [Fact]
+    public void An_upload_takes_its_extension_from_the_content_type_not_the_filename()
+    {
+        // The existing MediaUpload rule: a client filename never decides what a stored object is.
+        Assert.Equal("audio/l01.m4a", AudioKey.ForUpload("L01.mp3", ".m4a"));
+        Assert.Equal("audio/l01.mp3", AudioKey.ForUpload("L01.exe", ".mp3"));
+    }
+
+    [Fact]
+    public void An_upload_and_the_sheet_agree_when_the_filename_is_honest()
+    {
+        Assert.Equal(AudioKey.FromFilename("L01.mp3"), AudioKey.ForUpload("L01.mp3", ".mp3"));
+    }
+
+    [Theory]
+    [InlineData("../../evil.mp3", ".mp3", "audio/evil.mp3")]
+    [InlineData("C:\\clips\\L01.mp3", ".mp3", "audio/l01.mp3")]
+    public void An_upload_filename_never_keeps_its_path(string filename, string ext, string expected)
+        => Assert.Equal(expected, AudioKey.ForUpload(filename, ext));
 }

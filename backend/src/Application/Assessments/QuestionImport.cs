@@ -56,6 +56,23 @@ public static partial class AudioKey
         return Build(name[..dot], name[dot..].ToLowerInvariant());
     }
 
+    /// <summary>
+    /// The key for an UPLOADED file. Only the basename comes from the client's filename; the
+    /// extension is supplied by the caller from the content type, keeping the existing
+    /// MediaUpload rule that a client filename never decides what a stored object is.
+    /// </summary>
+    public static string? ForUpload(string? filename, string extension)
+    {
+        if (string.IsNullOrWhiteSpace(filename)) return null;
+
+        var name = filename.Trim();
+        var cut = name.LastIndexOfAny(['/', '\\']);
+        if (cut >= 0) name = name[(cut + 1)..];
+
+        var dot = name.LastIndexOf('.');
+        return Build(dot > 0 ? name[..dot] : name, extension);
+    }
+
     [GeneratedRegex(@"\A\.[a-z0-9]{1,6}\z")]
     private static partial Regex ExtensionPattern();
 }
