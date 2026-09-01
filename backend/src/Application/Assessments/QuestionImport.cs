@@ -150,9 +150,25 @@ public static class QuestionImportParser
         if (errors.Count > 0) return new ImportParseResult([], errors);
 
         var passages = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var blankPassages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var passage in workbook.Passages)
-            if (passage.PassageId.Length > 0)
-                passages[passage.PassageId] = passage.Text;
+        {
+            if (passage.PassageId.Length == 0) continue;
+
+            if (passage.Text.Length == 0)
+            {
+                // Many questions may reference this one id — report it once, here, against the
+                // Passages row, not once per referencing question (same precedent as the missing
+                // required column above).
+                blankPassages.Add(passage.PassageId);
+                errors.Add(new ImportError(passage.RowNumber, "text",
+                    $"Passage '{passage.PassageId}' pada sheet Passages tidak memiliki teks. " +
+                    "Isi teks passage-nya, atau hapus barisnya jika belum siap."));
+                continue;
+            }
+
+            passages[passage.PassageId] = passage.Text;
+        }
 
         var questions = new List<ParsedQuestion>();
         var seenIds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -171,7 +187,7 @@ public static class QuestionImportParser
             var choices = ParseChoices(row, errors);
             var choicesValid = errors.Count == choicesErrorsBefore;
             var correctIndex = ParseAnswer(row, choices, choicesValid, errors);
-            var passageText = ParsePassage(row, passages, errors);
+            var passageText = ParsePassage(row, passages, blankPassages, errors);
             var audioRef = ParseAudio(row, errors);
             var tags = Cell(row, "tags")
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -289,12 +305,16 @@ public static class QuestionImportParser
     }
 
     private static string? ParsePassage(
-        QuestionRow row, Dictionary<string, string> passages, List<ImportError> errors)
+        QuestionRow row, Dictionary<string, string> passages, HashSet<string> blankPassages,
+        List<ImportError> errors)
     {
         var passageId = Cell(row, "passage_id");
         if (passageId.Length == 0) return null;
 
         if (passages.TryGetValue(passageId, out var text)) return text;
+
+        // Already reported once, against the Passages row itself — not here, and not again.
+        if (blankPassages.Contains(passageId)) return null;
 
         errors.Add(new ImportError(row.RowNumber, "passage_id",
             $"passage_id '{passageId}' tidak ada pada sheet Passages."));

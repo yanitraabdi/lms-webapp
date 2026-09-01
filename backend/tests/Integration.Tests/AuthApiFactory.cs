@@ -29,6 +29,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     // (and isn't writable) on the test host, so media-backed tests get their own temp folder.
     private readonly string _mediaRoot = Directory.CreateTempSubdirectory("academy-media-tests-").FullName;
 
+    /// <summary>Lets a test read back what LocalObjectStorage actually wrote, key-for-path.</summary>
+    public string MediaRoot => _mediaRoot;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Default", _pg.GetConnectionString());

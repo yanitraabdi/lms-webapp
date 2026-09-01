@@ -160,6 +160,60 @@ public class QuestionImportApiTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     [Fact]
+    public async Task Two_files_colliding_on_the_same_key_in_one_batch_do_not_overwrite_each_other()
+    {
+        // The realistic case: a multi-select across folders, e.g. section1/01.mp3 and
+        // section2/01.mp3, both sanitise to audio/01.mp3. Silently overwriting would leave a
+        // Listening question playing the wrong recording with no error anywhere.
+        var first = new ByteArrayContent("recording-from-section-1"u8.ToArray());
+        first.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
+        var second = new ByteArrayContent("recording-from-section-2"u8.ToArray());
+        second.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
+        var form = new MultipartFormDataContent
+        {
+            { first, "files", "section1/01.mp3" }, { second, "files", "section2/01.mp3" },
+        };
+
+        var res = await Post("/api/admin/media/audio/bulk", await AdminToken(), form);
+        res.EnsureSuccessStatusCode();
+
+        var result = (await res.Content.ReadFromJsonAsync<BulkResult>(Json))!;
+        Assert.Equal("audio/01.mp3", result.Items[0].Key);
+        Assert.Null(result.Items[0].Error);
+        Assert.Null(result.Items[1].Key);
+        Assert.NotNull(result.Items[1].Error);
+        Assert.Contains("section1/01.mp3", result.Items[1].Error);
+
+        var stored = await File.ReadAllTextAsync(Path.Combine(factory.MediaRoot, "audio", "01.mp3"));
+        Assert.Equal("recording-from-section-1", stored);
+    }
+
+    [Fact]
+    public async Task A_later_request_re_uploading_the_same_filename_still_overwrites()
+    {
+        // Deliberate re-upload as a correction must keep working — only within-batch collisions
+        // are refused, never a cross-request one.
+        var original = new ByteArrayContent("original-take"u8.ToArray());
+        original.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
+        var token = await AdminToken();
+        (await Post("/api/admin/media/audio/bulk", token,
+            new MultipartFormDataContent { { original, "files", "L09.mp3" } })).EnsureSuccessStatusCode();
+
+        var corrected = new ByteArrayContent("corrected-take"u8.ToArray());
+        corrected.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
+        var res = await Post("/api/admin/media/audio/bulk", token,
+            new MultipartFormDataContent { { corrected, "files", "L09.mp3" } });
+        res.EnsureSuccessStatusCode();
+
+        var result = (await res.Content.ReadFromJsonAsync<BulkResult>(Json))!;
+        Assert.Equal("audio/l09.mp3", Assert.Single(result.Items).Key);
+        Assert.Null(result.Items[0].Error);
+
+        var stored = await File.ReadAllTextAsync(Path.Combine(factory.MediaRoot, "audio", "l09.mp3"));
+        Assert.Equal("corrected-take", stored);
+    }
+
+    [Fact]
     public async Task One_bad_file_does_not_reject_the_rest_of_the_batch()
     {
         // Unlike the sheet, uploads are independent: refusing 49 good recordings because the

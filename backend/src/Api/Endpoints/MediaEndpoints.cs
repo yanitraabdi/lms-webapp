@@ -59,6 +59,14 @@ public static class MediaEndpoints
             {
                 var items = new List<BulkAudioItem>();
 
+                // Two files in the SAME batch can sanitise to the same key (e.g. two folders each
+                // holding their own "01.mp3"). Track what this request has already stored so the
+                // second file is refused instead of silently overwriting the first — both would
+                // otherwise report success while one recording quietly vanishes. A deliberate
+                // re-upload in a LATER request must still overwrite, so this set is request-local,
+                // never a cross-request existence check.
+                var keysInThisBatch = new Dictionary<string, string>(StringComparer.Ordinal);
+
                 // Per-file, not all-or-nothing: unlike a sheet, uploads are independent, and
                 // refusing 49 good recordings over one stray PDF helps nobody at 140 questions.
                 foreach (var file in files)
@@ -80,8 +88,17 @@ public static class MediaEndpoints
                         continue;
                     }
 
+                    if (keysInThisBatch.TryGetValue(key, out var collidesWith))
+                    {
+                        items.Add(new BulkAudioItem(file.FileName, null,
+                            $"Nama berkas menghasilkan kunci yang sama dengan '{collidesWith}' ({key}). " +
+                            "Ganti nama salah satu berkas lalu unggah ulang."));
+                        continue;
+                    }
+
                     await using var stream = file.OpenReadStream();
                     await storage.PutAsync(key, stream, file.ContentType, ct);
+                    keysInThisBatch[key] = file.FileName;
                     items.Add(new BulkAudioItem(file.FileName, key, null));
                 }
 

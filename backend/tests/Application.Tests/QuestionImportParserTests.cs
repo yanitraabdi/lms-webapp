@@ -191,6 +191,30 @@ public class QuestionImportParserTests
     }
 
     [Fact]
+    public void A_passage_with_an_id_but_no_text_is_an_error_naming_the_passage_row()
+    {
+        var passage = new PassageRow(5, "P1", "");
+        var result = QuestionImportParser.Parse(Sheet([passage], "R01|Reading|Q|A1|A2|||A|P1||"));
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(5, error.Row);
+        Assert.Contains("P1", error.Message);
+    }
+
+    [Fact]
+    public void Many_questions_referencing_one_empty_passage_produce_one_error_not_many()
+    {
+        var passage = new PassageRow(5, "P1", "");
+        var rows = Enumerable.Range(1, 10)
+            .Select(i => $"R{i:00}|Reading|Q{i}|A1|A2|||A|P1||")
+            .ToArray();
+
+        var result = QuestionImportParser.Parse(Sheet([passage], rows));
+
+        Assert.Single(result.Errors);
+    }
+
+    [Fact]
     public void An_unknown_passage_id_is_an_error()
     {
         var result = QuestionImportParser.Parse(Sheet("R01|Reading|Q|A1|A2|||A|P9||"));

@@ -63,7 +63,7 @@ export default function QuestionImportPage() {
   }
 
   const errors = result?.errors ?? [];
-  const clean = !!result && errors.length === 0;
+  const clean = !!result && errors.length === 0 && !result.committed;
 
   return (
     <div className="flex flex-col gap-4">
