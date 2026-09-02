@@ -97,6 +97,7 @@ public static class DependencyInjection
         services.AddScoped<IProgramAdminService, ProgramAdminService>();
         services.AddScoped<ProgramSeeder>();
         services.AddScoped<Assessments.SampleTestSeeder>();
+        services.AddScoped<Assessments.PlaceholderFinalExamSeeder>();
 
         // INVERTA (M3): session playback/progress + the assessment engine
         services.AddScoped<ISessionLearningService, SessionLearningService>();

@@ -216,6 +216,10 @@ if (app.Configuration.GetValue<bool>("SeedSampleData"))
     await scope.ServiceProvider.GetRequiredService<ProgramSeeder>().SeedAsync();
     // Runnable sample test on session 1 — depends on ProgramSeeder having created the program.
     await scope.ServiceProvider.GetRequiredService<SampleTestSeeder>().SeedAsync();
+    // Fills the final assessment with 140 PLACEHOLDER items so the exam -> scoring -> certificate
+    // -> verify chain is exercisable before the real syllabus exists. Depends on DevAdminSeeder
+    // (the import is attributed to an admin) and on ProgramSeeder having created the assessment.
+    await scope.ServiceProvider.GetRequiredService<PlaceholderFinalExamSeeder>().SeedAsync();
 }
 
 app.Run();
