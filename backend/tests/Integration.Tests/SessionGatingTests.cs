@@ -287,6 +287,69 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     }
 
     [Fact]
+    public async Task Exactly_the_pass_mark_passes()
+    {
+        // The boundary, in the direction that costs a learner their session. The rule is
+        // `score >= passThreshold`, so scoring EXACTLY the mark must pass; an off-by-one here
+        // fails people who earned it, on a test they paid to sit.
+        var c = await EnrolledLearner();
+        var key = await AttachGatingTest(c, c.Session1, passThreshold: 1);
+        await SaveProgress(c.Token, c.Session1, 600, 95m);
+
+        var result = await TakeTest(c.Token, c.Session1, key, correctCount: 1);
+
+        Assert.Equal(1, result.Score);
+        Assert.True(result.Passed);
+    }
+
+    [Fact]
+    public async Task One_below_the_pass_mark_fails()
+    {
+        // The other side of the same boundary. Together these pin `>=` exactly: relaxing it to
+        // `>` breaks the test above, and loosening it to `>= threshold - 1` breaks this one.
+        var c = await EnrolledLearner();
+        var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);
+        await SaveProgress(c.Token, c.Session1, 600, 95m);
+
+        var result = await TakeTest(c.Token, c.Session1, key, correctCount: 1);
+
+        Assert.Equal(1, result.Score);
+        Assert.False(result.Passed);
+    }
+
+    [Fact]
+    public async Task A_question_with_no_correct_answer_marked_is_refused()
+    {
+        // The admin form always has a radio selected, so this state is only reachable through the
+        // API — which is exactly why the server has to refuse it rather than trust the screen.
+        var admin = await AdminToken();
+        var res = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
+        {
+            section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = Array.Empty<int>(),
+            audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("jawaban benar", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_question_with_fewer_than_two_choices_is_refused()
+    {
+        // Same reasoning: the form will not let an admin delete down to one choice, so the only
+        // way in is the API. A single-choice question is unanswerable, not merely odd.
+        var admin = await AdminToken();
+        var res = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
+        {
+            section = "Reading", prompt = "Q", choices = new[] { "hanya satu" }, correct = new[] { 0 },
+            audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("2 pilihan", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Question_bank_rejects_an_out_of_range_correct_index()
     {
         var admin = await AdminToken();
@@ -423,7 +486,23 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
             new Dictionary<string, int> { [q1.Id.ToString()] = 1, [q2.Id.ToString()] = 0 });
     }
 
-    private async Task<AttemptResultDto> TakeTest(string token, Guid sessionId, TestKey key, bool correct)
+    private Task<AttemptResultDto> TakeTest(string token, Guid sessionId, TestKey key, bool correct)
+        => Submit(token, sessionId, correct ? key.Correct : key.Wrong);
+
+    /// <summary>Answers exactly <paramref name="correctCount"/> of the questions correctly and the
+    /// rest wrongly — the only way to land ON a pass mark rather than either side of it.</summary>
+    private Task<AttemptResultDto> TakeTest(string token, Guid sessionId, TestKey key, int correctCount)
+    {
+        var answers = key.QuestionIds
+            .Select((id, index) => (Key: id.ToString(), Value: index < correctCount
+                ? key.Correct[id.ToString()]
+                : key.Wrong[id.ToString()]))
+            .ToDictionary(x => x.Key, x => x.Value);
+        return Submit(token, sessionId, answers);
+    }
+
+    private async Task<AttemptResultDto> Submit(
+        string token, Guid sessionId, IReadOnlyDictionary<string, int> answers)
     {
         var assessmentId = await AssessmentIdFor(sessionId);
         var start = await Authed(HttpMethod.Post, $"/api/assessments/{assessmentId}/attempts", token);
@@ -431,7 +510,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var attempt = (await start.Content.ReadFromJsonAsync<AttemptDto>(Json))!;
 
         var res = await Authed(HttpMethod.Post, $"/api/attempts/{attempt.Id}/submit", token,
-            new { answers = correct ? key.Correct : key.Wrong });
+            new { answers });
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<AttemptResultDto>(Json))!;
     }
