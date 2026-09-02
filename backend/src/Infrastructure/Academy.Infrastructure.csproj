@@ -24,6 +24,7 @@
     <EmbeddedResource Include="Assets\DejaVuSans-Bold.ttf" />
     <!-- Placeholder listening clips for SampleTestSeeder (synthesised speech, not production content). -->
     <EmbeddedResource Include="Assets\SampleListening\*.m4a" />
+    <EmbeddedResource Include="Assets\PlaceholderFinalExam.xlsx" />
   </ItemGroup>
 
 </Project>
