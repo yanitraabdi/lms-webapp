@@ -15,8 +15,15 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "LMS Akademi",
-  description: "Platform pembelajaran daring.",
+  // Was "LMS Akademi" — the archived product's name, shown in every browser tab beside the
+  // INVERTA favicon. The template lets a page set its own title without repeating the brand.
+  title: {
+    default: "INVERTA — Persiapan TOEFL",
+    template: "%s — INVERTA",
+  },
+  description:
+    "Program persiapan TOEFL terstruktur dalam Bahasa Indonesia: video, tes per sesi, sesi live, " +
+    "dan simulasi TOEFL ITP lengkap dengan sertifikat prediksi skor.",
 };
 
 export default async function RootLayout({
