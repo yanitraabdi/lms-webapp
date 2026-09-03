@@ -112,9 +112,23 @@ cd "frontend" && grep -rn "0050e6\|0040c0\|e5edff" app components lib
 
 Expected: **no output**. If anything appears outside `globals.css`, it is a hardcoded brand colour that would now contradict the token — fix it to use the token rather than swapping its hex.
 
-- [ ] **Step 5: Change the certificate PDF**
+- [ ] **Step 5: Change the certificate PDF — BOTH occurrences**
 
-In `backend/src/Infrastructure/Learning/CertificatePdf.cs`, line 34 currently reads:
+`CertificatePdf.cs` renders **two** certificates and each hardcodes the colour separately:
+
+- `Render(...)` — the ARCHIVED AI-Academy per-level certificate (called from `CertificateService`)
+- `RenderProgramCertificate(...)` — the **LIVE** INVERTA TOEFL-prediction certificate a paying
+  learner actually receives (called from `ProgramCertificateService`)
+
+Find every one before editing, and do not pipe the grep through `head` — an earlier draft of this
+plan named only the first because `head -6` truncated the output, and the live certificate would
+have shipped blue:
+
+```bash
+cd "backend" && grep -n "0x00, 0x50, 0xE6" src/Infrastructure/Learning/CertificatePdf.cs
+```
+
+Expected: **two** lines. Change both. The first currently reads:
 
 ```csharp
         var primary = XColor.FromArgb(0x00, 0x50, 0xE6);
@@ -129,6 +143,18 @@ Replace with:
         // code are unchanged; only the ink differs.
         var primary = XColor.FromArgb(0x7F, 0x00, 0xFF);
 ```
+
+Apply the identical change to the second occurrence in `RenderProgramCertificate`. The GR-6 comment
+is if anything more relevant there, since that is the certificate with the TOEFL-prediction
+disclaimer on it.
+
+Then confirm none survive:
+
+```bash
+cd "backend" && grep -c "0x00, 0x50, 0xE6" src/Infrastructure/Learning/CertificatePdf.cs
+```
+
+Expected: `0`.
 
 - [ ] **Step 6: Verify both sides build and the suite passes**
 
