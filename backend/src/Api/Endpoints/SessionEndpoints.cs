@@ -19,6 +19,13 @@ public static class SessionEndpoints
                 Guid id, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
             TypedResults.Ok(await s.GetContextAsync(u.UserId(), id, ct)));
 
+        // Listening audio for the session test. Rate-limited with playback: it mints a signed URL
+        // per call, and a gating test has no play cap, so the limiter is what bounds it.
+        g.MapGet("/{id:guid}/assessment/audio/{questionId:guid}", async Task<Ok<GatingAudioResponse>> (
+                Guid id, Guid questionId, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(new GatingAudioResponse(await s.GetGatingAudioUrlAsync(u.UserId(), id, questionId, ct))))
+            .RequireRateLimiting("playback");
+
         g.MapPost("/{id:guid}/playback", async Task<Ok<SessionPlaybackDto>> (
                 Guid id, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
             TypedResults.Ok(await s.GetPlaybackAsync(u.UserId(), id, ct)))
@@ -63,3 +70,5 @@ public static class SessionEndpoints
         return app;
     }
 }
+
+public record GatingAudioResponse(string Url);

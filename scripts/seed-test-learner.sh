@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# Seeds one enrolled test learner so the student flow can be clicked through end to end.
+# Seeds enrolled test learners so the student flow can be clicked through end to end.
+#
+# TWO accounts, because passing a session test is permanent and attempts are retained (GR-7):
+#
+#   siswa@test.local    the general-purpose learner. Works through the programme.
+#   siswa2@test.local   reserved for RETAKE testing (UAT E-05). Never pass its session test —
+#                       once passed, the retry control is correctly hidden for ever and the case
+#                       becomes unrunnable on that account. This has already produced two false
+#                       bug reports against working software.
 #
 # Deliberately NOT a C# seeder: enrollment must only ever be granted by a verified payment
 # webhook (GR-2), and a seeder writing an enrollment row directly would set exactly the wrong
@@ -12,11 +20,15 @@
 set -euo pipefail
 
 BASE="${1:-http://localhost:6300}"
-EMAIL="siswa@test.local"
 PASSWORD="Siswa12345!"
 COMPOSE="docker compose -f docker-compose.tunnel.yml"
 
 jqv() { python3 -c "import sys,json;print(json.load(sys.stdin)$1)"; }
+
+seed_learner() {
+  local EMAIL="$1" NAME="$2"
+  echo
+  echo "=== $EMAIL ==="
 
 echo "1/5 registering $EMAIL"
 REG=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/auth/register" \
@@ -54,5 +66,11 @@ fi
 STATUS=$($COMPOSE exec -T postgres psql -U academy -d academy -t \
   -c "select e.status from enrollments e join users u on u.id=e.user_id where u.email='$EMAIL';" | tr -d ' \n')
 
+  echo "   $EMAIL / $PASSWORD   enrollment: $STATUS"
+}
+
+seed_learner "siswa@test.local"  "Siswa Uji"
+seed_learner "siswa2@test.local" "Siswa Uji Retake"
+
 echo
-echo "done — $EMAIL / $PASSWORD   enrollment: $STATUS"
+echo "done. siswa2@test.local is reserved for UAT E-05 — do NOT pass its session test."
