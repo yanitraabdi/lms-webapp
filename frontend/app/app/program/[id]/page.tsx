@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
 import { SessionView } from "@/components/learn/SessionView";
 import { Badge, Button, Spinner, ErrorState, CheckIcon, LockIcon, PlayIcon } from "@/components/ui";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import {
   getStudentProgram, minutesLabel, fmtDateTime, num,
   SESSION_TYPE_LABEL, type StudentSession,
@@ -78,6 +79,7 @@ function ProgramBody({
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
+  const isDesktop = useIsDesktop();
 
   const sessions = useMemo(
     () => [...data.sessions].sort((a, b) => num(a.orderIndex) - num(b.orderIndex)),
@@ -96,6 +98,14 @@ function ProgramBody({
     const next = sessions.find((s) => s.id === data.nextSessionId && openable(s));
     return next ?? sessions.find(openable) ?? null;
   }, [sessions, requested, data.nextSessionId]);
+
+  // Pin the URL to the resolved fallback exactly once. Without this, `selected` keeps recomputing
+  // its fallback on every refetch (e.g. after completing a session), which changes `nextSessionId`
+  // and yanks the pane away from whatever the learner is actually looking at (finding C1).
+  useEffect(() => {
+    if (requested || !selected) return;
+    router.replace(`/app/program/${programId}?session=${selected.id}`, { scroll: false });
+  }, [requested, selected, programId, router]);
 
   function select(s: StudentSession) {
     if (s.type === "FinalAssessment") {
@@ -123,7 +133,7 @@ function ProgramBody({
           </div>
           <div className="flex items-center gap-2.5">
             <Badge tone={data.enrollmentStatus === "Active" ? "success" : "neutral"} className="px-2.5 py-1">
-              {data.enrollmentStatus}
+              {data.enrollmentStatus === "Active" ? "Terdaftar" : data.enrollmentStatus}
             </Badge>
             <span className="text-[12.5px] text-ink-muted">{completed}/{total} sesi</span>
           </div>
@@ -150,7 +160,7 @@ function ProgramBody({
 
       {/* ---- right: the session. Hidden below lg, where the row links out instead. ---- */}
       <section className="hidden min-w-0 flex-1 lg:block">
-        {selected ? (
+        {selected && isDesktop ? (
           <SessionView
             key={selected.id}
             token={token}
