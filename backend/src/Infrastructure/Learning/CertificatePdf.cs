@@ -31,7 +31,11 @@ public class CertificatePdf
         double w = page.Width.Point, h = page.Height.Point;
         var ink = XColor.FromArgb(0x11, 0x25, 0x3F);
         var muted = XColor.FromArgb(0x51, 0x60, 0x7A);
-        var primary = XColor.FromArgb(0x00, 0x50, 0xE6);
+        // Brand violet #7F00FF. The PDF renders on demand rather than being stored, so an
+        // already-issued certificate re-renders in the new colour — deliberate and approved.
+        // Immutability (GR-6) is untouched: score, section breakdown, recipient and verification
+        // code are unchanged; only the ink differs.
+        var primary = XColor.FromArgb(0x7F, 0x00, 0xFF);
         var gold = XColor.FromArgb(0xC2, 0x71, 0x0C);
 
         gfx.DrawRectangle(XBrushes.White, 0, 0, w, h);

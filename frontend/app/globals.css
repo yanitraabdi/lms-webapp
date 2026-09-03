@@ -30,10 +30,10 @@
   --color-ink-muted: #51607a;
   --color-ink-subtle: #8a99ae;
 
-  --color-primary: #0050e6;
-  --color-primary-hover: #0040c0;
+  --color-primary: #7F00FF;
+  --color-primary-hover: #6D00D9;
   --color-primary-ink: #ffffff;
-  --color-primary-soft: #e5edff;
+  --color-primary-soft: #F1E5FF;
 
   --color-accent: #c2710c;
   --color-accent-strong: #ffb81c;
@@ -45,10 +45,10 @@
   --color-warning-soft: #fcefd7;
   --color-danger: #c62828;
   --color-danger-soft: #fbe3e3;
-  --color-info: #0050e6;
-  --color-info-soft: #e5edff;
+  --color-info: #7F00FF;
+  --color-info-soft: #F1E5FF;
 
-  --color-focus: #0050e6;
+  --color-focus: #7F00FF;
 
   /* ---- Radius ---- */
   --radius-sm: 6px;
@@ -79,10 +79,10 @@
   --ds-color-ink-muted: #51607a;
   --ds-color-ink-subtle: #8a99ae;
 
-  --ds-color-primary: #0050e6;
-  --ds-color-primary-hover: #0040c0;
+  --ds-color-primary: #7F00FF;
+  --ds-color-primary-hover: #6D00D9;
   --ds-color-primary-ink: #ffffff;
-  --ds-color-primary-soft: #e5edff;
+  --ds-color-primary-soft: #F1E5FF;
 
   --ds-color-accent: #c2710c;
   --ds-color-accent-strong: #ffb81c;
@@ -94,10 +94,10 @@
   --ds-color-warning-soft: #fcefd7;
   --ds-color-danger: #c62828;
   --ds-color-danger-soft: #fbe3e3;
-  --ds-color-info: #0050e6;
-  --ds-color-info-soft: #e5edff;
+  --ds-color-info: #7F00FF;
+  --ds-color-info-soft: #F1E5FF;
 
-  --ds-color-focus: #0050e6;
+  --ds-color-focus: #7F00FF;
 
   /* Radius */
   --ds-radius-sm: 6px;
