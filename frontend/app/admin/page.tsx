@@ -5,7 +5,14 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Spinner, ErrorState, Button } from "@/components/ui";
 import { getAnalytics, num } from "@/lib/admin";
 
-const TIER_NAME: Record<number, string> = { 0: "Gratis", 1: "Basic", 2: "Intermediate", 3: "Advanced" };
+// Enrollment status is the INVERTA lifecycle. Replaces a plan-tier map that named the archived
+// subscription product's levels.
+const ENROLLMENT_STATUS_LABEL: Record<string, string> = {
+  PendingPayment: "Menunggu bayar",
+  Active: "Aktif",
+  Completed: "Selesai",
+  Revoked: "Dicabut",
+};
 
 export default function AdminAnalyticsPage() {
   const token = useAuth().accessToken;
@@ -17,9 +24,9 @@ export default function AdminAnalyticsPage() {
   const a = q.data;
   const kpis = [
     { label: "Total pengguna", value: num(a.totalUsers) },
-    { label: "Pendaftaran (30 hari)", value: num(a.signupsLast30Days) },
-    { label: "Langganan aktif", value: num(a.activeSubscriptions) },
-    { label: "Penyelesaian (30 hari)", value: num(a.completionsLast30Days) },
+    { label: "Akun baru (30 hari)", value: num(a.signupsLast30Days) },
+    { label: "Peserta aktif", value: num(a.activeEnrollments) },
+    { label: "Sesi selesai (30 hari)", value: num(a.sessionCompletionsLast30Days) },
     { label: "Sertifikat terbit", value: num(a.certificatesIssued) },
   ];
 
@@ -36,15 +43,15 @@ export default function AdminAnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-extrabold">Langganan aktif per tier</h2>
-          {a.activeByTier.length === 0 ? (
-            <p className="text-sm text-ink-muted">Belum ada langganan aktif.</p>
+          <h2 className="mb-3 text-sm font-extrabold">Pendaftaran per status</h2>
+          {a.enrollmentsByStatus.length === 0 ? (
+            <p className="text-sm text-ink-muted">Belum ada pendaftaran.</p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {a.activeByTier.map((t) => (
-                <li key={num(t.tier)} className="flex items-center justify-between text-sm">
-                  <span className="text-ink-muted">{TIER_NAME[num(t.tier)] ?? t.name}</span>
-                  <span className="font-bold text-ink">{num(t.count)}</span>
+              {a.enrollmentsByStatus.map((e) => (
+                <li key={e.status} className="flex items-center justify-between text-sm">
+                  <span className="text-ink-muted">{ENROLLMENT_STATUS_LABEL[e.status] ?? e.status}</span>
+                  <span className="font-bold text-ink">{num(e.count)}</span>
                 </li>
               ))}
             </ul>
@@ -52,7 +59,7 @@ export default function AdminAnalyticsPage() {
         </div>
 
         <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-extrabold">Modul paling banyak ditonton</h2>
+          <h2 className="mb-3 text-sm font-extrabold">Sesi paling banyak ditonton</h2>
           {a.mostWatched.length === 0 ? (
             <p className="text-sm text-ink-muted">Belum ada data tontonan.</p>
           ) : (

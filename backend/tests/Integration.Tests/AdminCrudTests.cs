@@ -124,7 +124,9 @@ public class AdminCrudTests(AuthApiFactory factory) : IClassFixture<AuthApiFacto
         var admin = await TokenWithRole(UserRole.SuperAdmin);
         var a = await Get<AdminAnalyticsDto>("/api/admin/analytics", admin);
         Assert.True(a.TotalUsers >= 1);
-        Assert.NotNull(a.ActiveByTier);
+        // Was ActiveByTier — the archived subscription breakdown. The dashboard now reports
+        // enrollment status, which is what INVERTA actually has.
+        Assert.NotNull(a.EnrollmentsByStatus);
         Assert.True(a.CertificatesIssued >= 0);
     }
 
