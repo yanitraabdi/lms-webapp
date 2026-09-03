@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AccountMenu } from "@/components/app/AccountMenu";
+import { Logo } from "@/components/Logo";
 
 // INVERTA is a single-program product — the program landing replaces catalog/pricing
 // as primary navigation (KAK §9.15). Those routes remain in-repo but are unlinked.
@@ -32,10 +33,7 @@ export function PublicNav({ className }: { className?: string }) {
     <header className={cn("sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur", className)}>
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-primary text-sm font-extrabold text-primary-ink">
-            A
-          </span>
-          <span className="text-sm font-bold text-ink">INVERTA</span>
+          <Logo />
         </Link>
 
         <div className="hidden items-center gap-5 md:flex">

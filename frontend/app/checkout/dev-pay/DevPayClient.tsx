@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui";
 import { formatIdr, simulateDevPayment } from "@/lib/billing";
+import { Logo } from "@/components/Logo";
 
 /// Local stand-in for the Xendit hosted-checkout page. Completing it fires a signed
 /// webhook through the real backend (which is what actually grants entitlement).
@@ -30,7 +31,7 @@ export function DevPayClient() {
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-7 shadow-lg">
         <div className="mb-1 flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-primary text-sm font-extrabold text-primary-ink">A</span>
+          <Logo />
           <span className="text-sm font-bold">Pembayaran (Simulasi Dev)</span>
         </div>
         <p className="mb-5 text-[13px] text-ink-muted">
