@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PublicNav } from "@/components/PublicNav";
+import { Logo } from "@/components/Logo";
 import {
   Badge,
   Button,
@@ -63,9 +64,7 @@ export default function StyleGuidePage() {
       <main className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-12">
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-primary text-base font-extrabold text-primary-ink">
-              A
-            </span>
+            <Logo height="h-8" />
             <span className="text-sm font-bold">AI Productivity Academy</span>
             <Badge promo="new">Style guide</Badge>
           </div>

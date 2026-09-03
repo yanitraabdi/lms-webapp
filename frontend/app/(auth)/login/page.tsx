@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AuthCard, AuthDivider, AuthError, LogoMark } from "@/components/auth/AuthCard";
+import { AuthCard, AuthDivider, AuthError } from "@/components/auth/AuthCard";
+import { Logo } from "@/components/Logo";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Button, Input } from "@/components/ui";
 
@@ -33,7 +34,7 @@ export default function LoginPage() {
   return (
     <AuthCard>
       <div className="flex flex-col items-center gap-2 text-center">
-        <LogoMark />
+        <Logo height="h-9" />
         <h1 className="text-[22px] font-extrabold tracking-tight">Masuk ke akun Anda</h1>
         <p className="text-[13.5px] text-ink-muted">Lanjutkan perjalanan belajar Anda.</p>
       </div>
