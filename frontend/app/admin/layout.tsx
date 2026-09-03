@@ -48,7 +48,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="grid min-h-screen grid-cols-1 bg-bg md:grid-cols-[220px_1fr]">
       <aside className="hidden flex-col gap-1.5 bg-ink p-3.5 md:flex">
         <div className="flex items-center gap-2.5 px-2 pb-4 pt-1.5">
-          <Logo variant="white" className="h-6" />
+          <Logo variant="white" height="h-6" />
           <div className="text-[10px] text-white/55">Admin</div>
         </div>
         {NAV.map((n) => {

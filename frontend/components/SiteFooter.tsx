@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 const columns: Array<{ heading: string; links: Array<{ label: string; href: string }> }> = [
   {
@@ -33,10 +34,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-8 px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-primary text-[15px] font-extrabold text-primary-ink">
-              A
-            </span>
-            <span className="text-[15px] font-extrabold">INVERTA</span>
+            <Logo variant="white" />
           </div>
           <p className="max-w-[280px] text-[13.5px] leading-relaxed text-white/60">
             Belajar AI praktis dalam Bahasa Indonesia. Untuk profesional yang ingin lebih produktif.
