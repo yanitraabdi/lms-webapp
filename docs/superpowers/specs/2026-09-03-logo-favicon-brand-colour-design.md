@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-03
 **Status:** approved, ready for planning
-**Sub-project 1 of 5** — see §8 for the others.
+**Sub-project 1 of 6** — see §8 for the others.
 
 ---
 
@@ -167,23 +167,25 @@ icon then breaks CI instead of sitting unnoticed in production.
 Everything else here is visual and is verified by loading the deployed pages: the three headers
 show the logo, the admin sidebar's version is legible on dark, and the tab shows the brain.
 
-## 8. The other four sub-projects
+## 8. The other sub-projects
 
-This design is the first of five, split because they share almost nothing and have very different
+This design is the first of six, split because they share almost nothing and have very different
 risk. Recorded here so the ordering is a decision rather than an accident:
 
 1. **Logo, favicon and brand colour** — this document.
-2. **Learner programme page as 30/70 master-detail.** Sessions listed left, the whole session
+2. **Learner dashboard.** Progress, the final exam's section breakdown, session-test history and
+   certificates — see `2026-09-03-learner-dashboard-design.md`.
+3. **Learner programme page as 30/70 master-detail.** Sessions listed left, the whole session
    inline right, so a learner stops bouncing back to the list between sessions.
    `SessionView({token, sessionId})` is already self-contained, which makes this a contained
    refactor.
-3. **Landing page density.** `/` currently redirects to `/program/toefl-preparation`, so the
+4. **Landing page density.** `/` currently redirects to `/program/toefl-preparation`, so the
    "homepage" is the programme page. Rebuilt from real content only — hero with price above the
    fold, the 8-session syllabus, what is included, the ITP format, the 12 seeded FAQs.
-4. **Final exam on a per-attempt UUID route**, 404 rather than 403 for an attempt that is not
+5. **Final exam on a per-attempt UUID route**, 404 rather than 403 for an attempt that is not
    yours, and a lifetime that ends when the sitting ends. Separate because it touches a paid exam.
-5. **Admin-editable instructor, outcome stats and testimonials.** Three tables, three admin
+6. **Admin-editable instructor, outcome stats and testimonials.** Three tables, three admin
    screens. Last, because the blocks render as nothing until content exists, so #3 ships without it.
 
-#3 and #5 are coupled by data, not layout: #3 reads those three blocks from one source, and #5
+#4 and #6 are coupled by data, not layout: #4 reads those three blocks from one source, and #6
 swaps that source from a stub to the database without touching the page.
