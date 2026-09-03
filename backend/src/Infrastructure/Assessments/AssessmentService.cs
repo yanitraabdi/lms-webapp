@@ -17,8 +17,50 @@ namespace Academy.Infrastructure.Assessments;
 public class AssessmentService(
     AppDbContext db,
     ISessionAccessService access,
-    ISessionCompletionService completion) : IAssessmentService
+    ISessionCompletionService completion,
+    Media.MediaSigner signer) : IAssessmentService
 {
+    /// <summary>
+    /// Signed audio for a Listening question in a SESSION test.
+    ///
+    /// Two checks, and both are load-bearing. EnsureAccessAsync is THE GATE (GR-1): audio is
+    /// session content, so reaching it must require session access. The question-belongs-to-this
+    /// -assessment check is what stops the route becoming a way to read any clip in the bank by
+    /// guessing question ids — the learner has access to this session, not to every recording.
+    ///
+    /// No play limit, unlike the final assessment: see IAssessmentService for why.
+    /// </summary>
+    public async Task<string> GetGatingAudioUrlAsync(
+        Guid userId, Guid sessionId, Guid questionId, CancellationToken ct = default)
+    {
+        await access.EnsureAccessAsync(userId, sessionId, ct);
+
+        var assessmentId = await db.ProgramSessions
+            .Where(s => s.Id == sessionId)
+            .Select(s => s.AssessmentId)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new AssessmentException("Sesi ini tidak memiliki tes.", 404);
+
+        var belongs = await db.AssessmentQuestions
+            .AnyAsync(aq => aq.AssessmentId == assessmentId && aq.QuestionId == questionId, ct);
+        if (!belongs)
+            throw new AssessmentException("Soal ini bukan bagian dari tes sesi ini.", 403);
+
+        var question = await db.Questions
+            .Where(q => q.Id == questionId)
+            .Select(q => new { q.AudioRef, q.Section })
+            .FirstAsync(ct);
+
+        var config = ParseConfig(
+            await db.Assessments.Where(a => a.Id == assessmentId).Select(a => a.Config).FirstAsync(ct));
+
+        // A question's own clip wins; otherwise a section recording, if the test has one.
+        var storageKey = AudioResolution.StorageKey(question.AudioRef, question.Section, config)
+            ?? throw new AssessmentException("Soal ini tidak memiliki audio.", 400);
+
+        return signer.Sign(storageKey);
+    }
+
     public async Task<StudentAssessmentDto?> GetForSessionAsync(
         Guid userId, Guid sessionId, CancellationToken ct = default)
     {

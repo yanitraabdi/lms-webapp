@@ -57,6 +57,10 @@ export const saveSessionProgress = (t: string, id: string, positionSeconds: numb
   });
 
 /** The session's gating test, WITHOUT answers. Null when the session has none (204). */
+/** Signed, short-TTL URL for a Listening question's clip in a session test (GR-3). */
+export const getGatingAudioUrl = (t: string, sessionId: string, questionId: string) =>
+  api<{ url: string }>("GET", `/api/sessions/${sessionId}/assessment/audio/${questionId}`, t);
+
 export async function getSessionAssessment(t: string, id: string): Promise<StudentAssessment | null> {
   const res = await apiFetch(`${API}/api/sessions/${id}/assessment`, { cache: "no-store" }, t);
   if (res.status === 204) return null;

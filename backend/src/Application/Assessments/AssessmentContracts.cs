@@ -91,6 +91,17 @@ public interface IAssessmentService
         Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default);
 
     Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default);
+
+    /// <summary>
+    /// A signed, short-TTL URL for a Listening question's clip in a SESSION test (GR-3).
+    ///
+    /// Separate from the final assessment's equivalent because a gating test has no attempt while
+    /// the learner is answering — it is created at submit — so there is nothing to charge a play
+    /// against. Gating tests also allow unlimited retakes, which makes a play cap meaningless:
+    /// fail, retry, hear it again. So there is deliberately no limit here.
+    /// </summary>
+    Task<string> GetGatingAudioUrlAsync(
+        Guid userId, Guid sessionId, Guid questionId, CancellationToken ct = default);
 }
 
 // ---------------------------------------------------------------- admin DTOs

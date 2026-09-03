@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Spinner, CheckIcon, LockIcon } from "@/components/ui";
 import {
-  getSessionAssessment, startAttempt, submitAttempt, num,
+  getSessionAssessment, getGatingAudioUrl, startAttempt, submitAttempt, num,
   type AttemptResult, type StudentAssessment,
 } from "@/lib/sessions";
 
@@ -109,6 +109,9 @@ export function GatingTest({
             {test.questions.map((question, qi) => (
               <li key={question.id}>
                 <p className="text-sm font-bold text-ink">{qi + 1}. {question.prompt}</p>
+                {question.hasAudio && (
+                  <QuestionAudio token={token} sessionId={sessionId} questionId={question.id} />
+                )}
                 {question.passageRef && (
                   <p className="mt-1 rounded-base bg-surface-2 px-3 py-2 text-[12.5px] leading-relaxed text-ink-muted">
                     {question.passageRef}
@@ -174,3 +177,48 @@ export function GatingTest({
     </div>
   );
 }
+
+/**
+ * The audio control for a Listening question in a session test.
+ *
+ * The URL is minted per play and signed with a short TTL (GR-3), so it is fetched on demand rather
+ * than embedded in the question payload — a URL sitting in the DTO would outlive its access check.
+ *
+ * There is no play limit here: a gating test creates its attempt at submit, so while answering
+ * there is nothing to charge a play against, and unlimited retakes would make a cap meaningless.
+ */
+function QuestionAudio({
+  token, sessionId, questionId,
+}: { token: string; sessionId: string; questionId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setBusy(true);
+    setError(null);
+    try {
+      setUrl((await getGatingAudioUrl(token, sessionId, questionId)).url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Audio tidak dapat dimuat.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (url) {
+    // autoPlay because the learner already pressed a button to get here; a second click to start
+    // playback would be a click for nothing.
+    return <audio src={url} controls autoPlay className="mt-2 w-full max-w-md" />;
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <Button size="sm" variant="neutral" onClick={load} loading={busy}>
+        ▶ Putar audio
+      </Button>
+      {error && <span className="text-[12px] font-semibold text-danger">{error}</span>}
+    </div>
+  );
+}
+

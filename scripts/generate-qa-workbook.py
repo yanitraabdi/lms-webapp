@@ -26,6 +26,11 @@ WRAP = Alignment(wrap_text=True, vertical="top")
 MOVED_TO_API = {"A-03", "E-02", "K-01", "N-01", "N-02", "N-03", "N-05",
                 "N-06", "N-07", "N-08", "N-15", "N-16", "N-19", "N-22", "H-02"}
 
+# Rewritten below rather than carried over. E-05 was unrunnable on the only seeded learner
+# (passing is permanent, GR-7 retains attempts) and produced two false bug reports; F-01 asked
+# for an audio control that did not exist until the gating-audio endpoint was built.
+REWRITTEN = {"E-05", "F-01"}
+
 API_COLS = ["ID", "Description (EN)", "Deskripsi (ID)", "Preconditions (EN)", "Prasyarat (ID)",
             "Method + URL", "Headers", "Body", "Expected status", "Expected body",
             "Ready-to-run (curl)", "Result", "Tester", "Notes / Catatan"]
@@ -370,6 +375,54 @@ def ui(idv, feat, en, idn, pre_en, pre_id, st_en, st_id, ex_en, ex_id):
 
 
 NEW_UI = [
+    ui("E-05", "Session test / Tes sesi",
+       "A failed session test can be retaken.",
+       "Tes sesi yang gagal dapat diulang.",
+       "Sign in as siswa2@test.local — the account RESERVED for this case. It is enrolled and has "
+       "never taken the test. Do NOT use siswa@test.local: it has already passed, and passing is "
+       "permanent, so the retry control is correctly hidden there.",
+       "Masuk sebagai siswa2@test.local — akun KHUSUS untuk kasus ini. Sudah terdaftar dan belum "
+       "pernah mengerjakan tes. JANGAN pakai siswa@test.local: akun itu sudah lulus, dan kelulusan "
+       "bersifat permanen, sehingga tombol ulang memang tidak ditampilkan di sana.",
+       "1. Open session 1 and watch the video past ~90% so the test unlocks.\n"
+       "2. Answer all 15 questions DELIBERATELY WRONG — pick the first choice every time.\n"
+       "3. Click \"Kirim jawaban\".\n"
+       "4. Without leaving the page, look at the bottom right of the test panel.",
+       "1. Buka sesi 1 dan tonton video sampai lewat ~90% agar tes terbuka.\n"
+       "2. Jawab ke-15 soal SENGAJA SALAH — pilih opsi pertama setiap kali.\n"
+       "3. Klik \"Kirim jawaban\".\n"
+       "4. Tanpa meninggalkan halaman, lihat kanan bawah panel tes.",
+       "A button reads \"Coba lagi\" and is clickable. It does NOT read \"Batas percobaan "
+       "tercapai\" — this test has no attempt limit. Clicking it clears the answers and reopens "
+       "the 15 questions.",
+       "Muncul tombol \"Coba lagi\" yang dapat diklik. TIDAK bertuliskan \"Batas percobaan "
+       "tercapai\" — tes ini tanpa batas percobaan. Mengkliknya mengosongkan jawaban dan membuka "
+       "kembali ke-15 soal."),
+
+    ui("F-01", "Listening audio / Audio listening",
+       "Listening questions in a session test can be played.",
+       "Soal Listening pada tes sesi dapat diputar.",
+       "The session 1 test is open (watch the video past ~90% first). Questions 1-5 are Listening "
+       "and each has its own recording.",
+       "Tes sesi 1 terbuka (tonton video lewat ~90% dulu). Soal 1-5 adalah Listening dan "
+       "masing-masing punya rekaman sendiri.",
+       "1. Open the session 1 test and look at question 1.\n"
+       "2. Click \"▶ Putar audio\".\n"
+       "3. Wait for the player to appear and listen for about 10 seconds.\n"
+       "4. Check questions 2 to 5 also have the button, and question 6 onward does not.",
+       "1. Buka tes sesi 1 dan lihat soal 1.\n"
+       "2. Klik \"▶ Putar audio\".\n"
+       "3. Tunggu pemutar muncul lalu dengarkan sekitar 10 detik.\n"
+       "4. Periksa soal 2 sampai 5 juga punya tombolnya, dan soal 6 ke atas tidak.",
+       "An audio player appears and plays a voice reading a short conversation, matching the "
+       "question on screen. Only Listening questions show the button. (A robotic voice is expected "
+       "— see the Info sheet.) You may replay as often as you like: a session test has no play "
+       "limit, unlike the final exam.",
+       "Muncul pemutar audio yang memutar suara membacakan percakapan singkat, sesuai soal di "
+       "layar. Hanya soal Listening yang punya tombolnya. (Suara robot itu wajar — lihat sheet "
+       "Info.) Anda boleh memutar ulang sesering mungkin: tes sesi tanpa batas pemutaran, berbeda "
+       "dengan tes akhir."),
+
     ui("UI-EXAM-01", "Final assessment / Tes akhir",
        "The final assessment is locked until every earlier session is complete.",
        "Tes akhir terkunci sampai semua sesi sebelumnya selesai.",
@@ -544,7 +597,7 @@ def carried_over_ui():
     hdr = [c.value for c in src[1]]
     out = []
     for row in src.iter_rows(min_row=2, values_only=True):
-        if not row[0] or row[0] in MOVED_TO_API:
+        if not row[0] or row[0] in MOVED_TO_API or row[0] in REWRITTEN:
             continue
         if not str(row[0])[1:2] == "-":          # skip the section divider row
             continue
@@ -599,6 +652,10 @@ def info_sheet(wb, n_api, n_ui):
         ("", ""),
         ("2. ACCOUNTS / AKUN", ""),
         ("Learner / Siswa", "siswa@test.local"),
+        ("Learner for retakes", "siswa2@test.local — RESERVED for E-05. Do NOT pass its session "
+                                "test. Passing is permanent and attempts are never deleted, so "
+                                "once passed the retry control is correctly hidden for ever and "
+                                "E-05 can never be run on that account again."),
         ("Admin", "admin@academy.local"),
         ("", "Passwords are deliberately not written here. Ask your lead once, then keep them "
              "yourself. Kata sandi sengaja tidak ditulis di sini. Tanyakan ke lead Anda."),
