@@ -37,7 +37,8 @@ export function SiteFooter() {
             <Logo variant="white" />
           </div>
           <p className="max-w-[280px] text-[13.5px] leading-relaxed text-white/60">
-            Belajar AI praktis dalam Bahasa Indonesia. Untuk profesional yang ingin lebih produktif.
+            Persiapan TOEFL terstruktur dalam Bahasa Indonesia. Untuk pelajar dan profesional yang
+            mengejar skor terbaik.
           </p>
         </div>
         {columns.map((col) => (

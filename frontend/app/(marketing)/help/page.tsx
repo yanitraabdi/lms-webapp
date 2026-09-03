@@ -9,13 +9,13 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Bantuan & FAQ — INVERTA",
-  description: "Pertanyaan yang sering diajukan tentang akun, langganan, sertifikat, dan pembayaran.",
+  description: "Pertanyaan yang sering diajukan tentang akun, pendaftaran program, sertifikat, dan pembayaran.",
 };
 
 const categories = [
-  { title: "Memulai", body: "Daftar, verifikasi email, dan mulai dari modul pratinjau." },
-  { title: "Langganan & tagihan", body: "Paket kumulatif, upgrade/downgrade, dan pembayaran." },
-  { title: "Sertifikat", body: "Cara lulus level dan memverifikasi sertifikat Anda." },
+  { title: "Memulai", body: "Daftar, verifikasi email, dan mulai dari sesi pertama." },
+  { title: "Pendaftaran & pembayaran", body: "Sekali bayar untuk seluruh program, tanpa perpanjangan otomatis." },
+  { title: "Tes & sertifikat", body: "Tes per sesi, simulasi TOEFL ITP, dan cara memverifikasi sertifikat Anda." },
 ];
 
 export default async function HelpPage() {
