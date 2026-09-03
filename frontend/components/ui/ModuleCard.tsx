@@ -23,7 +23,7 @@ export interface ModuleCardProps {
 }
 
 const thumbBg: Record<ModuleCardState, string> = {
-  entitled: "bg-[linear-gradient(135deg,#0050E6,#2A6BFF)]",
+  entitled: "bg-gradient-to-br from-primary to-primary/60",
   preview: "bg-[linear-gradient(135deg,#64748B,#475569)]",
   locked: "bg-surface-2",
 };

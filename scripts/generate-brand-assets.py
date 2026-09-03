@@ -5,6 +5,8 @@ Derives every INVERTA logo and icon asset from the two committed brand sources.
 Run after changing anything in docs/brand/:
     python3 scripts/generate-brand-assets.py
 
+Requires Pillow:  pip install Pillow
+
 The favicon is NOT the wordmark. A 3600x1251 lockup is an unreadable smear at 16px, so the icon
 is the brain glyph that sits inside the "a" — the only element of the lockup that is square and
 legible at that size. It is a KNOCKOUT: transparent, punched out of the solid violet bowl, so

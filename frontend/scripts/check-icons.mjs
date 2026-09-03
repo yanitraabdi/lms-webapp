@@ -18,8 +18,8 @@ for (const [path, size] of EXPECTED) {
     failed = true;
     continue;
   }
-  if (buf.length === 0) {
-    console.error(`✗ ${path} is empty.`);
+  if (buf.length < 24) {
+    console.error(`✗ ${path} is empty or truncated.`);
     failed = true;
     continue;
   }

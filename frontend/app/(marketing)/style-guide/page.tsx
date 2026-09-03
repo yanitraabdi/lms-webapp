@@ -24,9 +24,9 @@ import {
 } from "@/components/ui";
 
 const colors: Array<{ name: string; hex: string; cls: string; border?: boolean }> = [
-  { name: "primary", hex: "#0050E6", cls: "bg-primary" },
-  { name: "primary-hover", hex: "#0040C0", cls: "bg-primary-hover" },
-  { name: "primary-soft", hex: "#E5EDFF", cls: "bg-primary-soft", border: true },
+  { name: "primary", hex: "#7F00FF", cls: "bg-primary" },
+  { name: "primary-hover", hex: "#6D00D9", cls: "bg-primary-hover" },
+  { name: "primary-soft", hex: "#F1E5FF", cls: "bg-primary-soft", border: true },
   { name: "accent-strong", hex: "#FFB81C", cls: "bg-accent-strong" },
   { name: "accent", hex: "#C2710C", cls: "bg-accent" },
   { name: "accent-soft", hex: "#FEF1D2", cls: "bg-accent-soft", border: true },
