@@ -1,12 +1,9 @@
 {
   "app": {
-    "name": "LMS Akademi"
+    "name": "INVERTA"
   },
   "nav": {
-    "catalog": "Katalog",
-    "pricing": "Harga",
     "howItWorks": "Cara Kerja",
-    "forBusiness": "Untuk Bisnis",
     "about": "Tentang"
   },
   "common": {
