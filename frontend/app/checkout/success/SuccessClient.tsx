@@ -38,17 +38,20 @@ export function SuccessClient() {
         )}
 
         <div className="mt-6 flex flex-col gap-2.5">
+          {/* INVERTA is a ONE-TIME purchase. This page previously said "Lihat langganan saya" and
+              offered the archived AI catalogue — telling a learner who had just bought a TOEFL
+              programme that they held a subscription to something else. */}
           <Link
-            href="/app/account"
+            href="/app/dashboard"
             className="rounded-sm bg-primary px-4 py-2.5 text-sm font-bold text-primary-ink transition-colors hover:bg-primary-hover"
           >
-            Lihat langganan saya
+            Ke dasbor saya
           </Link>
           <Link
-            href="/catalog"
+            href="/app/account"
             className="rounded-sm border border-border bg-surface px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:bg-surface-2"
           >
-            Jelajahi katalog
+            Lihat detail pembelian
           </Link>
         </div>
       </div>
