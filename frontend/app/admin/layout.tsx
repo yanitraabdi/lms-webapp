@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Spinner } from "@/components/ui";
 import { isAdminRole } from "@/lib/admin";
 import { cn } from "@/lib/cn";
+import { Logo } from "@/components/Logo";
 
 // INVERTA nav. Curriculum/Modules/Pricing belong to the archived catalog product and stay
 // reachable by URL, but are unlinked here (KAK §9.15).
@@ -47,11 +48,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="grid min-h-screen grid-cols-1 bg-bg md:grid-cols-[220px_1fr]">
       <aside className="hidden flex-col gap-1.5 bg-ink p-3.5 md:flex">
         <div className="flex items-center gap-2.5 px-2 pb-4 pt-1.5">
-          <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-primary text-[15px] font-extrabold text-primary-ink">A</span>
-          <div className="leading-tight">
-            <div className="text-[13px] font-extrabold text-white">Academy</div>
-            <div className="text-[10px] text-white/55">Admin</div>
-          </div>
+          <Logo variant="white" height="h-6" />
+          <div className="text-[10px] text-white/55">Admin</div>
         </div>
         {NAV.map((n) => {
           const isActive = n === active;

@@ -8,6 +8,7 @@ import { AccountMenu } from "@/components/app/AccountMenu";
 import { WrenchIcon } from "@/components/ui";
 import { isAdminRole } from "@/lib/admin";
 import { cn } from "@/lib/cn";
+import { Logo } from "@/components/Logo";
 
 // INVERTA nav. Catalog/subscription belong to the archived product and are unlinked (KAK §9.15).
 const links: Array<{ href: string; label: string; tour?: string }> = [
@@ -32,8 +33,7 @@ export function AppHeader() {
       <div className="mx-auto flex h-[58px] max-w-6xl items-center justify-between gap-4 px-6">
         <div className="flex items-center gap-6">
           <Link href="/app/dashboard" className="flex items-center gap-2.5">
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-primary text-[15px] font-extrabold text-primary-ink">I</span>
-            <span className="hidden text-sm font-extrabold sm:inline">INVERTA</span>
+            <Logo />
           </Link>
           <nav className="flex items-center gap-1">
             {links.map((l) => {

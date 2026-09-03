@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PublicNav } from "@/components/PublicNav";
+import { Logo } from "@/components/Logo";
 import {
   Badge,
   Button,
@@ -23,9 +24,9 @@ import {
 } from "@/components/ui";
 
 const colors: Array<{ name: string; hex: string; cls: string; border?: boolean }> = [
-  { name: "primary", hex: "#0050E6", cls: "bg-primary" },
-  { name: "primary-hover", hex: "#0040C0", cls: "bg-primary-hover" },
-  { name: "primary-soft", hex: "#E5EDFF", cls: "bg-primary-soft", border: true },
+  { name: "primary", hex: "#7F00FF", cls: "bg-primary" },
+  { name: "primary-hover", hex: "#6D00D9", cls: "bg-primary-hover" },
+  { name: "primary-soft", hex: "#F1E5FF", cls: "bg-primary-soft", border: true },
   { name: "accent-strong", hex: "#FFB81C", cls: "bg-accent-strong" },
   { name: "accent", hex: "#C2710C", cls: "bg-accent" },
   { name: "accent-soft", hex: "#FEF1D2", cls: "bg-accent-soft", border: true },
@@ -63,9 +64,7 @@ export default function StyleGuidePage() {
       <main className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-12">
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-primary text-base font-extrabold text-primary-ink">
-              A
-            </span>
+            <Logo height="h-8" />
             <span className="text-sm font-bold">AI Productivity Academy</span>
             <Badge promo="new">Style guide</Badge>
           </div>

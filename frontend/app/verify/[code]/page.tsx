@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AlertTriangleIcon, CheckCircleIcon } from "@/components/ui";
 import { verifyCertificate, num, type CertificateVerification } from "@/lib/sessions";
 import { fmtDateTime } from "@/lib/programs";
+import { Logo } from "@/components/Logo";
 
 // Public certificate verification — SSR per request (live validity).
 export const dynamic = "force-dynamic";
@@ -30,8 +31,9 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
     <div className="flex min-h-screen flex-col bg-bg">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex h-[58px] max-w-3xl items-center gap-2.5 px-6">
-          <span className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-primary text-[13px] font-extrabold text-primary-ink">I</span>
-          <Link href="/" className="text-[13px] font-extrabold hover:underline">INVERTA</Link>
+          <Link href="/">
+            <Logo />
+          </Link>
         </div>
       </header>
 

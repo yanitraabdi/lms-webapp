@@ -10,14 +10,6 @@ export function AuthCard({ children, className }: { children: ReactNode; classNa
   );
 }
 
-export function LogoMark() {
-  return (
-    <span className="flex h-[38px] w-[38px] items-center justify-center rounded-base bg-primary text-lg font-extrabold text-primary-ink">
-      A
-    </span>
-  );
-}
-
 export function AuthDivider() {
   return (
     <div className="flex items-center gap-3">
