@@ -5395,10 +5395,10 @@ export interface components {
             /** Format: int32 */
             signupsLast30Days: number | string;
             /** Format: int32 */
-            activeSubscriptions: number | string;
-            activeByTier: components["schemas"]["TierCountDto"][];
+            activeEnrollments: number | string;
+            enrollmentsByStatus: components["schemas"]["EnrollmentStatusCountDto"][];
             /** Format: int32 */
-            completionsLast30Days: number | string;
+            sessionCompletionsLast30Days: number | string;
             /** Format: int32 */
             certificatesIssued: number | string;
             mostWatched: components["schemas"]["ModuleWatchDto"][];
@@ -5918,6 +5918,11 @@ export interface components {
             amountPaidIdr: number | string;
             /** Format: date-time */
             enrolledAt: null | string;
+        };
+        EnrollmentStatusCountDto: {
+            status: string;
+            /** Format: int32 */
+            count: number | string;
         };
         EnrollRequest: {
             /** Format: uuid */
@@ -6543,13 +6548,6 @@ export interface components {
             id: string;
             name: string;
             slug: string;
-        };
-        TierCountDto: {
-            /** Format: int32 */
-            tier: number | string;
-            name: string;
-            /** Format: int32 */
-            count: number | string;
         };
         /** @enum {unknown} */
         TourStatus: "Completed" | "Skipped";
