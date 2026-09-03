@@ -150,7 +150,7 @@ function ProgramCard({ token, enrollment }: { token: string; enrollment: Enrollm
             <span className="truncate text-[13.5px] font-bold text-ink">{next.title}</span>
           </div>
           <Link
-            href={nextHref(next)}
+            href={nextHref(next, data.programId)}
             className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-primary px-3.5 text-[13px] font-bold text-primary-ink hover:bg-primary-hover"
           >
             Buka →
@@ -204,11 +204,14 @@ function SessionLine({ session }: { session: StudentSession }) {
   );
 }
 
-/** The final assessment has its own runner; everything else opens the session page. */
-function nextHref(session: StudentSession): string {
+/**
+ * The final assessment has its own runner. Everything else opens the programme page with the
+ * session preselected, so "Lanjutkan" lands on the same master-detail view the session list uses.
+ */
+function nextHref(session: StudentSession, programId: string): string {
   return session.type === "FinalAssessment"
     ? `/app/assessment/${session.id}`
-    : `/app/session/${session.id}`;
+    : `/app/program/${programId}?session=${session.id}`;
 }
 
 function CertificatesTeaser({ token }: { token: string }) {
