@@ -5,16 +5,16 @@ const columns: Array<{ heading: string; links: Array<{ label: string; href: stri
   {
     heading: "Produk",
     links: [
-      { label: "Katalog", href: "/catalog" },
-      { label: "Harga", href: "/pricing" },
-      { label: "Untuk Bisnis", href: "/for-business" },
+      // Was Katalog / Harga / Untuk Bisnis — all three archived AI-Academy surfaces, linked from
+      // every public page while a code comment elsewhere claimed they were unlinked.
+      { label: "Program TOEFL", href: "/program/toefl-preparation" },
+      { label: "Cara Kerja", href: "/how-it-works" },
     ],
   },
   {
     heading: "Perusahaan",
     links: [
       { label: "Tentang", href: "/about" },
-      { label: "Cara Kerja", href: "/how-it-works" },
       { label: "Pusat Bantuan", href: "/help" },
     ],
   },

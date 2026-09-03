@@ -53,8 +53,8 @@ export default function AboutPage() {
             Karena itu kami membangun jalur belajar yang jelas, bertahap dari Basic ke Advanced, dengan video singkat
             yang ringan untuk koneksi 4G dan dapat ditonton kapan saja.
           </p>
-          <Link href="/pricing" className="mt-2 w-fit rounded-sm bg-primary px-5 py-3 text-sm font-bold text-primary-ink hover:bg-primary-hover">
-            Lihat paket belajar
+          <Link href="/program/toefl-preparation" className="mt-2 w-fit rounded-sm bg-primary px-5 py-3 text-sm font-bold text-primary-ink hover:bg-primary-hover">
+            Lihat program TOEFL
           </Link>
         </div>
       </section>

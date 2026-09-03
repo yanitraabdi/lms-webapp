@@ -9,11 +9,11 @@ export default function NotFound() {
         Maaf, halaman yang Anda cari tidak ada atau telah dipindahkan.
       </p>
       <div className="mt-2 flex gap-2.5">
-        <Link href="/" className="rounded-sm bg-primary px-5 py-2.5 text-sm font-bold text-primary-ink hover:bg-primary-hover">
-          Ke beranda
+        <Link href="/program/toefl-preparation" className="rounded-sm bg-primary px-5 py-2.5 text-sm font-bold text-primary-ink hover:bg-primary-hover">
+          Lihat program
         </Link>
-        <Link href="/catalog" className="rounded-sm border border-border bg-surface px-5 py-2.5 text-sm font-bold text-ink hover:bg-surface-2">
-          Jelajahi katalog
+        <Link href="/help" className="rounded-sm border border-border bg-surface px-5 py-2.5 text-sm font-bold text-ink hover:bg-surface-2">
+          Pusat bantuan
         </Link>
       </div>
     </div>
