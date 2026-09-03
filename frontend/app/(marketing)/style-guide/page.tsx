@@ -65,7 +65,7 @@ export default function StyleGuidePage() {
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Logo height="h-8" />
-            <span className="text-sm font-bold">AI Productivity Academy</span>
+            <span className="text-sm font-bold">INVERTA</span>
             <Badge promo="new">Style guide</Badge>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-ink">Fondasi sistem desain &amp; kit komponen</h1>

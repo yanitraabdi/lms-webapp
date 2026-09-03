@@ -62,7 +62,7 @@ export function VerifyEmailClient() {
         </span>
         <h1 className="text-[22px] font-extrabold tracking-tight">Email terverifikasi</h1>
         <p className="text-sm leading-relaxed text-ink-muted">
-          Akun Anda sudah aktif. Anda kini dapat berlangganan dan mulai belajar.
+          Akun Anda sudah aktif. Anda kini dapat mendaftar program dan mulai belajar.
         </p>
         <Link href="/app/dashboard" className="w-full">
           <Button fullWidth>Ke Dasbor</Button>
@@ -108,7 +108,7 @@ export function VerifyEmailClient() {
           <path d="M12 8v5M12 16.5v.5" />
         </svg>
         <span className="text-[12.5px] leading-snug text-[#8A5208]">
-          Verifikasi email diperlukan sebelum Anda dapat berlangganan paket berbayar.
+          Verifikasi email diperlukan sebelum Anda dapat mendaftar program berbayar.
         </span>
       </div>
       <Button variant="secondary" fullWidth disabled={cooldown > 0 || !email} onClick={resend}>

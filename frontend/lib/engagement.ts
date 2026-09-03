@@ -79,8 +79,8 @@ export const rateModule = (t: string, moduleId: string, rating: number, comment?
 // ---- labels (mirror of server-side NotificationCategories) ----
 export const CATEGORY_LABELS: Record<string, string> = {
   progress: "Progres & sertifikat",
-  content: "Modul & konten baru",
-  billing: "Tagihan & langganan",
+  content: "Sesi & konten baru",
+  billing: "Pembayaran & tagihan",
   promo: "Promosi & tips",
 };
 export const CATEGORY_ORDER = ["progress", "content", "billing", "promo"];
