@@ -62,7 +62,10 @@ internal static class ItpFinal
             Title = title,
             Config = JsonSerializer.Serialize(new
             {
-                passThreshold = 0,
+                // Null, as the admin editor writes it: a final has no pass mark — its outcome is
+                // a scaled score and a predicted band. The literal 0 that used to sit here was
+                // written to match scoring's old `?? 0`, so the fixture agreed with the bug.
+                passThreshold = (int?)null,
                 retakeCap,
                 proctoringEnabled = true,
                 audioPlayLimit,
