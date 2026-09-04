@@ -67,12 +67,38 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
     /// <summary>
     /// A retake cap of 0 would make <c>used &gt;= cap</c> true before the first attempt, locking the
     /// test — and with it the linear program — permanently. Unlimited is expressed as null.
+    ///
+    /// A pass mark below 1 is the mirror image: every attempt clears it, including one that
+    /// answered nothing. Absent (null) is different from zero and stays allowed — it is how a
+    /// final assessment says it has no pass mark at all.
     /// </summary>
     private static void Validate(AssessmentConfig config)
     {
         if (config.RetakeCap is int cap && cap < 1)
             throw new AssessmentException(
                 "Batas percobaan minimal 1. Kosongkan untuk tanpa batas.");
+
+        if (config.PassThreshold is int mark && mark < 1)
+            throw new AssessmentException(
+                "Skor lulus minimal 1. Kosongkan jika tes ini tidak memiliki batas lulus.");
+    }
+
+    /// <summary>
+    /// The pass mark must be reachable. A mark above the number of questions the test holds makes
+    /// it unpassable, and an unpassable gating test holds the whole linear programme behind it for
+    /// every learner, with no retry and no admin reset that can help.
+    ///
+    /// Checked from BOTH sides, because either can move: the mark changes on update, the count
+    /// changes when the questions are composed. Checking one alone leaves the other as the way in.
+    ///
+    /// A test with no questions yet is exempt — that is every test between being created and being
+    /// composed, and the composition call is what will judge it.
+    /// </summary>
+    private static void ValidateAgainstQuestions(AssessmentConfig config, int questionCount)
+    {
+        if (config.PassThreshold is int mark && questionCount > 0 && mark > questionCount)
+            throw new AssessmentException(
+                $"Skor lulus ({mark}) tidak boleh melebihi jumlah soal ({questionCount}).");
     }
 
     /// <summary>Merges the partial request over what is stored, then validates the RESULT — a
@@ -107,6 +133,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         var a = await db.Assessments.FirstOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
         var (configJson, config) = Resolve(a.Config, req);
+        ValidateAgainstQuestions(config, await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == id, ct));
         a.Kind = Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) ? k : a.Kind;
         a.Title = req.Title.Trim();
         a.Config = configJson;
@@ -135,8 +162,8 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
     public async Task SetQuestionsAsync(
         Guid actor, Guid id, SetAssessmentQuestionsRequest req, CancellationToken ct = default)
     {
-        if (!await db.Assessments.AnyAsync(a => a.Id == id, ct))
-            throw new AssessmentException("Tes tidak ditemukan.", 404);
+        var assessment = await db.Assessments.FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
 
         var ids = req.QuestionIdsInOrder.Distinct().ToList();
         if (ids.Count != req.QuestionIdsInOrder.Count)
@@ -145,6 +172,10 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         var existing = await db.Questions.Where(q => ids.Contains(q.Id)).Select(q => q.Id).ToListAsync(ct);
         if (existing.Count != ids.Count)
             throw new AssessmentException("Sebagian soal tidak ditemukan di bank soal.", 400);
+
+        // Refused BEFORE anything is removed: composing fewer questions than the stored pass mark
+        // would leave a test nobody can pass.
+        ValidateAgainstQuestions(AssessmentService.ParseConfig(assessment.Config), ids.Count);
 
         // Replace the composition wholesale; order_index is explicit so the learner's question
         // order is deterministic and matches scoring (never rely on id/timestamp ordering).
