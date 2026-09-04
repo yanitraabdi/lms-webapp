@@ -129,7 +129,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         // every certificate would carry a bogus ~310 prediction.
         var final = await NewAssessment(admin, "Final", new
         {
-            passThreshold = 0, retakeCap = 1, proctoringEnabled = true,
+            passThreshold = (int?)null, retakeCap = 1, proctoringEnabled = true,
             sections = new[]
             {
                 new { section = "Listening", questions = 5, minutes = 35 },
@@ -324,7 +324,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         // A final assessment with no Listening section at all: nothing to play, nothing to check.
         var final = await NewAssessment(admin, "Final", new
         {
-            passThreshold = 0, retakeCap = 1, proctoringEnabled = false,
+            passThreshold = (int?)null, retakeCap = 1, proctoringEnabled = false,
             sections = new[] { new { section = "Reading", questions = 1, minutes = 55 } },
         });
         var q = await NewQuestion(admin, "Reading");

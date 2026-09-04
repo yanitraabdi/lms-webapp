@@ -171,6 +171,53 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
     }
 
+    // ---- the pass mark must be reachable ----
+
+    [Fact]
+    public async Task A_pass_mark_below_one_is_refused_by_the_admin_api()
+    {
+        var admin = await AdminToken();
+
+        // Mark 0 clears on every attempt, including one that answered nothing — the mirror image
+        // of a retake cap of 0. Absent (null) is a different thing and stays allowed.
+        var res = await Authed(HttpMethod.Post, "/api/admin/assessments", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 0, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_pass_mark_above_the_question_count_is_refused_from_both_sides()
+    {
+        // An unpassable gating test holds the whole linear programme behind it for every learner,
+        // and nothing downstream can rescue one: no retry helps, and there is no admin reset.
+        // Either side can create it, so both are checked.
+        var c = await EnrolledLearner();
+        var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);   // 2 questions, mark 2
+        var admin = await AdminToken();
+        var assessmentId = await AssessmentIdFor(c.Session1);
+
+        // Side 1: raise the mark past the questions already composed.
+        var raise = await Authed(HttpMethod.Put, $"/api/admin/assessments/{assessmentId}", admin, new
+        {
+            kind = "Gating", title = "Tes sesi",
+            config = new { passThreshold = 3, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, raise.StatusCode);
+
+        // Side 2: compose fewer questions than the mark already stored.
+        var shrink = await Authed(HttpMethod.Put, $"/api/admin/assessments/{assessmentId}/questions", admin,
+            new { questionIdsInOrder = new[] { key.QuestionIds[0] } });
+        Assert.Equal(HttpStatusCode.BadRequest, shrink.StatusCode);
+
+        // And the refusal left the test intact — a rejected composition must not half-apply.
+        var view = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.Session1}/assessment", c.Token);
+        Assert.Equal(2, view.QuestionCount);
+        Assert.Equal(2, view.PassThreshold);
+    }
+
     [Fact]
     public async Task Unlimited_retakes_by_default()
     {
