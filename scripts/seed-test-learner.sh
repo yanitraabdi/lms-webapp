@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Seeds enrolled test learners so the student flow can be clicked through end to end.
 #
-# TWO accounts, because passing a session test is permanent and attempts are retained (GR-7):
+# THREE accounts, because passing a session test is permanent and attempts are retained (GR-7):
 #
 #   siswa@test.local    the general-purpose learner. Works through the programme.
-#   siswa2@test.local   reserved for RETAKE testing (UAT E-05). Never pass its session test —
-#                       once passed, the retry control is correctly hidden for ever and the case
-#                       becomes unrunnable on that account. This has already produced two false
-#                       bug reports against working software.
+#   siswa2@test.local   SPENT — passed on 2026-09-04. Kept so the script stays idempotent.
+#   siswa3@test.local   reserved for RETAKE testing (UAT E-05). Never pass its session test —
+#                       once passed the whole test is hidden, correctly and for ever, and the case
+#                       becomes unrunnable on that account. Two accounts have already been burnt
+#                       this way, producing false bug reports against working software.
+#
+# A gating test itself is never capped: it can be retried until passed (FSD §6.1). The reserved
+# account exists because PASSING ends the case, not because attempts run out.
 #
 # Deliberately NOT a C# seeder: enrollment must only ever be granted by a verified payment
 # webhook (GR-2), and a seeder writing an enrollment row directly would set exactly the wrong
@@ -71,6 +75,7 @@ STATUS=$($COMPOSE exec -T postgres psql -U academy -d academy -t \
 
 seed_learner "siswa@test.local"  "Siswa Uji"
 seed_learner "siswa2@test.local" "Siswa Uji Retake"
+seed_learner "siswa3@test.local" "Siswa Uji Retake 2"
 
 echo
-echo "done. siswa2@test.local is reserved for UAT E-05 — do NOT pass its session test."
+echo "done. siswa3@test.local is reserved for UAT E-05 — do NOT pass its session test."

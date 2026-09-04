@@ -93,9 +93,10 @@ export function GatingTestEditor({
     return () => { cancelled = true; };
   }, [token, assessmentId]);
 
-  // Blank means unlimited; 0 would make the very first attempt exceed the cap, locking the
-  // session — and the whole linear program — for every learner.
-  const capOk = retakeCap.trim() === "" || Number(retakeCap) >= 1;
+  // Final only: blank means unlimited, and 0 would make the very first attempt exceed the cap,
+  // locking the sitting for every learner. A gating test has no cap to validate, and a stale one
+  // read off a stored config must not block a save through a field that is no longer shown.
+  const capOk = !isFinal || retakeCap.trim() === "" || Number(retakeCap) >= 1;
   const itpMismatch = isFinal
     ? DEFAULT_SECTIONS.filter((d, i) => sections[i]?.questions !== d.questions)
     : [];
@@ -115,7 +116,9 @@ export function GatingTestEditor({
       // save — which is how audioPlayLimit was being forced back to 1 on each layout edit.
       const updateConfig = isFinal
         ? { retakeCap: cap, sections }
-        : { passThreshold, retakeCap: cap, sections: [] };
+        // Explicitly null, not omitted: the API merges by key presence, so leaving it out would
+        // preserve a cap an earlier edit stored rather than clearing it.
+        : { passThreshold, retakeCap: null, sections: [] };
 
       // On create there is nothing to merge over, so the defaults must be stated in full.
       const createConfig = isFinal
@@ -190,15 +193,25 @@ export function GatingTestEditor({
                 />
               </label>
             )}
-            <label className="flex flex-col gap-1">
-              <span className="text-[12px] font-bold text-ink-muted">Batas percobaan</span>
-              <input
-                type="number" min={1} value={retakeCap} placeholder="tanpa batas"
-                onChange={(e) => setRetakeCap(e.target.value)}
-                className={inputCls + " w-36"}
-              />
-            </label>
+            {/* Gating tests are retried until passed, so there is nothing to cap. Only the final
+                assessment, which is one sitting by default, exposes this. */}
+            {isFinal && (
+              <label className="flex flex-col gap-1">
+                <span className="text-[12px] font-bold text-ink-muted">Batas percobaan</span>
+                <input
+                  type="number" min={1} value={retakeCap} placeholder="tanpa batas"
+                  onChange={(e) => setRetakeCap(e.target.value)}
+                  className={inputCls + " w-36"}
+                />
+              </label>
+            )}
           </div>
+
+          {!isFinal && (
+            <p className="text-[12.5px] text-ink-muted">
+              Peserta dapat mengulang tes ini sampai lulus.
+            </p>
+          )}
 
           {!capOk && (
             <p className="text-[12.5px] font-semibold text-danger">

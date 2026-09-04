@@ -91,8 +91,7 @@ export function GatingTest({
           </span>
         ) : (
           <span className="text-[12px] text-ink-muted">
-            Skor lulus: {num(test.passThreshold)}/{total}
-            {test.retakeCap != null && ` · sisa ${Math.max(0, num(test.retakeCap) - num(test.attemptsUsed))} percobaan`}
+            Skor lulus: {num(test.passThreshold)}/{total} · dapat diulang sampai lulus
           </span>
         )}
       </div>
@@ -159,9 +158,9 @@ export function GatingTest({
           <div className="mt-4 flex items-center justify-between gap-3">
             <span className="text-[12.5px] text-ink-subtle">{answered}/{total} terjawab</span>
             {result && !result.passed ? (
-              <Button onClick={retry} disabled={!test.canAttempt}>
-                {test.canAttempt ? "Coba lagi" : "Batas percobaan tercapai"}
-              </Button>
+              // Always offered: a gating test is retried until passed, so there is no capped-out
+              // state to render here (the server ignores any stored cap on a Gating assessment).
+              <Button onClick={retry}>Coba lagi</Button>
             ) : (
               <Button onClick={submit} loading={busy} disabled={answered < total}>Kirim jawaban</Button>
             )}

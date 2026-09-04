@@ -118,25 +118,29 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         Assert.True(await CanAccess(c.UserId, c.Session2));
     }
 
-    // ---- retake cap is server-authoritative (GR-12) ----
+    // ---- a gating test is always retried until passed ----
 
     [Fact]
-    public async Task Retake_cap_is_enforced_server_side()
+    public async Task A_stored_retake_cap_cannot_strand_a_learner_on_a_gating_test()
     {
+        // A gating test has no cap (FSD §6.1) — but one WAS stored on the live sample test by an
+        // admin edit, and a capped-out learner has no way past it: no retry in the UI, no admin
+        // reset, and the linear lock holds the rest of a paid programme behind that one session.
+        // So the cap is ignored at read, which disarms the bad data already out there rather than
+        // only the next save.
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2, retakeCap: 1);
 
         var first = await TakeTest(c.Token, c.Session1, key, correct: false);
         Assert.False(first.Passed);
 
-        // Second attempt refused — the cap is checked on the server, not offered by the client.
-        var assessmentId = await AssessmentIdFor(c.Session1);
-        var res = await Authed(HttpMethod.Post, $"/api/assessments/{assessmentId}/attempts", c.Token);
-        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        var second = await TakeTest(c.Token, c.Session1, key, correct: true);
+        Assert.True(second.Passed);
 
         var view = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.Session1}/assessment", c.Token);
-        Assert.False(view.CanAttempt);
-        Assert.Equal(1, view.AttemptsUsed);
+        Assert.True(view.CanAttempt);
+        Assert.Null(view.RetakeCap);        // never advertised to the client either
+        Assert.Equal(2, view.AttemptsUsed);
     }
 
     [Fact]
