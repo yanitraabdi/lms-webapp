@@ -225,7 +225,12 @@ public class FinalAssessmentService(
 
         var config = AssessmentService.ParseConfig(
             await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
-        attempt.Passed = score >= (config.PassThreshold ?? 0);
+        // No configured pass mark means the exam HAS no pass mark, so nothing passes it — the old
+        // `?? 0` read the absence as a threshold of zero and stamped every attempt passed, which
+        // is the one direction this must never fail in (GR-14: nothing here may suggest a learner
+        // cleared a TOEFL bar). The final's outcome is a scaled score and a predicted band, not a
+        // verdict; `PassThreshold` on a Final is left null by the editor and this stays false.
+        attempt.Passed = config.PassThreshold is int mark && score >= mark;
     }
 
     private async Task<AttemptStateDto> BuildStateAsync(Attempt attempt, CancellationToken ct)

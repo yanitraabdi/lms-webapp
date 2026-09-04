@@ -435,6 +435,23 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
             (await Authed(HttpMethod.Post, $"/api/attempts/{state.AttemptId}/finish", otherToken)).StatusCode);
     }
 
+    // ---- no pass mark means nothing "passes" (GR-14) ----
+
+    [Fact]
+    public async Task A_final_with_no_pass_mark_never_stamps_an_attempt_passed()
+    {
+        // The final's outcome is a scaled score and a predicted band, not a verdict, so the editor
+        // leaves passThreshold null. Scoring used to read that absence as `?? 0` and mark EVERY
+        // attempt passed — including one that answered nothing. Nothing rendered it, which is the
+        // only reason it went unnoticed; it still sat in the admin attempt feed as a flat 100%,
+        // and it is the one direction this must never fail in.
+        var c = await SetUp();
+
+        var perfect = await AnswerEverythingCorrectly(c, (await Start(c)).AttemptId);
+        Assert.Equal(perfect.MaxScore, perfect.Score);      // a clean sweep …
+        Assert.False(perfect.Passed);                       // … is still not a "pass"
+    }
+
     // ================================================================ helpers
 
     private record Ctx(string Token, Guid UserId, string Admin, Guid ProgramId, Guid SessionId,
