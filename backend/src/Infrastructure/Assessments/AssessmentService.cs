@@ -274,7 +274,17 @@ public class AssessmentService(
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == assessmentId)
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
-        return (assessment, ParseConfig(assessment.Config), sessionId);
+
+        var config = ParseConfig(assessment.Config);
+
+        // A gating test is retried until passed — no cap, ever (FSD §6.1; confirmed by the PO
+        // 2026-09-04). Enforced here rather than at save time so a cap stored by an earlier
+        // admin edit is inert too: a live test had been left at 2, which would have stranded a
+        // paying learner one failed session short of the rest of the programme. Every caller —
+        // start, submit, the student view's canAttempt — reads its config through here.
+        if (assessment.Kind == AssessmentKind.Gating) config.RetakeCap = null;
+
+        return (assessment, config, sessionId);
     }
 
     private async Task<Attempt> LoadOwnedAttemptAsync(Guid userId, Guid attemptId, CancellationToken ct)
