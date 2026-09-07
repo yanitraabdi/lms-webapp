@@ -52,6 +52,18 @@ services:
       # back to http://localhost:3001 — links no learner can open, and a wrong URL printed onto
       # an immutable certificate (GR-6), which can only be superseded, never corrected.
       FrontendBaseUrl: "${PUBLIC_SITE_URL:?set PUBLIC_SITE_URL in .env}"
+      # Outbound email. Defaults to "dev", which LOGS every message to this container's console
+      # instead of sending it — which means nobody can verify an address, and email verification
+      # is required before purchase. Set SMTP_* in .env to actually send (see DEPLOY.md).
+      # An incomplete smtp config fails at startup rather than silently reverting to the log.
+      Email__Provider: "${EMAIL_PROVIDER:-dev}"
+      Email__Host: "${SMTP_HOST:-smtp.gmail.com}"
+      Email__Port: "${SMTP_PORT:-587}"
+      Email__Username: "${SMTP_USERNAME:-}"
+      Email__Password: "${SMTP_PASSWORD:-}"
+      Email__FromAddress: "${SMTP_FROM_ADDRESS:-}"
+      Email__FromName: "${SMTP_FROM_NAME:-INVERTA}"
+      Email__ReplyTo: "${SMTP_REPLY_TO:-}"
     # Internal only — reached exclusively via the frontend same-origin proxy.
     expose:
       - "8080"

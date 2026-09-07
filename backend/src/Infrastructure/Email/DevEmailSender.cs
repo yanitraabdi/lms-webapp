@@ -3,23 +3,32 @@ using Microsoft.Extensions.Logging;
 
 namespace Academy.Infrastructure.Email;
 
-/// <summary>Dev/local IEmailSender: logs the link to the API console so auth flows are
-/// fully testable without SES. Replaced by SesEmailSender in a later milestone.</summary>
+/// <summary>
+/// Dev/local IEmailSender: logs the link to the API console so auth flows are fully testable
+/// without a relay. The default provider, and what every test runs against.
+///
+/// Also the base of <see cref="SmtpEmailSender"/>, which overrides the three authentication
+/// methods and inherits the rest — so the seven messages whose bodies are not written yet keep
+/// logging instead of quietly doing nothing.
+/// </summary>
 public class DevEmailSender(ILogger<DevEmailSender> logger) : IEmailSender
 {
-    public Task SendEmailVerificationAsync(string toEmail, string name, string verifyUrl, CancellationToken ct = default)
+    /// <summary>Available to the SMTP subclass for its own failure logging.</summary>
+    protected readonly ILogger<DevEmailSender> logger = logger;
+
+    public virtual Task SendEmailVerificationAsync(string toEmail, string name, string verifyUrl, CancellationToken ct = default)
     {
         logger.LogInformation("[DEV EMAIL] Verifikasi email → {Email}: {Url}", toEmail, verifyUrl);
         return Task.CompletedTask;
     }
 
-    public Task SendPasswordResetAsync(string toEmail, string name, string resetUrl, CancellationToken ct = default)
+    public virtual Task SendPasswordResetAsync(string toEmail, string name, string resetUrl, CancellationToken ct = default)
     {
         logger.LogInformation("[DEV EMAIL] Reset kata sandi → {Email}: {Url}", toEmail, resetUrl);
         return Task.CompletedTask;
     }
 
-    public Task SendPasswordChangedAsync(string toEmail, string name, CancellationToken ct = default)
+    public virtual Task SendPasswordChangedAsync(string toEmail, string name, CancellationToken ct = default)
     {
         logger.LogInformation("[DEV EMAIL] Konfirmasi kata sandi diubah → {Email}", toEmail);
         return Task.CompletedTask;
