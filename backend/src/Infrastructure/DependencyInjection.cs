@@ -42,7 +42,14 @@ public static class DependencyInjection
         services.AddSingleton(Options.Create(AuthOptionsFactory.Build(configuration)));
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<UserPasswordHasher>();
-        services.AddScoped<IEmailSender, DevEmailSender>();
+        // Email:Provider "dev" logs to the console (default); "smtp" actually sends the three
+        // authentication emails. The factory throws at startup on an incomplete smtp config —
+        // falling back to the logger would leave registration returning 200 while the
+        // verification mail went nowhere.
+        var email = EmailOptionsFactory.Build(configuration);
+        services.AddSingleton(email);
+        if (email.IsSmtp) services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else services.AddScoped<IEmailSender, DevEmailSender>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddHostedService<AccountAnonymizationService>();
 

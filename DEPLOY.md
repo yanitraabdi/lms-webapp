@@ -34,9 +34,53 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 | `FRONTEND_PORT` | Host port the frontend is published on (default `3001`). The tunnel binds this. |
 | `REVALIDATE_SECRET` | Shared secret for the API→Next ISR revalidation call. Change for a real deploy. |
 | `POSTGRES_USER/PASSWORD/DB` | Database credentials. |
+| `EMAIL_PROVIDER` | `dev` (default — logs mail to the API console) or `smtp` (actually sends). |
+| `SMTP_HOST/PORT` | Relay. Defaults `smtp.gmail.com` / `587` (STARTTLS). |
+| `SMTP_USERNAME` | Authenticating mailbox. Required when `EMAIL_PROVIDER=smtp`. |
+| `SMTP_PASSWORD` | Google **app password**, not the account password. Required when `EMAIL_PROVIDER=smtp`. |
+| `SMTP_FROM_ADDRESS` | Visible From. Required when `EMAIL_PROVIDER=smtp`. |
+| `SMTP_FROM_NAME` | Display name (default `INVERTA`). |
+| `SMTP_REPLY_TO` | Where replies go. Set this if From is a noreply mailbox. |
 
 Set `PUBLIC_SITE_URL` to your tunnel hostname for correct SEO URLs (optional — the app works
 without it).
+
+### Sending real email
+
+**Until `EMAIL_PROVIDER=smtp` is set, no email leaves the server** — every message is written to
+the API container's log instead. Email verification is required before purchase, so on the default
+setting no real learner can complete one. This is the single setting standing between the app and
+taking money.
+
+Google Workspace, using an app password:
+
+1. Enable 2-Step Verification on the sending Workspace account.
+2. Create an **app password** (Google Account → Security → App passwords). It is a 16-character
+   string; treat it as a credential and keep it out of the repo.
+3. Put it in `.env` — which is gitignored, and must stay that way:
+
+```
+EMAIL_PROVIDER=smtp
+SMTP_USERNAME=noreply@yourdomain.com
+SMTP_PASSWORD=xxxxxxxxxxxxxxxx
+SMTP_FROM_ADDRESS=noreply@yourdomain.com
+SMTP_REPLY_TO=halo@yourdomain.com
+```
+
+4. `docker compose -f docker-compose.tunnel.yml up -d` and register a throwaway address to confirm
+   a real message arrives.
+
+Notes:
+
+- `SMTP_USERNAME` must be a real mailbox. Google refuses to authenticate an address that exists
+  only as an alias, and `SMTP_FROM_ADDRESS` must be that mailbox or an address it is permitted to
+  send as (Gmail "Send mail as", or a Workspace alias) — otherwise Google rewrites the From and
+  the learner sees the wrong sender.
+- Workspace allows roughly **2,000 recipients a day**. Ample now; not a permanent answer.
+- An incomplete `smtp` config **fails at startup** rather than falling back to the log. That is
+  deliberate: a healthy API silently dropping verification mail is the failure being fixed here.
+- Only the three authentication emails send. The enrolment receipt, certificate and live-session
+  reminder are still console stubs — their bodies have not been written.
 
 ## 2. Build & run
 
