@@ -81,6 +81,38 @@ public class ProgramEnrollmentTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     [Fact]
+    public async Task A_failing_receipt_email_cannot_cost_a_paying_learner_their_enrollment()
+    {
+        // The receipt used to be awaited INSIDE the webhook, before the save that persists the
+        // Active status. A throw rolled the enrollment back, returned 500, and Xendit retried into
+        // the webhook_events unique index — which answers Duplicate and returns before re-applying
+        // anything. Paid, not enrolled, and unfixable by retry: the idempotency guard is what made
+        // it permanent. Unreachable while email only ever went to a log; live the moment SMTP is on.
+        await Seed();
+        var (token, userId) = await VerifiedUser();
+        var programId = await ProgramId();
+        var session = await Checkout(token, programId);
+
+        factory.Email.FailEnrollmentReceipt = true;
+        try
+        {
+            await PayDev(session.ProviderRef);
+        }
+        finally
+        {
+            factory.Email.FailEnrollmentReceipt = false;   // singleton: never leak into other tests
+        }
+
+        // Access is what was paid for, so access is what must survive a dead mail relay.
+        var view = await AuthedGet<StudentProgramDto>($"/api/me/programs/{programId}", token);
+        Assert.Equal(nameof(EnrollmentStatus.Active), view.EnrollmentStatus);
+
+        await WithDb(async db => Assert.Equal(EnrollmentStatus.Active,
+            await db.Enrollments.Where(e => e.UserId == userId && e.ProgramId == programId)
+                .Select(e => e.Status).FirstAsync()));
+    }
+
+    [Fact]
     public async Task Unverified_user_cannot_purchase()
     {
         await Seed();

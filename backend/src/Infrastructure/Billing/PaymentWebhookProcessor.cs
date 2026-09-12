@@ -197,8 +197,31 @@ public class PaymentWebhookProcessor(
         enrollment.EnrolledAt = DateTimeOffset.UtcNow;
         enrollment.ProviderRef = evt.ProviderRef;
 
+        // The receipt can NEVER be allowed to fail this method.
+        //
+        // Trace what a throw here used to do. The webhook_events row is already committed — its
+        // unique index is the idempotency guard — but the Active status above is still only in
+        // memory; it is persisted by the SaveChangesAsync back in ProcessAsync, after this
+        // returns. So an exception rolled back the enrollment, returned 500, and Xendit retried
+        // into that unique index and got Duplicate, which returns before ApplyAsync ever runs
+        // again. The learner had paid, was not enrolled, and no retry could ever fix it — the
+        // idempotency guard, which is correct, is what made the failure permanent.
+        //
+        // Unreachable while Email:Provider was "dev", because a logger cannot throw. Live the
+        // moment SMTP is switched on, and one Gmail hiccup is enough.
+        //
+        // A missing receipt is a support email; a paid learner with no access is GR-2 broken.
         if (user is not null)
-            await email.SendEnrollmentReceiptAsync(user.Email, user.Name, programName, tx.AmountIdr, ct);
+        {
+            try
+            {
+                await email.SendEnrollmentReceiptAsync(user.Email, user.Name, programName, tx.AmountIdr, ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                logger.LogError(e, "Enrollment receipt failed for {Email}; enrollment stands.", user.Email);
+            }
+        }
     }
 
     private static string MergeEventId(string xenditIds, string externalId)

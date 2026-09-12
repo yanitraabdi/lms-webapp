@@ -23,7 +23,7 @@ public class EmailSendingTests
     [InlineData("text")]
     public void The_verification_link_survives_into_both_bodies(string part)
     {
-        var body = AuthEmailTemplates.Verification("Budi", Url);
+        var body = EmailTemplates.Verification("Budi", Url);
 
         // A verification email without its link is not a degraded email, it is a dead end: the
         // learner cannot verify, cannot buy, and has nothing to report but "it didn't work".
@@ -35,7 +35,7 @@ public class EmailSendingTests
     {
         // Clients strip buttons and plenty of people will not click one. The pasteable URL is
         // what makes the mail work anyway — so it appears twice, in the href and as text.
-        var html = AuthEmailTemplates.PasswordReset("Budi", Url).Html;
+        var html = EmailTemplates.PasswordReset("Budi", Url).Html;
 
         Assert.Contains($"href=\"{Url}\"", html);
         var occurrences = html.Split(Url).Length - 1;
@@ -47,7 +47,7 @@ public class EmailSendingTests
     {
         // Nothing to click, by design: it is a warning that something already happened. A link
         // here would be a phishing template we had written ourselves.
-        var body = AuthEmailTemplates.PasswordChanged("Budi");
+        var body = EmailTemplates.PasswordChanged("Budi");
 
         Assert.DoesNotContain("href=", body.Html);
         Assert.DoesNotContain("http", body.Text);
@@ -60,7 +60,7 @@ public class EmailSendingTests
     {
         // Registration accepts any name. Interpolated raw, this one closes the surrounding
         // element and the rest of the email is whatever the sender chose to write.
-        var body = AuthEmailTemplates.Verification("<script>alert(1)</script>", Url);
+        var body = EmailTemplates.Verification("<script>alert(1)</script>", Url);
 
         Assert.DoesNotContain("<script>", body.Html);
         Assert.Contains("&lt;script&gt;", body.Html);
@@ -69,7 +69,93 @@ public class EmailSendingTests
     [Fact]
     public void A_blank_name_does_not_produce_an_empty_greeting()
     {
-        Assert.Contains("Halo Halo,", AuthEmailTemplates.Verification("   ", Url).Html);
+        Assert.Contains("Halo Halo,", EmailTemplates.Verification("   ", Url).Html);
+    }
+
+    // ---- the receipt: the amount is the whole point ----
+
+    [Theory]
+    [InlineData(1_500_000, "Rp1.500.000")]
+    [InlineData(2_500_000.4, "Rp2.500.000")]   // IDR is charged as whole rupiah
+    [InlineData(999, "Rp999")]
+    [InlineData(0, "Rp0")]
+    public void Rupiah_is_formatted_the_indonesian_way_regardless_of_host_culture(decimal amount, string expected)
+    {
+        // Explicitly, not via CultureInfo: a container with ICU trimmed or a different locale
+        // renders "Rp1,500,000" or "Rp1500000", and the receipt is the one number a learner checks
+        // most carefully — it is money they just paid.
+        Assert.Equal(expected, EmailTemplates.FormatIdr(amount));
+    }
+
+    [Fact]
+    public void The_receipt_states_the_programme_and_the_amount()
+    {
+        var body = EmailTemplates.EnrollmentReceipt(
+            "Budi", "INVERTA — Persiapan TOEFL", 1_500_000m, "https://inverta.recosta.id/app");
+
+        Assert.Contains("Rp1.500.000", body.Html);
+        Assert.Contains("Rp1.500.000", body.Text);
+        Assert.Contains("Persiapan TOEFL", body.Text);
+    }
+
+    [Fact]
+    public void The_receipt_does_not_claim_to_be_a_tax_document()
+    {
+        // Faktur and kuitansi pajak are regulated documents with content requirements this does
+        // not meet. Claiming to be one is a tax problem, not a copy problem.
+        var body = EmailTemplates.EnrollmentReceipt("Budi", "Program", 1m, "https://x.test/app");
+
+        Assert.DoesNotContain("faktur", body.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pajak", body.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ---- the certificate: GR-14 governs this one ----
+
+    [Theory]
+    [InlineData("html")]
+    [InlineData("text")]
+    public void The_certificate_email_says_the_score_is_a_prediction_not_an_official_result(string part)
+    {
+        // GR-14, and this is the message a learner forwards to a university or an employer, so the
+        // disclaimer has to be IN it rather than only on the certificate it links to.
+        var body = EmailTemplates.Certificate("Budi", "Persiapan TOEFL", "ABC123", 523, "https://x.test/verify/ABC123");
+        var content = part == "html" ? body.Html : body.Text;
+
+        Assert.Contains("PREDIKSI", content);
+        Assert.Contains("bukan skor TOEFL resmi", content);
+        Assert.Contains("ETS", content);
+    }
+
+    [Fact]
+    public void The_certificate_email_carries_the_code_and_the_verify_link()
+    {
+        const string url = "https://inverta.recosta.id/verify/ABC123";
+        var body = EmailTemplates.Certificate("Budi", "Persiapan TOEFL", "ABC123", 523, url);
+
+        Assert.Contains("ABC123", body.Html);
+        Assert.Contains(url, body.Text);
+        Assert.Contains("523", body.Html);
+    }
+
+    [Fact]
+    public void A_certificate_with_no_score_omits_the_row_rather_than_printing_zero()
+    {
+        // totalScore is nullable. "Skor prediksi: 0" on a certificate email is worse than silence.
+        var body = EmailTemplates.Certificate("Budi", "Persiapan TOEFL", "ABC123", null, "https://x.test/v");
+
+        Assert.DoesNotContain("Skor prediksi", body.Html);
+        Assert.DoesNotContain("Skor prediksi", body.Text);
+    }
+
+    [Fact]
+    public void A_programme_name_containing_markup_cannot_escape_into_the_html()
+    {
+        // Programme titles are admin input and land in the details table and the subject line.
+        var body = EmailTemplates.EnrollmentReceipt(
+            "Budi", "<img src=x onerror=alert(1)>", 1m, "https://x.test/app");
+
+        Assert.DoesNotContain("<img", body.Html);
+        Assert.Contains("&lt;img", body.Html);
     }
 
     // ---- an incomplete smtp config must not start ----

@@ -94,10 +94,25 @@ public class ProgramCertificateService(
             return raced is null ? null : await MapAsync(raced, ct);
         }
 
+        // The certificate is already committed above and is immutable (GR-6), so a failed email
+        // must not fail this call: the learner's submit would surface an error for a certificate
+        // that exists, and the retry would find it already issued. The record is the certificate,
+        // not the notification — it is visible at /app/certificates and on the verify page either
+        // way, and the send can be repeated by hand.
         if (user is not null)
-            await email.SendCertificateAsync(
-                user.Email, user.Name, session.ProgramName, certificate.VerificationCode,
-                conversionResult.Total, $"{FrontendBase}/verify/{certificate.VerificationCode}", ct);
+        {
+            try
+            {
+                await email.SendCertificateAsync(
+                    user.Email, user.Name, session.ProgramName, certificate.VerificationCode,
+                    conversionResult.Total, $"{FrontendBase}/verify/{certificate.VerificationCode}", ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                logger.LogError(e, "Certificate email failed for {Code}; certificate stands.",
+                    certificate.VerificationCode);
+            }
+        }
 
         return await MapAsync(certificate, ct);
     }
