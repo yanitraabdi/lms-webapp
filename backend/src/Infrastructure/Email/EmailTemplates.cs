@@ -40,6 +40,43 @@ public static class EmailTemplates
     public static string FormatIdr(decimal amount)
         => "Rp" + Math.Round(amount, MidpointRounding.AwayFromZero).ToString("N", Rupiah);
 
+    /// <summary>
+    /// Western Indonesia Time, as a fixed +7 offset.
+    ///
+    /// Fixed rather than TimeZoneInfo("Asia/Jakarta") because WIB has had no daylight saving since
+    /// 1964, so the offset is exact — and a fixed offset needs no tzdata in the container, which
+    /// is one less thing that can be absent from a slim base image.
+    ///
+    /// Indonesia spans WIB/WITA/WITK (+7/+8/+9). This product is Jakarta-centric and every string
+    /// in it is Bahasa Indonesia, so WIB is the right default; a learner in Makassar reads the
+    /// label and adds an hour. Make it per-programme config the day that is not good enough.
+    /// </summary>
+    private static readonly TimeSpan Wib = TimeSpan.FromHours(7);
+
+    /// <summary>Spelled out rather than taken from CultureInfo("id-ID"), for the reason given on
+    /// <see cref="Rupiah"/> — and because that call does not throw when globalization is
+    /// unavailable, it quietly returns English.</summary>
+    private static readonly string[] Days =
+        ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+    private static readonly string[] Months =
+        ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+         "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    /// <summary>
+    /// "Sabtu, 12 September 2026, 19.00 WIB".
+    ///
+    /// The API container runs UTC, so the stored instant MUST be shifted before it is printed.
+    /// Sent raw it reads seven hours early, and a learner who trusts it misses the class — the
+    /// worst failure this particular email has available to it.
+    /// </summary>
+    public static string FormatWib(DateTimeOffset instant)
+    {
+        var t = instant.ToOffset(Wib);
+        return $"{Days[(int)t.DayOfWeek]}, {t.Day} {Months[t.Month]} {t.Year}, " +
+               $"{t.Hour:00}.{t.Minute:00} WIB";
+    }
+
     // ---------------------------------------------------------------- auth
 
     public static EmailBody Verification(string name, string verifyUrl) => Build(
@@ -124,6 +161,53 @@ public static class EmailTemplates
                     "bukan skor TOEFL resmi dan bukan hasil tes dari ETS.",
             footer: "Sertifikat ini tidak pernah berubah. Jika Anda mengikuti tes akhir lagi, " +
                     "sertifikat baru akan diterbitkan dan yang ini tetap berlaku.");
+    }
+
+    /// <summary>
+    /// H-1 reminder for a live session.
+    ///
+    /// Online and offline sessions are genuinely different emails and the distinction is the whole
+    /// value of the message: online needs the join link in front of the learner, offline needs an
+    /// address they can leave the house for. Both fields are nullable, and a session whose details
+    /// are not filled in yet still has to produce something honest rather than a blank row — an
+    /// admin can schedule first and add the link later, and the sweep does not wait for them.
+    /// </summary>
+    public static EmailBody LiveSessionReminder(
+        string name, string programName, string sessionTitle,
+        DateTimeOffset scheduledAt, string? joinUrl, string? location, string appUrl)
+    {
+        var online = !string.IsNullOrWhiteSpace(joinUrl);
+        var onsite = !string.IsNullOrWhiteSpace(location);
+
+        var details = new List<(string, string)>
+        {
+            ("Sesi", sessionTitle),
+            ("Program", programName),
+            ("Waktu", FormatWib(scheduledAt)),
+        };
+        if (onsite) details.Add(("Lokasi", location!));
+
+        return Build(
+            subject: $"Besok: {sessionTitle}",
+            name: name,
+            lead: online
+                ? "Sesi live Anda berlangsung besok. Gunakan tombol di bawah ini untuk bergabung " +
+                  "pada waktu yang tertera."
+                : onsite
+                    ? "Sesi live Anda berlangsung besok di lokasi berikut. Mohon datang beberapa " +
+                      "menit lebih awal."
+                    : "Sesi live Anda berlangsung besok.",
+            buttonLabel: online ? "Gabung sesi" : "Buka program",
+            url: online ? joinUrl : appUrl,
+            details: [.. details],
+            // Said only when it is true. A learner whose session has neither a link nor an address
+            // an hour before it starts needs to know that is our gap, not theirs to hunt down.
+            notice: online || onsite
+                ? null
+                : "Tautan atau lokasi sesi ini belum tersedia. Kami akan mengirimkannya sebelum " +
+                  "sesi dimulai — periksa juga halaman program Anda.",
+            footer: "Kehadiran pada sesi live dicatat oleh pengajar, dan sesi ini harus dihadiri " +
+                    "untuk membuka sesi berikutnya. Waktu di atas menggunakan WIB.");
     }
 
     // ---------------------------------------------------------------- the shell

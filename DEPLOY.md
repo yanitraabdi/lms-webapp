@@ -79,9 +79,11 @@ Notes:
 - Workspace allows roughly **2,000 recipients a day**. Ample now; not a permanent answer.
 - An incomplete `smtp` config **fails at startup** rather than falling back to the log. That is
   deliberate: a healthy API silently dropping verification mail is the failure being fixed here.
-- Five messages send: verification, password reset, password-changed, the enrolment receipt and
-  the certificate. The live-session reminder is still a console stub, as are the five archived
-  subscription messages (nothing sends those).
+- Six messages send: verification, password reset, password-changed, the enrolment receipt, the
+  certificate and the H-1 live-session reminder. Only the five archived subscription messages still
+  log, and nothing sends those.
+- Live-session times are printed in **WIB** (fixed UTC+7). The API container runs UTC, so this is a
+  conversion, not a label. A cohort outside western Indonesia needs this made configurable.
 
 ## 2. Build & run
 
