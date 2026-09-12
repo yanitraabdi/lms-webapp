@@ -73,7 +73,7 @@ public class DevEmailSender(ILogger<DevEmailSender> logger) : IEmailSender
         return Task.CompletedTask;
     }
 
-    public Task SendLiveSessionReminderAsync(string toEmail, string name, string programName, string sessionTitle,
+    public virtual Task SendLiveSessionReminderAsync(string toEmail, string name, string programName, string sessionTitle,
         DateTimeOffset scheduledAt, string? joinUrl, string? location, CancellationToken ct = default)
     {
         logger.LogInformation(

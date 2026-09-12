@@ -158,6 +158,88 @@ public class EmailSendingTests
         Assert.Contains("&lt;img", body.Html);
     }
 
+    // ---- the reminder: the clock is the whole message ----
+
+    [Fact]
+    public void The_time_is_shifted_into_WIB_not_printed_as_stored()
+    {
+        // The API container runs UTC. A session stored at 12:00Z is 19.00 WIB — printed raw it
+        // reads seven hours early, and a learner who trusts it misses the class. That is the worst
+        // failure available to this particular email, and it is invisible to anyone testing from
+        // a machine already set to Jakarta time.
+        var noonUtc = new DateTimeOffset(2026, 9, 12, 12, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal("Sabtu, 12 September 2026, 19.00 WIB", EmailTemplates.FormatWib(noonUtc));
+    }
+
+    [Fact]
+    public void A_late_evening_utc_time_rolls_into_the_next_day_in_WIB()
+    {
+        // 20:00Z on Saturday is 03.00 Sunday in Jakarta. Shifting the clock without the date is a
+        // reminder for the wrong day.
+        var lateUtc = new DateTimeOffset(2026, 9, 12, 20, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal("Minggu, 13 September 2026, 03.00 WIB", EmailTemplates.FormatWib(lateUtc));
+    }
+
+    [Fact]
+    public void An_instant_with_a_non_utc_offset_is_still_rendered_in_WIB()
+    {
+        // DateTimeOffset carries an offset and EF can hand one back in a zone nobody expected.
+        // The same instant must read the same way regardless of how it arrived.
+        var sameInstant = new DateTimeOffset(2026, 9, 12, 14, 0, 0, TimeSpan.FromHours(2));  // 12:00Z
+
+        Assert.Equal("Sabtu, 12 September 2026, 19.00 WIB", EmailTemplates.FormatWib(sameInstant));
+    }
+
+    private static readonly DateTimeOffset When = new(2026, 9, 12, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void An_online_session_puts_the_join_link_in_front_of_the_learner()
+    {
+        const string join = "https://meet.example.com/abc-defg-hij";
+        var body = EmailTemplates.LiveSessionReminder(
+            "Budi", "Persiapan TOEFL", "Sesi Live 1", When, join, null, "https://x.test/app");
+
+        Assert.Contains($"href=\"{join}\"", body.Html);
+        Assert.Contains(join, body.Text);
+        Assert.Contains("Gabung sesi", body.Html);
+        Assert.Contains("19.00 WIB", body.Text);
+    }
+
+    [Fact]
+    public void An_onsite_session_gives_the_address_and_does_not_offer_a_join_button()
+    {
+        var body = EmailTemplates.LiveSessionReminder(
+            "Budi", "Persiapan TOEFL", "Sesi Live 1", When, null,
+            "Jl. Sudirman No. 1, Jakarta", "https://x.test/app");
+
+        Assert.Contains("Jl. Sudirman No. 1, Jakarta", body.Text);
+        Assert.DoesNotContain("Gabung sesi", body.Html);
+    }
+
+    [Fact]
+    public void A_session_with_neither_a_link_nor_a_location_says_so_plainly()
+    {
+        // An admin can schedule first and fill the details in later, and the H-1 sweep does not
+        // wait for them. Silence here reads as the learner's problem to solve.
+        var body = EmailTemplates.LiveSessionReminder(
+            "Budi", "Persiapan TOEFL", "Sesi Live 1", When, null, null, "https://x.test/app");
+
+        Assert.Contains("belum tersedia", body.Text);
+    }
+
+    [Fact]
+    public void The_notice_is_absent_when_the_details_are_present()
+    {
+        // A "details are missing" warning on an email that carries the link would be worse than
+        // no warning at all.
+        var body = EmailTemplates.LiveSessionReminder(
+            "Budi", "Persiapan TOEFL", "Sesi Live 1", When, "https://meet.test/x", null, "https://x.test/app");
+
+        Assert.DoesNotContain("belum tersedia", body.Text);
+    }
+
     // ---- an incomplete smtp config must not start ----
 
     private static EmailOptions Build(params (string Key, string Value)[] settings)
