@@ -63,10 +63,15 @@ public class CapturingEmailSender : IEmailSender
     public int EnrollmentReceiptCount { get; private set; }
     public string? LastEnrollmentProgram { get; private set; }
 
+    /// <summary>Set by a test to make the receipt send fail, the way a real relay can. Reset it in
+    /// a finally — this sender is a singleton shared by every test on the factory.</summary>
+    public bool FailEnrollmentReceipt { get; set; }
+
     public Task SendEnrollmentReceiptAsync(string toEmail, string name, string programName, decimal amountIdr, CancellationToken ct = default)
     {
         EnrollmentReceiptCount++;
         LastEnrollmentProgram = programName;
+        if (FailEnrollmentReceipt) throw new InvalidOperationException("relay refused the message");
         return Task.CompletedTask;
     }
 

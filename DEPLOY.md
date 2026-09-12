@@ -79,8 +79,9 @@ Notes:
 - Workspace allows roughly **2,000 recipients a day**. Ample now; not a permanent answer.
 - An incomplete `smtp` config **fails at startup** rather than falling back to the log. That is
   deliberate: a healthy API silently dropping verification mail is the failure being fixed here.
-- Only the three authentication emails send. The enrolment receipt, certificate and live-session
-  reminder are still console stubs — their bodies have not been written.
+- Five messages send: verification, password reset, password-changed, the enrolment receipt and
+  the certificate. The live-session reminder is still a console stub, as are the five archived
+  subscription messages (nothing sends those).
 
 ## 2. Build & run
 

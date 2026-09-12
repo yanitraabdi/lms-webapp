@@ -1,3 +1,5 @@
+using Academy.Infrastructure.Auth;
+using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Mime;
@@ -6,32 +8,43 @@ using Microsoft.Extensions.Logging;
 namespace Academy.Infrastructure.Email;
 
 /// <summary>
-/// Sends the three AUTHENTICATION emails over SMTP. Everything else still logs to the console,
-/// inherited from <see cref="DevEmailSender"/>.
-///
-/// That split is deliberate and worth stating plainly, because a half-real email sender is the
-/// kind of thing that gets misremembered as finished: verification, password reset and the
-/// password-changed notice are what stand between a learner and a purchase, so they are what was
-/// asked for. The enrolment receipt, the certificate email and the live-session reminder are
-/// still stubs — a learner who buys the programme today gets no receipt, and one who finishes it
-/// gets no certificate in their inbox. Those bodies have not been written yet.
+/// Sends the five real emails over SMTP: the three authentication ones, the enrolment receipt and
+/// the certificate. The rest still log to the console, inherited from <see cref="DevEmailSender"/>
+/// — the five archived subscription messages, which nothing sends, and the live-session reminder,
+/// whose body is not written.
 ///
 /// Configured for Google Workspace with an app password; any SMTP relay is the same settings.
 /// </summary>
-public class SmtpEmailSender(EmailOptions options, ILogger<DevEmailSender> logger)
+public class SmtpEmailSender(
+    EmailOptions options, IOptions<AuthOptions> authOptions, ILogger<DevEmailSender> logger)
     : DevEmailSender(logger)
 {
+    /// <summary>Where "Mulai belajar" points. The same base the verify and reset links use, so
+    /// there is one setting to get wrong rather than two.</summary>
+    private string AppUrl => $"{authOptions.Value.FrontendBaseUrl.TrimEnd('/')}/app";
+
     public override Task SendEmailVerificationAsync(
         string toEmail, string name, string verifyUrl, CancellationToken ct = default)
-        => SendAsync(toEmail, name, AuthEmailTemplates.Verification(name, verifyUrl), ct);
+        => SendAsync(toEmail, name, EmailTemplates.Verification(name, verifyUrl), ct);
 
     public override Task SendPasswordResetAsync(
         string toEmail, string name, string resetUrl, CancellationToken ct = default)
-        => SendAsync(toEmail, name, AuthEmailTemplates.PasswordReset(name, resetUrl), ct);
+        => SendAsync(toEmail, name, EmailTemplates.PasswordReset(name, resetUrl), ct);
 
     public override Task SendPasswordChangedAsync(
         string toEmail, string name, CancellationToken ct = default)
-        => SendAsync(toEmail, name, AuthEmailTemplates.PasswordChanged(name), ct);
+        => SendAsync(toEmail, name, EmailTemplates.PasswordChanged(name), ct);
+
+    public override Task SendEnrollmentReceiptAsync(
+        string toEmail, string name, string programName, decimal amountIdr, CancellationToken ct = default)
+        => SendAsync(toEmail, name,
+            EmailTemplates.EnrollmentReceipt(name, programName, amountIdr, AppUrl), ct);
+
+    public override Task SendCertificateAsync(
+        string toEmail, string name, string programName, string verificationCode,
+        int? totalScore, string verifyUrl, CancellationToken ct = default)
+        => SendAsync(toEmail, name,
+            EmailTemplates.Certificate(name, programName, verificationCode, totalScore, verifyUrl), ct);
 
     private async Task SendAsync(string toEmail, string name, EmailBody body, CancellationToken ct)
     {
