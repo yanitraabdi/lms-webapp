@@ -104,9 +104,16 @@ public class FinalAssessmentService(
         var config = AssessmentService.ParseConfig(
             await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
 
-        // A question's own clip wins; otherwise the section recording, if there is one.
-        var storageKey = AudioResolution.StorageKey(question.AudioRef, question.Section, config)
-            ?? throw new AssessmentException("Soal ini tidak memiliki audio.", 400);
+        // A question's OWN clip only. The section recording used to be served here too, one URL per
+        // question, each with native player controls — so fifty Listening questions meant fifty
+        // ways to pause, rewind and replay a conversation the ITP plays once. It now has exactly
+        // one way in, StartSectionAudioAsync, which stamps a single start.
+        var storageKey = string.IsNullOrWhiteSpace(question.AudioRef)
+            ? throw new AssessmentException(
+                AudioResolution.StorageKey(null, question.Section, config) is null
+                    ? "Soal ini tidak memiliki audio."
+                    : "Audio bagian ini diputar sekali untuk seluruh bagian, bukan per soal.", 400)
+            : question.AudioRef;
 
         // Play limit is counted SERVER-side; the client cannot grant itself another play.
         if (config.AudioPlayLimit is int limit)
@@ -122,6 +129,48 @@ public class FinalAssessmentService(
 
         // Signed, short-TTL, minted per play (GR-3).
         return signer.Sign(storageKey);
+    }
+
+    /// <summary>
+    /// One recording for the whole Listening section, played once, without pausing or replaying.
+    ///
+    /// The server stamps the start exactly once and never clears it. Every request after that —
+    /// a second click, a reload, a reconnect — gets a fresh signed URL and the ORIGINAL start, and
+    /// the client plays from <c>ServerNow - StartedAt</c>. So a reload resumes where the recording
+    /// has reached rather than beginning again, and there is no request a learner can make that
+    /// rewinds it.
+    ///
+    /// What this does not do is stop a determined learner who edits the page from seeking the
+    /// audio element themselves: the signed URL serves the whole file. That is the same line soft
+    /// proctoring already draws — deterrence, not exam security (GR-14).
+    /// </summary>
+    public async Task<SectionAudioDto> StartSectionAudioAsync(
+        Guid userId, Guid attemptId, CancellationToken ct = default)
+    {
+        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        await EnforceDeadlinesAsync(attempt, ct);
+        if (attempt.SubmittedAt is not null)
+            throw new AssessmentException("Tes ini sudah selesai.", 409);
+
+        var state = AttemptState.Parse(attempt.State);
+        var current = state.Current ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
+
+        var config = AssessmentService.ParseConfig(
+            await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
+        var storageKey = AudioResolution.StorageKey(null, ParseSection(current.Section), config)
+            ?? throw new AssessmentException("Bagian ini tidak memiliki audio.", 400);
+
+        var now = DateTimeOffset.UtcNow;
+        if (current.AudioStartedAt is null)
+        {
+            current.AudioStartedAt = now;
+            attempt.State = state.Serialize();
+            await db.SaveChangesAsync(ct);
+        }
+
+        // Signed, short-TTL, minted per request (GR-3). The TTL outlasts the longest section, so a
+        // URL minted at the start does not expire partway through the recording.
+        return new SectionAudioDto(signer.Sign(storageKey), current.AudioStartedAt.Value, now);
     }
 
     // ================================================================ internals
@@ -267,7 +316,7 @@ public class FinalAssessmentService(
             questions = rows
                 .Select(r => new StudentQuestionDto(
                     r.QuestionId, r.Section.ToString(), r.Prompt, ParseStrings(r.Choices), r.PassageRef,
-                    AudioResolution.StorageKey(r.AudioRef, r.Section, config) is not null))
+                    !string.IsNullOrWhiteSpace(r.AudioRef)))    // own clip; the section recording is below
                 .ToList();
 
             var saved = ParseInts(attempt.Answers);
@@ -276,12 +325,9 @@ public class FinalAssessmentService(
                 var id = r.QuestionId.ToString();
                 if (saved.TryGetValue(id, out var v)) answers[id] = v;
 
-                if (config.AudioPlayLimit is int limit
-                    && AudioResolution.PlayKey(r.QuestionId, r.AudioRef, r.Section, config) is string playKey)
+                if (config.AudioPlayLimit is int limit && !string.IsNullOrWhiteSpace(r.AudioRef))
                 {
-                    state.AudioPlays.TryGetValue(playKey, out var used);
-                    // Keyed by question id for the client, even when the allowance is shared,
-                    // so every question in the section shows the same remaining count.
+                    state.AudioPlays.TryGetValue(id, out var used);
                     audioLeft[id] = Math.Max(0, limit - used);
                 }
             }
@@ -304,7 +350,11 @@ public class FinalAssessmentService(
             state.CurrentIndex, state.Sections.Count, current?.Section,
             current?.StartedAt, deadline, remaining,
             config.ProctoringEnabled, strikes, StrikeLimit, attempt.ProctorFlagged,
-            questions, answers, audioLeft);
+            questions, answers, audioLeft,
+            SectionHasAudio: attempt.SubmittedAt is null && current is not null
+                             && AudioResolution.StorageKey(null, ParseSection(current.Section), config) is not null,
+            SectionAudioStartedAt: current?.AudioStartedAt,
+            ServerNow: DateTimeOffset.UtcNow);
     }
 
     private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)

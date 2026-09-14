@@ -58,6 +58,13 @@ internal class SectionState
     public DateTimeOffset? StartedAt { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
 
+    /// <summary>
+    /// When the section recording was started — stamped ONCE, by the server, and never cleared.
+    /// Everything about "one play, no pause, no replay" derives from it: a reloaded page resumes at
+    /// now minus this, not at zero, so reloading is not a way to hear the conversation again.
+    /// </summary>
+    public DateTimeOffset? AudioStartedAt { get; set; }
+
     /// <summary>True once the learner has left it — sections are non-returnable (KAK §9.7.2 R3).</summary>
     public bool Closed => SubmittedAt is not null;
 }

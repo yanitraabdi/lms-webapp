@@ -199,6 +199,13 @@ export const reportProctorEvent = (t: string, attemptId: string, kind: string, d
 export const getAudioUrl = (t: string, attemptId: string, questionId: string) =>
   api<{ url: string }>("GET", `/api/attempts/${attemptId}/audio/${questionId}`, t);
 
+export type SectionAudio = components["schemas"]["SectionAudioDto"];
+
+/** Starts the active section's single recording — or, if it is already running, returns the
+ *  ORIGINAL start so playback resumes at its live position. There is no call that rewinds it. */
+export const startSectionAudio = (t: string, attemptId: string) =>
+  api<SectionAudio>("POST", `/api/attempts/${attemptId}/section-audio`, t);
+
 export const listMyCertificates = (t: string) =>
   api<ProgramCertificate[]>("GET", "/api/me/program-certificates", t);
 
