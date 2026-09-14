@@ -23,7 +23,17 @@ public record AttemptStateDto(
     bool ProctorFlagged,
     IReadOnlyList<StudentQuestionDto> Questions,     // current section ONLY
     IReadOnlyDictionary<string, int> Answers,        // current section ONLY
-    IReadOnlyDictionary<string, int> AudioPlaysLeft);
+    IReadOnlyDictionary<string, int> AudioPlaysLeft,  // per-question clips ONLY
+    bool SectionHasAudio,                            // one recording for the whole active section
+    DateTimeOffset? SectionAudioStartedAt,           // null until the learner starts it
+    DateTimeOffset ServerNow);                       // so the client never positions audio by its own clock
+
+/// <summary>
+/// The section recording: a signed URL plus the server's facts about where playback must be. The
+/// client plays from <c>ServerNow - StartedAt</c> — so the first start begins at zero, and a reload
+/// picks up where the recording has got to rather than starting it over.
+/// </summary>
+public record SectionAudioDto(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow);
 
 public record AdvanceSectionRequest(IReadOnlyDictionary<string, int>? Answers);
 
@@ -46,8 +56,13 @@ public interface IFinalAssessmentService
 
     Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default);
 
-    /// <summary>Signed audio URL for a listening question; the play limit is counted server-side.</summary>
+    /// <summary>Signed audio URL for a question with its OWN clip; the play limit is counted
+    /// server-side. A question covered by the section recording has no per-question audio.</summary>
     Task<string> GetAudioUrlAsync(Guid userId, Guid attemptId, Guid questionId, CancellationToken ct = default);
+
+    /// <summary>Starts the active section's recording (stamped once), or resumes it at its live
+    /// position if it is already running.</summary>
+    Task<SectionAudioDto> StartSectionAudioAsync(Guid userId, Guid attemptId, CancellationToken ct = default);
 }
 
 // ---------------------------------------------------------------- proctoring

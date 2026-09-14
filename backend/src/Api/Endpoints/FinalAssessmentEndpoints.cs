@@ -39,6 +39,12 @@ public static class FinalAssessmentEndpoints
             TypedResults.Ok(new AudioUrlResponse(await s.GetAudioUrlAsync(u.UserId(), id, questionId, ct))))
             .RequireRateLimiting("playback");
 
+        // One recording per section: stamped once, resumed at its live position, never rewound.
+        g.MapPost("/{id:guid}/section-audio", async Task<Ok<SectionAudioDto>> (
+                Guid id, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.StartSectionAudioAsync(u.UserId(), id, ct)))
+            .RequireRateLimiting("playback");
+
         // ---- certificates ----
         app.MapGet("/api/me/program-certificates", async Task<Ok<IReadOnlyList<ProgramCertificateDto>>> (
                 ClaimsPrincipal u, IProgramCertificateService s, CancellationToken ct) =>

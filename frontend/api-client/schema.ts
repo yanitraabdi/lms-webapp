@@ -3940,6 +3940,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{id}/assessment/audio/{questionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GatingAudioResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{id}/playback": {
         parameters: {
             query?: never;
@@ -4928,6 +4966,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/attempts/{id}/section-audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SectionAudioDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/attempts/{id}/reinstate": {
         parameters: {
             query?: never;
@@ -5757,6 +5832,11 @@ export interface components {
             audioPlaysLeft: {
                 [key: string]: number | string;
             };
+            sectionHasAudio: boolean;
+            /** Format: date-time */
+            sectionAudioStartedAt: null | string;
+            /** Format: date-time */
+            serverNow: string;
         };
         AttendanceRosterDto: {
             /** Format: uuid */
@@ -5958,6 +6038,9 @@ export interface components {
         };
         ForgotPasswordRequest: {
             email: string;
+        };
+        GatingAudioResponse: {
+            url: string;
         };
         GrantEnrollmentRequest: {
             email: string;
@@ -6401,6 +6484,13 @@ export interface components {
             /** Format: int32 */
             scaledScore: number | string;
             predictedBand: null | string;
+        };
+        SectionAudioDto: {
+            url: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            serverNow: string;
         };
         SessionContextDto: {
             /** Format: uuid */

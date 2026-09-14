@@ -320,22 +320,105 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.Equal("per-question", await played.Content.ReadAsStringAsync());
     }
 
-    [Fact]
-    public async Task A_question_without_its_own_clip_falls_back_to_the_section_recording()
+    // ---- one recording per section: started once, never paused, never replayed ----
+
+    private record SectionAudio(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow);
+
+    private async Task<SectionAudio> StartSectionAudio(Ctx c, Guid attemptId)
     {
+        var res = await Authed(HttpMethod.Post, $"/api/attempts/{attemptId}/section-audio", c.Token);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<SectionAudio>(Json))!;
+    }
+
+    [Fact]
+    public async Task The_section_recording_is_one_audio_for_the_whole_section_not_one_per_question()
+    {
+        // Product decision: ONE audio per Listening section. Questions covered by it carry no
+        // per-question audio, and asking for one is refused — that per-question route, each with
+        // player controls, was fifty ways to replay a conversation the ITP plays once.
         var c = await SetUp(sectionAudioRef: "audio/section.mp3");
         await SeedObjectAsync("audio/section.mp3", "whole-section"u8.ToArray());
         await ClearQuestionAudioAsync(c.AssessmentId);
 
         var state = await Start(c);
-        var q = state.Questions.First().Id;
+        Assert.True(state.SectionHasAudio);
+        Assert.All(state.Questions, q => Assert.False(q.HasAudio));
 
-        var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{q}", c.Token);
-        res.EnsureSuccessStatusCode();
-        var url = (await res.Content.ReadFromJsonAsync<AudioUrlResponse>(Json))!.Url;
+        var perQuestion = await Authed(HttpMethod.Get,
+            $"/api/attempts/{state.AttemptId}/audio/{state.Questions[0].Id}", c.Token);
+        Assert.Equal(HttpStatusCode.BadRequest, perQuestion.StatusCode);
 
-        var played = await _client.GetAsync(url);
+        var audio = await StartSectionAudio(c, state.AttemptId);
+        var played = await _client.GetAsync(audio.Url);
         Assert.Equal("whole-section", await played.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Starting_the_section_audio_again_resumes_it_rather_than_restarting_it()
+    {
+        // The start is stamped ONCE. A second request — a reload, a reconnect, a second click —
+        // returns the ORIGINAL start, and the client plays from ServerNow - StartedAt. There is no
+        // request that rewinds the recording.
+        var c = await SetUp(sectionAudioRef: "audio/section.mp3");
+        await SeedObjectAsync("audio/section.mp3", "whole-section"u8.ToArray());
+        await ClearQuestionAudioAsync(c.AssessmentId);
+        var state = await Start(c);
+
+        var first = await StartSectionAudio(c, state.AttemptId);
+        await RewindAudioStartAsync(state.AttemptId, TimeSpan.FromMinutes(3));  // three minutes in
+        var again = await StartSectionAudio(c, state.AttemptId);
+
+        Assert.True(again.StartedAt < first.StartedAt, "a second start must not re-stamp the start");
+        var elapsed = again.ServerNow - again.StartedAt;
+        Assert.InRange(elapsed.TotalSeconds, 175, 200);   // resumes ~3 minutes in, not at zero
+
+        // …and the state the page reloads from carries the same stamp.
+        var reloaded = await AuthedGet<AttemptStateDto>($"/api/attempts/{state.AttemptId}/state", c.Token);
+        Assert.Equal(again.StartedAt, reloaded.SectionAudioStartedAt);
+    }
+
+    [Fact]
+    public async Task A_section_without_a_recording_has_no_section_audio_to_start()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+
+        Assert.False(state.SectionHasAudio);
+        var res = await Authed(HttpMethod.Post, $"/api/attempts/{state.AttemptId}/section-audio", c.Token);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_next_section_does_not_inherit_the_previous_sections_audio()
+    {
+        // Structure has no recording. Advancing must not leave the Listening stamp or a player
+        // hanging over a section it does not belong to.
+        var c = await SetUp(sectionAudioRef: "audio/section.mp3");
+        await SeedObjectAsync("audio/section.mp3", "whole-section"u8.ToArray());
+        await ClearQuestionAudioAsync(c.AssessmentId);
+        var state = await Start(c);
+        await StartSectionAudio(c, state.AttemptId);
+
+        var next = await Advance(c, state.AttemptId, null);
+
+        Assert.False(next.SectionHasAudio);
+        Assert.Null(next.SectionAudioStartedAt);
+    }
+
+    /// <summary>Moves the stored audio start back in time, as if the recording had been playing.</summary>
+    private async Task RewindAudioStartAsync(Guid attemptId, TimeSpan by)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var attempt = await db.Attempts.FirstAsync(a => a.Id == attemptId);
+        var node = System.Text.Json.Nodes.JsonNode.Parse(attempt.State)!;
+        var current = (int)node["currentIndex"]!;
+        var section = node["sections"]![current]!;
+        var started = DateTimeOffset.Parse((string)section["audioStartedAt"]!);
+        section["audioStartedAt"] = started.Subtract(by).ToString("O");
+        attempt.State = node.ToJsonString();
+        await db.SaveChangesAsync();
     }
 
     [Fact]
@@ -349,25 +432,6 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{q}", c.Token);
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-    }
-
-    [Fact]
-    public async Task Section_audio_shares_one_allowance_across_its_questions()
-    {
-        var c = await SetUp(audioPlayLimit: 1, sectionAudioRef: "audio/section.mp3");
-        await SeedObjectAsync("audio/section.mp3", [1, 2, 3]);
-        await ClearQuestionAudioAsync(c.AssessmentId);
-
-        var state = await Start(c);
-        var a = state.Questions[0].Id;
-        var b = state.Questions[1].Id;
-
-        (await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{a}", c.Token))
-            .EnsureSuccessStatusCode();
-
-        // There is only ONE recording, so the second question has no allowance left.
-        var second = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/audio/{b}", c.Token);
-        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
 
     [Fact]
@@ -392,9 +456,11 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         var state = await Start(c);
 
-        // hasAudio drives whether the play button renders at all — section audio that the
-        // client cannot see is audio that is never offered.
-        Assert.All(state.Questions, q => Assert.True(q.HasAudio));
+        // SectionHasAudio drives whether the section player renders at all — section audio the
+        // client cannot see is audio that is never offered. It is ONE flag for the section; it used
+        // to be hasAudio on every question, which rendered a separate player under each of them.
+        Assert.True(state.SectionHasAudio);
+        Assert.Null(state.SectionAudioStartedAt);          // offered, not yet started
     }
 
     // ---- helpers for the audio facts ----
