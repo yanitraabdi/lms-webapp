@@ -64,6 +64,14 @@ services:
       Email__FromAddress: "${SMTP_FROM_ADDRESS:-}"
       Email__FromName: "${SMTP_FROM_NAME:-INVERTA}"
       Email__ReplyTo: "${SMTP_REPLY_TO:-}"
+      # Video. Defaults to "dev", which plays ONE public test stream for every session whatever
+      # the session's asset id says — no real lesson can be published on it. Set BUNNY_* in .env
+      # to play the real videos (see DEPLOY.md). An incomplete bunny config fails at startup.
+      Video__Provider: "${VIDEO_PROVIDER:-dev}"
+      Video__PullZoneHostname: "${BUNNY_PULL_ZONE:-}"
+      Video__LibraryId: "${BUNNY_LIBRARY_ID:-}"
+      Video__SigningKey: "${BUNNY_TOKEN_KEY:-dev-video-signing-key-change-me}"
+      Video__CaptionsLanguage: "${BUNNY_CAPTIONS_LANGUAGE:-}"
     # Internal only — reached exclusively via the frontend same-origin proxy.
     expose:
       - "8080"

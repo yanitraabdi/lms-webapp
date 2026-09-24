@@ -76,8 +76,13 @@ public static class DependencyInjection
         services.AddSingleton(MediaOptionsFactory.Build(configuration));
         services.AddSingleton<IObjectStorage, LocalObjectStorage>();
         services.AddSingleton<MediaSigner>();
-        // DevVideoProvider simulates Bunny signed playback; swap to BunnyVideoProvider when Video:Provider="bunny".
-        services.AddScoped<IVideoProvider, DevVideoProvider>();
+        // DevVideoProvider simulates Bunny signed playback and points every session at one public
+        // test stream; "bunny" plays the session's real video. The factory throws at startup on an
+        // incomplete bunny config rather than 403-ing for every learner at play time.
+        if (VideoOptionsFactory.Build(configuration).IsBunny)
+            services.AddScoped<IVideoProvider, BunnyVideoProvider>();
+        else
+            services.AddScoped<IVideoProvider, DevVideoProvider>();
         services.AddSingleton<CertificatePdf>();
         services.AddScoped<ICertificateService, CertificateService>();
         services.AddScoped<ILearningService, LearningService>();

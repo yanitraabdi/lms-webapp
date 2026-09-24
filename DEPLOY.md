@@ -41,9 +41,50 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 | `SMTP_FROM_ADDRESS` | Visible From. Required when `EMAIL_PROVIDER=smtp`. |
 | `SMTP_FROM_NAME` | Display name (default `INVERTA`). |
 | `SMTP_REPLY_TO` | Where replies go. Set this if From is a noreply mailbox. |
+| `VIDEO_PROVIDER` | `dev` (default — one test stream for every session) or `bunny` (real videos). |
+| `BUNNY_PULL_ZONE` | The video library's pull zone hostname, e.g. `vz-1a2b3c4d-e5f.b-cdn.net`. |
+| `BUNNY_LIBRARY_ID` | Bunny Stream video library id. |
+| `BUNNY_TOKEN_KEY` | The library's **Token Authentication key** (not the API key). |
+| `BUNNY_CAPTIONS_LANGUAGE` | Caption track to offer, e.g. `id`. Blank offers none. |
 
 Set `PUBLIC_SITE_URL` to your tunnel hostname for correct SEO URLs (optional — the app works
 without it).
+
+### Playing real videos
+
+**Until `VIDEO_PROVIDER=bunny` is set, every video session plays the same public test stream**,
+whatever asset id the session carries. The "Bunny asset id" field in the admin session form is
+recorded but ignored.
+
+1. In Bunny Stream, create a **video library** and upload the lesson videos. Each upload gets a
+   video GUID.
+2. On that library: **Security → Token Authentication**, enable it, and copy the token
+   authentication key. This is *not* the account API key.
+3. Copy the library's **pull zone hostname** (shown on the library, of the form
+   `vz-xxxxxxxx-xxx.b-cdn.net`). Each library has its own — the account hostname will not work.
+4. Put them in `.env`, which is gitignored and must stay that way:
+
+```
+VIDEO_PROVIDER=bunny
+BUNNY_PULL_ZONE=vz-1a2b3c4d-e5f.b-cdn.net
+BUNNY_LIBRARY_ID=123456
+BUNNY_TOKEN_KEY=xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+5. `docker compose -f docker-compose.tunnel.yml up -d api`.
+6. In Admin → Program, edit each video session and paste its **video GUID** into "Bunny asset id",
+   then set "Durasi (menit)" to the real length.
+
+Notes:
+
+- Playback URLs are signed per viewing with a short expiry, minted only after the server's access
+  check. Nothing is public and nothing is stored.
+- The token signs the video's whole **directory**, so the HLS segments the player fetches are
+  covered too. A playlist-only token 403s on every segment and presents as a broken video.
+- **Watch progress drives the linear lock**, so "Durasi (menit)" must match the real video. A
+  duration that is too long means a learner can never reach the completion threshold.
+- An incomplete `bunny` config — or one still carrying the dev signing key — **fails at startup**
+  rather than 403-ing for every learner at play time.
 
 ### Sending real email
 
