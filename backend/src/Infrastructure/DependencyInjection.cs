@@ -34,8 +34,32 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? "Host=localhost;Port=5432;Database=academy;Username=academy;Password=academy";
 
+        // Retry on transient database failures.
+        //
+        // Without this, a Postgres restart is an OUTAGE rather than a blip: the connection pool is
+        // left holding sockets to a server that has gone, every request hangs on "Attempted to
+        // read past the end of the stream", and the API stays wedged until a human restarts it.
+        // That happened ten times in two days on the deployed stack, and recovery each time was a
+        // manual `docker compose restart api`.
+        //
+        // Safe to apply globally because nothing in this codebase opens an explicit transaction —
+        // the retrying strategy refuses user-initiated transactions, so a BeginTransaction added
+        // later will throw at runtime and must be wrapped in the execution strategy.
+        //
+        // One consequence worth naming: a SaveChanges that reached the server but whose
+        // acknowledgement was lost gets retried, so a write can be attempted twice. The webhook
+        // path is already built for that — its unique index on external_id is what makes delivery
+        // idempotent (GR-2) — and a retry that loses the race surfaces as DbUpdateException,
+        // which it already handles.
         services.AddDbContext<AppDbContext>(options => options
-            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name))
+            .UseNpgsql(connectionString, npgsql => npgsql
+                .MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name)
+                .EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    // Long enough to cover Postgres replaying its write-ahead log on restart,
+                    // which took roughly four seconds on the deployed stack.
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorCodesToAdd: null))
             .UseSnakeCaseNamingConvention());
 
         // Auth (M1)
