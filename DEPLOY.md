@@ -58,11 +58,18 @@ recorded but ignored.
 
 1. In Bunny Stream, create a **video library** and upload the lesson videos. Each upload gets a
    video GUID.
-2. On that library: **Security → Token Authentication**, enable it, and copy the token
-   authentication key. This is *not* the account API key.
-3. Copy the library's **pull zone hostname** (shown on the library, of the form
-   `vz-xxxxxxxx-xxx.b-cdn.net`). Each library has its own — the account hostname will not work.
-4. Put them in `.env`, which is gitignored and must stay that way:
+2. Open that library's pull zone: **Stream → your library → API → Pull Zone → Manage**. Every
+   Stream library has its own pull zone, and this is where the setting we need lives.
+3. On the pull zone: **Security**, switch on **Token Authentication**, and copy the
+   **URL Token Authentication Key**.
+
+   Two near-miss values to avoid. The library's own *Embed View Token Authentication* is a
+   DIFFERENT feature — it protects Bunny's iframe player, which this app does not use, and its key
+   will not sign a direct URL. The account **API key** is a third value again, used for uploads,
+   not playback.
+4. Copy the pull zone's **hostname**, of the form `vz-xxxxxxxx-xxx.b-cdn.net`. Each library has its
+   own; the account hostname will not work.
+5. Put them in `.env`, which is gitignored and must stay that way:
 
 ```
 VIDEO_PROVIDER=bunny
@@ -71,8 +78,8 @@ BUNNY_LIBRARY_ID=123456
 BUNNY_TOKEN_KEY=xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
-5. `docker compose -f docker-compose.tunnel.yml up -d api`.
-6. In Admin → Program, edit each video session and paste its **video GUID** into "Bunny asset id",
+6. `docker compose -f docker-compose.tunnel.yml up -d api`.
+7. In Admin → Program, edit each video session and paste its **video GUID** into "Bunny asset id",
    then set "Durasi (menit)" to the real length.
 
 Notes:
