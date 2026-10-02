@@ -13,6 +13,24 @@ public interface IVideoProvider
 /// <summary>A short-lived, signed playback URL for one viewing session.</summary>
 public record PlaybackTicket(string Url, DateTimeOffset ExpiresAt, string? CaptionsUrl = null);
 
+/// <summary>
+/// The video library an admin attaches sessions to. READ-ONLY on purpose: uploads, renames and
+/// deletes happen in Bunny's own dashboard, which is the source of truth for the files.
+/// </summary>
+public interface IVideoLibrary
+{
+    Task<VideoLibraryPageDto> ListAsync(string? search, int page, CancellationToken ct = default);
+}
+
+/// <summary>One library video. <c>Status</c> is a name ("Finished", "Processing", …), never
+/// Bunny's integer, so the frontend does not depend on Bunny's numbering.</summary>
+public record VideoLibraryItemDto(string Id, string Title, int LengthSeconds, string Status, int EncodeProgress);
+
+/// <summary><c>Unavailable</c> is null when <c>Items</c> is the real library, and otherwise says in
+/// Indonesian why there is no list — the picker shows it and offers manual entry instead.</summary>
+public record VideoLibraryPageDto(
+    IReadOnlyList<VideoLibraryItemDto> Items, int Page, int TotalItems, string? Unavailable);
+
 // IPaymentGateway lives in Academy.Application.Billing (M3) — a full contract, not a stub.
 
 /// <summary>Transactional email (Amazon SES adapter; dev impl logs to console). M1 + later.</summary>

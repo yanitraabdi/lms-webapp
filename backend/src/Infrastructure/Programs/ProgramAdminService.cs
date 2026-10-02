@@ -6,13 +6,16 @@ using Academy.Domain;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Assessments;
+using Academy.Infrastructure.Learning;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Academy.Infrastructure.Programs;
 
 /// <summary>Program/session/batch authoring (KAK §9.12). Every mutation is audit-logged.</summary>
-public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidator, IObjectStorage storage) : IProgramAdminService
+public class ProgramAdminService(
+    AppDbContext db, IContentRevalidator revalidator, IObjectStorage storage, VideoOptions video)
+    : IProgramAdminService
 {
     // ---------------------------------------------------------------- programs
 
@@ -126,6 +129,7 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
 
         var session = new ProgramSession { Id = Guid.CreateVersion7(), ProgramId = programId };
         ApplySession(session, req);
+        ValidateVideoAsset(session.Type, session.ProviderAssetId, video);
         // Append to the end unless an explicit index was supplied.
         session.OrderIndex = req.OrderIndex > 0
             ? req.OrderIndex
@@ -142,8 +146,30 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
     {
         var session = await db.ProgramSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct)
             ?? throw new ProgramException("Sesi tidak ditemukan.", 404);
+
+        // An edit owns the session's CONTENT. Three fields have their own endpoints and are kept as
+        // stored, whatever the request says. Taking them from the request is what made this unsafe:
+        //   AssessmentId — a form that does not model the quiz sends null, which DETACHED it, and
+        //                  the session then completed on watching alone. Attach: PUT …/assessment.
+        //   OrderIndex   — a stale index collided with UNIQUE(program_id, order_index) or quietly
+        //                  moved the session. Reorder: POST …/sessions/reorder.
+        //   Type         — a Video could become Live after learners had watched it. Immutable.
+        var (type, order, assessmentId, scheduledAt) =
+            (session.Type, session.OrderIndex, session.AssessmentId, session.ScheduledAt);
+
         ApplySession(session, req);
-        session.OrderIndex = req.OrderIndex;
+
+        session.Type = type;
+        session.OrderIndex = order;
+        session.AssessmentId = assessmentId;
+        ValidateVideoAsset(session.Type, session.ProviderAssetId, video);
+
+        // The H-1 sweep claims a session by stamping ReminderSentAt and never revisits it, so a
+        // rescheduled session would get no reminder for its new slot. Re-arm it. Compared at minute
+        // precision: the datetime-local control cannot express seconds, so an edit that merely
+        // drops them is not a move and must not email learners a second time.
+        if (!SameMinute(session.ScheduledAt, scheduledAt)) session.ReminderSentAt = null;
+
         Audit(actor, "session_updated", sessionId, new { session.Title, Type = session.Type.ToString() });
         await SaveSessionsAsync(session.ProgramId, ct);
     }
@@ -521,6 +547,31 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
         s.JoinUrl = req.JoinUrl?.Trim();
         s.Location = req.Location?.Trim();
         s.AssessmentId = req.AssessmentId;
+    }
+
+    private static bool SameMinute(DateTimeOffset? a, DateTimeOffset? b)
+        => a is null || b is null
+            ? a is null && b is null
+            : a.Value.UtcTicks / TimeSpan.TicksPerMinute == b.Value.UtcTicks / TimeSpan.TicksPerMinute;
+
+    /// <summary>
+    /// Under Bunny, a Video session must point at a real Bunny video, and Bunny video ids are
+    /// hyphenated GUIDs (the "D" form; braced or 32-hex forms would save and then 403). Anything else — the old form default "sample", a blank field, a pasted title — saves
+    /// fine and then 403s for every learner, with nothing at save time to say why. Refusing it here
+    /// is where an admin can still see the mistake.
+    ///
+    /// A no-op under the dev provider, which plays one test stream whatever the id says; the
+    /// seeder and the integration suite rely on that.
+    ///
+    /// Deliberately NOT checked: that the video exists in the library or has finished encoding.
+    /// That would make every session save depend on Bunny being reachable (spec §8).
+    /// </summary>
+    public static void ValidateVideoAsset(SessionType type, string? assetId, VideoOptions video)
+    {
+        if (!video.IsBunny || type != SessionType.Video) return;
+        if (!Guid.TryParseExact(assetId, "D", out _))
+            throw new ProgramException(
+                "Sesi video memerlukan ID video Bunny yang valid. Pilih video dari pustaka.", 400);
     }
 
     private async Task SaveSessionsAsync(Guid programId, CancellationToken ct)

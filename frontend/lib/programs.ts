@@ -16,6 +16,8 @@ export type AdminBatch = components["schemas"]["AdminBatchDto"];
 export type UpsertProgram = components["schemas"]["UpsertProgramRequest"];
 export type UpsertSession = components["schemas"]["UpsertSessionRequest"];
 export type UpsertBatch = components["schemas"]["UpsertBatchRequest"];
+export type VideoLibraryPage = components["schemas"]["VideoLibraryPageDto"];
+export type VideoLibraryItem = components["schemas"]["VideoLibraryItemDto"];
 
 /** Server-side (SSR/SSG) calls go over the internal network; the browser uses the same origin. */
 function baseUrl(): string {
@@ -87,6 +89,15 @@ export const updateSession = (t: string, id: string, b: UpsertSession) =>
 export const deleteSession = (t: string, id: string) => api<void>("DELETE", `/api/admin/sessions/${id}`, t);
 export const reorderSessions = (t: string, programId: string, sessionIdsInOrder: string[]) =>
   api<void>("POST", `/api/admin/programs/${programId}/sessions/reorder`, t, { sessionIdsInOrder });
+
+/** The Bunny library, for the session form's picker. Admin-only; the API key never leaves the
+ *  server. `unavailable` is set — and `items` empty — when there is no list to show. */
+export const listVideoLibrary = (t: string, search: string, page = 1) =>
+  api<VideoLibraryPage>(
+    "GET",
+    `/api/admin/video-library?search=${encodeURIComponent(search)}&page=${page}`,
+    t,
+  );
 
 export const listBatches = (t: string, programId: string) =>
   api<AdminBatch[]>("GET", `/api/admin/programs/${programId}/batches`, t);

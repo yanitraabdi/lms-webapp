@@ -72,6 +72,9 @@ services:
       Video__LibraryId: "${BUNNY_LIBRARY_ID:-}"
       Video__SigningKey: "${BUNNY_TOKEN_KEY:-dev-video-signing-key-change-me}"
       Video__CaptionsLanguage: "${BUNNY_CAPTIONS_LANGUAGE:-}"
+      # The video LIBRARY's API key, for the admin video picker only. Optional: without it the
+      # picker offers manual entry and playback is unaffected.
+      Video__ApiKey: "${BUNNY_API_KEY:-}"
     # Internal only — reached exclusively via the frontend same-origin proxy.
     expose:
       - "8080"

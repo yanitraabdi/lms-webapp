@@ -46,6 +46,7 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 | `BUNNY_LIBRARY_ID` | Bunny Stream video library id. |
 | `BUNNY_TOKEN_KEY` | The library's **Token Authentication key** (not the API key). |
 | `BUNNY_CAPTIONS_LANGUAGE` | Caption track to offer, e.g. `id`. Blank offers none. |
+| `BUNNY_API_KEY` | The video **library's** API key, for the admin video picker. Optional. |
 
 Set `PUBLIC_SITE_URL` to your tunnel hostname for correct SEO URLs (optional — the app works
 without it).
@@ -79,8 +80,10 @@ BUNNY_TOKEN_KEY=xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 6. `docker compose -f docker-compose.tunnel.yml up -d api`.
-7. In Admin → Program, edit each video session and paste its **video GUID** into "Bunny asset id",
-   then set "Durasi (menit)" to the real length.
+7. Optional but recommended: copy the **library's API key** (Stream → your library → API) into
+   `.env` as `BUNNY_API_KEY`. The admin session form then lists the library and fills in each
+   video's id and length when you pick it. Without it, paste each video's GUID by hand.
+8. In Admin → Program → Sesi, use **Ubah** on each video session and choose its video.
 
 Notes:
 
@@ -88,8 +91,9 @@ Notes:
   check. Nothing is public and nothing is stored.
 - The token signs the video's whole **directory**, so the HLS segments the player fetches are
   covered too. A playlist-only token 403s on every segment and presents as a broken video.
-- **Watch progress drives the linear lock**, so "Durasi (menit)" must match the real video. A
-  duration that is too long means a learner can never reach the completion threshold.
+- "Durasi (menit)" is only a label shown to learners and admins; the video picker fills it from
+  Bunny. Watch progress is computed from the video file's own length, so the label never affects
+  completion or the linear lock.
 - An incomplete `bunny` config — or one still carrying the dev signing key — **fails at startup**
   rather than 403-ing for every learner at play time.
 

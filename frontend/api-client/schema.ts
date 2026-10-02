@@ -3748,6 +3748,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/video-library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VideoLibraryPageDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/programs/{programId}/batches": {
         parameters: {
             query?: never;
@@ -6797,6 +6835,23 @@ export interface components {
         };
         VerifyEmailRequest: {
             token: string;
+        };
+        VideoLibraryItemDto: {
+            id: string;
+            title: string;
+            /** Format: int32 */
+            lengthSeconds: number | string;
+            status: string;
+            /** Format: int32 */
+            encodeProgress: number | string;
+        };
+        VideoLibraryPageDto: {
+            items: components["schemas"]["VideoLibraryItemDto"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            totalItems: number | string;
+            unavailable: null | string;
         };
         VideoNoteDto: {
             /** Format: uuid */
