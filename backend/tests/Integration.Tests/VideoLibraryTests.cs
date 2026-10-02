@@ -1,3 +1,11 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Academy.Application.Auth;
+using Academy.Domain.Enums;
+using Academy.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text;
 using Academy.Application.Abstractions;
@@ -137,5 +145,66 @@ public class VideoLibraryTests
 
         Assert.Empty(page.Items);
         Assert.Equal("alasan", page.Unavailable);
+    }
+}
+
+/// <summary>
+/// The endpoint proxies a call made with a credential that can delete videos, so who may reach it
+/// matters more than what it returns. The suite runs under the dev provider, so the body is the
+/// stated "unavailable" reason — which is also exactly what the picker must cope with.
+/// </summary>
+public class VideoLibraryEndpointTests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>
+{
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private readonly HttpClient _client = factory.CreateClient();
+    private const string Pw = "Password123";
+
+    [Fact]
+    public async Task Anonymous_requests_are_refused()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await _client.GetAsync("/api/admin/video-library")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Learners_are_refused()
+    {
+        var token = await Token(UserRole.User);   // the learner role
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Get("/api/admin/video-library", token)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Admins_get_a_page_that_explains_itself_when_there_is_no_library()
+    {
+        var res = await Get("/api/admin/video-library?search=sesi", await Token(UserRole.Admin));
+        res.EnsureSuccessStatusCode();
+
+        var page = (await res.Content.ReadFromJsonAsync<VideoLibraryPageDto>(Json))!;
+        Assert.Empty(page.Items);
+        Assert.False(string.IsNullOrWhiteSpace(page.Unavailable));
+    }
+
+    private Task<HttpResponseMessage> Get(string url, string token)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, url)
+        { Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) } };
+        return _client.SendAsync(req);
+    }
+
+    private async Task<string> Token(UserRole role)
+    {
+        var email = $"vl{Guid.NewGuid():N}@test.local";
+        (await _client.PostAsJsonAsync("/api/auth/register", new { name = "VL", email, password = Pw }))
+            .EnsureSuccessStatusCode();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var u = await db.Users.FirstAsync(x => x.Email == email);
+            u.Role = role;
+            await db.SaveChangesAsync();
+        }
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = Pw });
+        return (await login.Content.ReadFromJsonAsync<AuthTokens>())!.AccessToken;
     }
 }

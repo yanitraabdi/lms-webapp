@@ -1,3 +1,4 @@
+using Academy.Application.Abstractions;
 using System.Security.Claims;
 using Academy.Application.Programs;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -59,6 +60,14 @@ public static class ProgramAdminEndpoints
         g.MapPost("/programs/{programId:guid}/sessions/reorder", async Task<NoContent> (
             Guid programId, ReorderSessionsRequest r, ClaimsPrincipal u, IProgramAdminService s, CancellationToken ct) =>
         { await s.ReorderSessionsAsync(u.UserId(), programId, r, ct); return TypedResults.NoContent(); });
+
+        // ---- video library (Bunny), for the session form's picker ----
+        // Rate-limited on the "media" policy (per IP, generous) because the picker searches as the
+        // admin types, and every call spends the library's API quota.
+        g.MapGet("/video-library", async Task<Ok<VideoLibraryPageDto>> (
+                string? search, int? page, IVideoLibrary library, CancellationToken ct) =>
+            TypedResults.Ok(await library.ListAsync(search, page ?? 1, ct)))
+            .RequireRateLimiting("media");
 
         // ---- batches ----
         g.MapGet("/programs/{programId:guid}/batches", async Task<Ok<IReadOnlyList<AdminBatchDto>>> (
