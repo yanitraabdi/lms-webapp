@@ -48,10 +48,14 @@ export function SessionForm({
   const [type, setType] = useState<SessionKind>((session?.type as SessionKind) ?? "Video");
   const [title, setTitle] = useState(session?.title ?? "");
   const [seconds, setSeconds] = useState<number>(session?.durationSeconds != null ? num(session.durationSeconds) : 900);
+  // Typed minutes, kept as text so the field can be cleared and retyped; `seconds` is what is saved.
+  const [minutes, setMinutes] = useState(String(Math.max(1, Math.round(seconds / 60))));
   // Empty, not "sample": under Bunny the server refuses anything that is not a real video id.
   const [assetId, setAssetId] = useState(session?.providerAssetId ?? "");
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(session?.scheduledAt));
   const [joinUrl, setJoinUrl] = useState(session?.joinUrl ?? "");
+  const minutesOk = /^\d+$/.test(minutes) && Number(minutes) >= 1;
+  const durationBad = type === "Video" && !minutesOk;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +93,7 @@ export function SessionForm({
       footer={
         <div className="flex w-full justify-end gap-2">
           <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-          <Button size="sm" onClick={save} loading={busy} disabled={!title.trim()}>Simpan</Button>
+          <Button size="sm" onClick={save} loading={busy} disabled={!title.trim() || durationBad}>Simpan</Button>
         </div>
       }
     >
@@ -121,7 +125,7 @@ export function SessionForm({
               <VideoPicker
                 token={token}
                 value={assetId}
-                onPick={(v) => { setAssetId(v.id); setSeconds(v.lengthSeconds); }}
+                onPick={(v) => { setAssetId(v.id); setSeconds(v.lengthSeconds); setMinutes(String(Math.max(1, Math.round(v.lengthSeconds / 60)))); }}
               />
             </div>
             <Field label="ID video Bunny">
@@ -136,10 +140,15 @@ export function SessionForm({
               <input
                 type="number"
                 min={1}
-                value={Math.max(1, Math.round(seconds / 60))}
-                onChange={(e) => setSeconds((Number(e.target.value) || 0) * 60)}
+                value={minutes}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  setMinutes(m);
+                  if (/^\d+$/.test(m) && Number(m) >= 1) setSeconds(Number(m) * 60);
+                }}
                 className={inputBlockCls}
               />
+              {durationBad && <p className="mt-1 text-[12px] text-danger">Durasi minimal 1 menit.</p>}
             </Field>
           </>
         )}
