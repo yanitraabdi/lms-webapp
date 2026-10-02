@@ -30,6 +30,16 @@ public class VideoOptions
     /// screens have one place to read it from.</summary>
     public string LibraryId { get; set; } = "";
 
+    /// <summary>
+    /// The video LIBRARY's API key (Stream → library → API), used only to list videos for the
+    /// admin picker. Not the account API key, and not the token authentication key.
+    ///
+    /// A full-control credential — it can delete videos — so it stays in server config (GR-9) and
+    /// never reaches a DTO or the browser. Optional: playback works without it, and the picker falls
+    /// back to manual entry. Making it required would take the whole API down for a convenience.
+    /// </summary>
+    public string ApiKey { get; set; } = "";
+
     /// <summary>Language code of the caption track to offer, e.g. "id". Blank offers none —
     /// which is the honest default, because a caption URL for a track that was never uploaded is
     /// a 403 the player surfaces as a broken subtitle button.</summary>

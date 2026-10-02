@@ -46,6 +46,7 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 | `BUNNY_LIBRARY_ID` | Bunny Stream video library id. |
 | `BUNNY_TOKEN_KEY` | The library's **Token Authentication key** (not the API key). |
 | `BUNNY_CAPTIONS_LANGUAGE` | Caption track to offer, e.g. `id`. Blank offers none. |
+| `BUNNY_API_KEY` | The video **library's** API key, for the admin video picker. Optional. |
 
 Set `PUBLIC_SITE_URL` to your tunnel hostname for correct SEO URLs (optional — the app works
 without it).
@@ -79,8 +80,10 @@ BUNNY_TOKEN_KEY=xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 6. `docker compose -f docker-compose.tunnel.yml up -d api`.
-7. In Admin → Program, edit each video session and paste its **video GUID** into "Bunny asset id",
-   then set "Durasi (menit)" to the real length.
+7. Optional but recommended: copy the **library's API key** (Stream → your library → API) into
+   `.env` as `BUNNY_API_KEY`. The admin session form then lists the library and fills in each
+   video's id and length when you pick it. Without it, paste each video's GUID by hand.
+8. In Admin → Program → Sesi, use **Ubah** on each video session and choose its video.
 
 Notes:
 

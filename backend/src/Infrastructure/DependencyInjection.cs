@@ -103,10 +103,20 @@ public static class DependencyInjection
         // DevVideoProvider simulates Bunny signed playback and points every session at one public
         // test stream; "bunny" plays the session's real video. The factory throws at startup on an
         // incomplete bunny config rather than 403-ing for every learner at play time.
-        if (VideoOptionsFactory.Build(configuration).IsBunny)
+        var videoOptions = VideoOptionsFactory.Build(configuration);
+        if (videoOptions.IsBunny)
             services.AddScoped<IVideoProvider, BunnyVideoProvider>();
         else
             services.AddScoped<IVideoProvider, DevVideoProvider>();
+
+        // The admin video picker. Real only under Bunny WITH a library API key; otherwise a stand-in
+        // that says why, so the picker falls back to manual entry instead of erroring.
+        if (videoOptions.IsBunny && !string.IsNullOrWhiteSpace(videoOptions.ApiKey))
+            services.AddHttpClient<IVideoLibrary, BunnyVideoLibrary>();
+        else
+            services.AddSingleton<IVideoLibrary>(new UnavailableVideoLibrary(videoOptions.IsBunny
+                ? "Kunci API Bunny (BUNNY_API_KEY) belum diatur. Isi ID video secara manual."
+                : "Pustaka video hanya tersedia saat penyedia video adalah Bunny. Isi ID video secara manual."));
         services.AddSingleton<CertificatePdf>();
         services.AddScoped<ICertificateService, CertificateService>();
         services.AddScoped<ILearningService, LearningService>();
