@@ -40,9 +40,13 @@ public class BunnyVideoLibrary(HttpClient http, VideoOptions options) : IVideoLi
 
             var body = await res.Content.ReadFromJsonAsync<BunnyPage>(Json, ct) ?? new BunnyPage();
             return new VideoLibraryPageDto(
-                body.Items.Select(v => new VideoLibraryItemDto(
+                (body.Items ?? []).Select(v => new VideoLibraryItemDto(
                     v.Guid, v.Title ?? "", v.Length, StatusName(v.Status), v.EncodeProgress)).ToList(),
                 body.CurrentPage, body.TotalItems, null);
+        }
+        catch (Exception e) when ((e is JsonException or NotSupportedException) && !ct.IsCancellationRequested)
+        {
+            return Unavailable("Bunny mengirim balasan yang tidak dapat dibaca. Coba lagi, atau isi ID video secara manual.");
         }
         catch (Exception e) when ((e is HttpRequestException or TaskCanceledException) && !ct.IsCancellationRequested)
         {
@@ -74,7 +78,7 @@ public class BunnyVideoLibrary(HttpClient http, VideoOptions options) : IVideoLi
     {
         public int TotalItems { get; set; }
         public int CurrentPage { get; set; } = 1;
-        public List<BunnyVideo> Items { get; set; } = [];
+        public List<BunnyVideo>? Items { get; set; } = [];
     }
 
     private sealed class BunnyVideo

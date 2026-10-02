@@ -23,7 +23,7 @@ public class VideoLibraryTests
            "status":3,"encodeProgress":63,"views":0,"dateUploaded":"2026-10-01T10:00:00","isPublic":false,"storageSize":0}]}
         """;
 
-    private sealed class StubHandler(HttpStatusCode code, string body) : HttpMessageHandler
+    private sealed class StubHandler(HttpStatusCode code, string body, string contentType = "application/json") : HttpMessageHandler
     {
         public HttpRequestMessage? Last { get; private set; }
 
@@ -32,7 +32,7 @@ public class VideoLibraryTests
             Last = request;
             return Task.FromResult(new HttpResponseMessage(code)
             {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+                Content = new StringContent(body, Encoding.UTF8, contentType),
             });
         }
     }
@@ -107,6 +107,27 @@ public class VideoLibraryTests
 
         Assert.Empty(page.Items);
         Assert.Contains("manual", page.Unavailable);
+    }
+
+    [Theory]
+    [InlineData("not json", "application/json")]
+    [InlineData("<html>portal</html>", "text/html")]
+    public async Task A_response_that_cannot_be_read_falls_back_instead_of_failing(string body, string contentType)
+    {
+        var page = await Library(new StubHandler(HttpStatusCode.OK, body, contentType)).ListAsync(null, 1);
+
+        Assert.Empty(page.Items);
+        Assert.False(string.IsNullOrEmpty(page.Unavailable));
+    }
+
+    [Fact]
+    public async Task A_null_items_list_is_an_empty_library_not_a_crash()
+    {
+        var page = await Library(new StubHandler(HttpStatusCode.OK,
+            """{"totalItems":0,"currentPage":1,"items":null}""")).ListAsync(null, 1);
+
+        Assert.Empty(page.Items);
+        Assert.Null(page.Unavailable);
     }
 
     [Fact]
