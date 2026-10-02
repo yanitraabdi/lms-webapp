@@ -18,6 +18,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
   const key = ["admin-sessions", program.id];
   const q = useQuery({ queryKey: key, queryFn: () => listSessions(token, program.id) });
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<AdminSession | null>(null);
   const [busy, setBusy] = useState(false);
   const [attendanceFor, setAttendanceFor] = useState<string | null>(null);
   const [testFor, setTestFor] = useState<{ sessionId: string; assessmentId: string | null; kind: "Gating" | "Final" } | null>(null);
@@ -124,6 +125,13 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
                     )}
                   </>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setEditing(s)}
+                  className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
+                >
+                  Ubah
+                </button>
                 <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)}
                   aria-label="Naikkan" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↑</button>
                 <button type="button" disabled={busy || i === sessions.length - 1} onClick={() => move(i, 1)}
@@ -162,6 +170,16 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
           programId={program.id}
           nextOrder={sessions.length + 1}
           onClose={async () => { setAdding(false); await qc.invalidateQueries({ queryKey: key }); }}
+        />
+      )}
+
+      {editing && (
+        <SessionForm
+          token={token}
+          programId={program.id}
+          nextOrder={sessions.length + 1}
+          session={editing}
+          onClose={async () => { setEditing(null); await qc.invalidateQueries({ queryKey: key }); }}
         />
       )}
     </Modal>
