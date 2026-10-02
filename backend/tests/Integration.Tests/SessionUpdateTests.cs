@@ -115,6 +115,20 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         Assert.NotNull((await Session(c.LiveId)).ReminderSentAt);
     }
 
+    [Fact]
+    public async Task An_edit_that_only_drops_the_seconds_is_not_a_reschedule()
+    {
+        // The datetime-local control is minute-precision, so the form sends the stored instant
+        // truncated to :00. That is not a move and must not email learners a second time.
+        var c = await Seed();
+        await SetScheduledAt(c.LiveId, LiveAt.AddSeconds(37.123));
+        await MarkReminderSent(c.LiveId);
+
+        await Put(c, c.LiveId, Body("Live", "Sesi Live — judul baru", orderIndex: 2, at: LiveAt));
+
+        Assert.NotNull((await Session(c.LiveId)).ReminderSentAt);
+    }
+
     // ================================================================ helpers
 
     private static object Body(
@@ -173,6 +187,15 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         using var scope = factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>()
             .ProgramSessions.AsNoTracking().FirstAsync(s => s.Id == id);
+    }
+
+    private async Task SetScheduledAt(Guid id, DateTimeOffset at)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var s = await db.ProgramSessions.FirstAsync(x => x.Id == id);
+        s.ScheduledAt = at;
+        await db.SaveChangesAsync();
     }
 
     private async Task MarkReminderSent(Guid id)

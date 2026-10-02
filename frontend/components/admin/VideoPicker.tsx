@@ -52,6 +52,7 @@ export function VideoPicker({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="Cari judul video…"
+        aria-label="Cari video di pustaka"
         className={inputBlockCls}
       />
       <div className="max-h-56 overflow-y-auto rounded-base border border-border">

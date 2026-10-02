@@ -165,8 +165,10 @@ public class ProgramAdminService(
         ValidateVideoAsset(session.Type, session.ProviderAssetId, video);
 
         // The H-1 sweep claims a session by stamping ReminderSentAt and never revisits it, so a
-        // rescheduled session would get no reminder for its new slot. Re-arm it.
-        if (session.ScheduledAt != scheduledAt) session.ReminderSentAt = null;
+        // rescheduled session would get no reminder for its new slot. Re-arm it. Compared at minute
+        // precision: the datetime-local control cannot express seconds, so an edit that merely
+        // drops them is not a move and must not email learners a second time.
+        if (!SameMinute(session.ScheduledAt, scheduledAt)) session.ReminderSentAt = null;
 
         Audit(actor, "session_updated", sessionId, new { session.Title, Type = session.Type.ToString() });
         await SaveSessionsAsync(session.ProgramId, ct);
@@ -547,9 +549,14 @@ public class ProgramAdminService(
         s.AssessmentId = req.AssessmentId;
     }
 
+    private static bool SameMinute(DateTimeOffset? a, DateTimeOffset? b)
+        => a is null || b is null
+            ? a is null && b is null
+            : a.Value.UtcTicks / TimeSpan.TicksPerMinute == b.Value.UtcTicks / TimeSpan.TicksPerMinute;
+
     /// <summary>
     /// Under Bunny, a Video session must point at a real Bunny video, and Bunny video ids are
-    /// GUIDs. Anything else — the old form default "sample", a blank field, a pasted title — saves
+    /// hyphenated GUIDs (the "D" form; braced or 32-hex forms would save and then 403). Anything else — the old form default "sample", a blank field, a pasted title — saves
     /// fine and then 403s for every learner, with nothing at save time to say why. Refusing it here
     /// is where an admin can still see the mistake.
     ///
@@ -562,7 +569,7 @@ public class ProgramAdminService(
     public static void ValidateVideoAsset(SessionType type, string? assetId, VideoOptions video)
     {
         if (!video.IsBunny || type != SessionType.Video) return;
-        if (!Guid.TryParse(assetId, out _))
+        if (!Guid.TryParseExact(assetId, "D", out _))
             throw new ProgramException(
                 "Sesi video memerlukan ID video Bunny yang valid. Pilih video dari pustaka.", 400);
     }

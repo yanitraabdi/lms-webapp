@@ -91,8 +91,9 @@ Notes:
   check. Nothing is public and nothing is stored.
 - The token signs the video's whole **directory**, so the HLS segments the player fetches are
   covered too. A playlist-only token 403s on every segment and presents as a broken video.
-- **Watch progress drives the linear lock**, so "Durasi (menit)" must match the real video. A
-  duration that is too long means a learner can never reach the completion threshold.
+- "Durasi (menit)" is only a label shown to learners and admins; the video picker fills it from
+  Bunny. Watch progress is computed from the video file's own length, so the label never affects
+  completion or the linear lock.
 - An incomplete `bunny` config — or one still carrying the dev signing key — **fails at startup**
   rather than 403-ing for every learner at play time.
 

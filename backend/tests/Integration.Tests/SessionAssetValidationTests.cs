@@ -24,6 +24,8 @@ public class SessionAssetValidationTests
     [InlineData("   ")]
     [InlineData("sample")]
     [InlineData("not-a-guid")]
+    [InlineData("{3f2b8c1e-9a4d-4e6b-8c7a-1d2e3f4a5b6c}")]
+    [InlineData("3f2b8c1e9a4d4e6b8c7a1d2e3f4a5b6c")]
     public void Under_bunny_a_video_session_without_a_real_video_id_is_refused(string? asset)
     {
         var e = Assert.Throws<ProgramException>(

@@ -69,7 +69,12 @@ export function SessionForm({
         orderIndex: session ? num(session.orderIndex) : nextOrder,
         providerAssetId: type === "Video" ? assetId.trim() || null : null,
         durationSeconds: type === "Video" ? seconds : null,
-        scheduledAt: type === "Live" && scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        scheduledAt:
+          type !== "Live" || !scheduledAt
+            ? null
+            : session?.scheduledAt && scheduledAt === toLocalInput(session.scheduledAt)
+              ? session.scheduledAt // untouched: re-parsing would drop the seconds
+              : new Date(scheduledAt).toISOString(),
         liveMode: type === "Live" ? (session?.liveMode ?? "Zoom") : null,
         joinUrl: type === "Live" ? joinUrl.trim() || null : null,
         location: session?.location ?? null,
@@ -120,8 +125,8 @@ export function SessionForm({
 
         {type === "Video" && (
           <>
-            <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-bold text-ink-muted">Video</span>
+            <div className="flex flex-col gap-1" role="group" aria-labelledby="video-caption">
+              <span id="video-caption" className="text-[12px] font-bold text-ink-muted">Video</span>
               <VideoPicker
                 token={token}
                 value={assetId}
