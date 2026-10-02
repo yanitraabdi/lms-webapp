@@ -142,8 +142,27 @@ public class ProgramAdminService(AppDbContext db, IContentRevalidator revalidato
     {
         var session = await db.ProgramSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct)
             ?? throw new ProgramException("Sesi tidak ditemukan.", 404);
+
+        // An edit owns the session's CONTENT. Three fields have their own endpoints and are kept as
+        // stored, whatever the request says. Taking them from the request is what made this unsafe:
+        //   AssessmentId — a form that does not model the quiz sends null, which DETACHED it, and
+        //                  the session then completed on watching alone. Attach: PUT …/assessment.
+        //   OrderIndex   — a stale index collided with UNIQUE(program_id, order_index) or quietly
+        //                  moved the session. Reorder: POST …/sessions/reorder.
+        //   Type         — a Video could become Live after learners had watched it. Immutable.
+        var (type, order, assessmentId, scheduledAt) =
+            (session.Type, session.OrderIndex, session.AssessmentId, session.ScheduledAt);
+
         ApplySession(session, req);
-        session.OrderIndex = req.OrderIndex;
+
+        session.Type = type;
+        session.OrderIndex = order;
+        session.AssessmentId = assessmentId;
+
+        // The H-1 sweep claims a session by stamping ReminderSentAt and never revisits it, so a
+        // rescheduled session would get no reminder for its new slot. Re-arm it.
+        if (session.ScheduledAt != scheduledAt) session.ReminderSentAt = null;
+
         Audit(actor, "session_updated", sessionId, new { session.Title, Type = session.Type.ToString() });
         await SaveSessionsAsync(session.ProgramId, ct);
     }
