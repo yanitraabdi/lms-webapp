@@ -255,6 +255,83 @@ public class LiveSessionAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             (await Authed(HttpMethod.Get, $"/api/admin/sessions/{c.LiveSessionId}/attendance", token)).StatusCode);
     }
 
+    // ---- late enrolment: a live session that already happened cannot hold a learner back ----
+    //
+    // Product decision 2026-10-04. The live session sits FIRST in the programme, so anyone who
+    // enrolled after it took place was locked out of every lesson until an admin marked them
+    // "attended" at a session that was already over. Those learners now complete it on sight.
+    // Everyone else keeps the original rule: attendance is admin-marked.
+
+    [Fact]
+    public async Task A_learner_who_enrolled_after_the_live_session_is_not_locked_out_by_it()
+    {
+        var c = await SetUp(learners: 1, liveInHours: -24);   // happened yesterday; enrolled now
+        var learner = c.Learners[0];
+
+        Assert.True(await CanAccess(learner.UserId, c.NextSessionId));
+
+        // Recorded as its own method, so nobody can mistake it for attendance an admin marked.
+        var method = await WithDbResult(db => db.SessionCompletions
+            .Where(x => x.UserId == learner.UserId && x.SessionId == c.LiveSessionId)
+            .Select(x => (CompletionMethod?)x.Method).FirstOrDefaultAsync());
+        Assert.Equal(CompletionMethod.EnrolledAfterLive, method);
+    }
+
+    [Fact]
+    public async Task The_programme_view_shows_a_missed_live_session_as_done_without_a_visit_first()
+    {
+        // The learner's programme list must agree with the gate on first load; otherwise the live
+        // session reads as "Available" and the next lesson as "Locked" until something else
+        // happened to touch the gate.
+        var c = await SetUp(learners: 1, liveInHours: -24);
+        var learner = c.Learners[0];
+
+        var view = await AuthedGet<StudentProgramDto>($"/api/me/programs/{c.ProgramId}", learner.Token);
+
+        Assert.Equal(SessionState.Completed, view.Sessions.Single(x => x.Id == c.LiveSessionId).State);
+        Assert.Equal(SessionState.Available, view.Sessions.Single(x => x.Id == c.NextSessionId).State);
+    }
+
+    [Fact]
+    public async Task A_learner_enrolled_before_the_live_session_still_needs_attendance_marked()
+    {
+        // Enrolled two days ago; the session was yesterday. They could have attended, so the
+        // original rule stands — this is not an automatic pass for anyone who skips a class.
+        var c = await SetUp(learners: 1, liveInHours: -24);
+        var learner = c.Learners[0];
+        await WithDb(async db =>
+        {
+            var e = await db.Enrollments.FirstAsync(x => x.UserId == learner.UserId && x.ProgramId == c.ProgramId);
+            e.EnrolledAt = DateTimeOffset.UtcNow.AddHours(-48);
+            await db.SaveChangesAsync();
+        });
+
+        Assert.False(await CanAccess(learner.UserId, c.NextSessionId));
+    }
+
+    [Fact]
+    public async Task An_upcoming_live_session_is_never_completed_automatically()
+    {
+        var c = await SetUp(learners: 1, liveInHours: 12);
+
+        Assert.False(await CanAccess(c.Learners[0].UserId, c.NextSessionId));
+    }
+
+    [Fact]
+    public async Task A_live_session_with_no_date_is_never_completed_automatically()
+    {
+        // No schedule means "enrolled after it" has no meaning — fall back to attendance.
+        var c = await SetUp(learners: 1, liveInHours: -24);
+        await WithDb(async db =>
+        {
+            var s = await db.ProgramSessions.FirstAsync(x => x.Id == c.LiveSessionId);
+            s.ScheduledAt = null;
+            await db.SaveChangesAsync();
+        });
+
+        Assert.False(await CanAccess(c.Learners[0].UserId, c.NextSessionId));
+    }
+
     // ================================================================ helpers
 
     private record Learner(string Token, Guid UserId, string Email);

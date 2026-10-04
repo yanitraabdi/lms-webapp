@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Academy.Infrastructure.Programs;
 
-public class ProgramService(AppDbContext db) : IProgramService
+public class ProgramService(AppDbContext db, ISessionCompletionService completion) : IProgramService
 {
     public async Task<PublicProgramDto?> GetPublicAsync(string slug, CancellationToken ct = default)
     {
@@ -67,6 +67,13 @@ public class ProgramService(AppDbContext db) : IProgramService
             .Where(c => c.UserId == userId)
             .Select(c => c.SessionId)
             .ToListAsync(ct)).ToHashSet();
+
+        // Live sessions the learner enrolled after complete on sight (see SessionAccessService).
+        // Done here too, so the list agrees with the gate on first load instead of showing the live
+        // session as pending and the next lesson as locked until something touched the gate.
+        foreach (var live in rows.Where(r => r.Type == SessionType.Live && !completed.Contains(r.Id)))
+            if (await completion.TryCompleteAsync(userId, live.Id, ct))
+                completed.Add(live.Id);
 
         var progress = await db.WatchProgress
             .Where(w => w.UserId == userId && w.SessionId != null)

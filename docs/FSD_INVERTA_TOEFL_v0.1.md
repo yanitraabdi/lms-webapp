@@ -78,7 +78,7 @@ Program (e.g. "INVERTA TOEFL Prep Batch 1")
   the 9-vs-6 contradiction).
 - **R2:** **Linear lock:** Session *k+1* is locked until Session *k* is completed. Completion means:
   video watched ≥ threshold (default 90%) **AND** its gating test passed; live session marked
-  attended (§5); final assessment submitted.
+  attended (§5), or the learner enrolled after it had already started; final assessment submitted.
 - **R3:** Programs can run as **batches/cohorts** (a start date; live-session schedule attached).
   Multiple batches of the same program can exist. *(Resolved — see §12: optional batches.)*
 - **R4:** Locked sessions are visible (title + status) but not playable — consistent with the prior
@@ -113,6 +113,12 @@ progress tracked as before (`watch_progress` reused as-is). On reaching the watc
   a link; attendance is **marked by admin** (bulk-mark UI). Integration with Zoom attendance APIs is
   a later enhancement. *(Deliberate scope cut — flag if the business expects automated attendance.)*
 - Completion of a live session = admin marks attended (or admin can waive/mark all).
+- **Late enrolment (decided 2026-10-04):** a learner who enrolled *after* a live session's
+  scheduled start could not have attended it, so it completes automatically for them, recorded with
+  its own completion method (`EnrolledAfterLive`) so it is never mistaken for confirmed attendance.
+  A learner enrolled *before* the session still needs it admin-marked; a live session with no
+  scheduled date never completes this way. Prompted by the live session being placed first in the
+  programme, which otherwise locked every later enrolment out of all lessons.
 
 ---
 
@@ -190,7 +196,7 @@ program_sessions(id, program_id FK, order_index, type,                -- video|l
 enrollments(id, user_id FK, program_id FK, batch_id FK NULL,
         status,                       -- pending_payment|active|completed|revoked
         amount_paid_idr, xendit_ref, enrolled_at)
-session_completions(id, user_id FK, session_id FK, completed_at, method)  -- watch+test | attended | submitted
+session_completions(id, user_id FK, session_id FK, completed_at, method)  -- watch+test | attended | submitted | enrolled-after-live
 live_attendance(id, session_id FK, user_id FK, attended bool, marked_by FK)
 assessments(id, session_id FK NULL, kind,                              -- gating|final
         config JSONB: sections[], per-section time limits, pass_threshold, retake_cap, proctoring on/off)
@@ -221,7 +227,9 @@ refs, `SetNull` on optional.
 2. ● **Cohorts/batches** — do enrollments belong to a dated batch (shared live-session schedule), or
    is enrollment continuous/self-paced with ad-hoc live sessions? → **Resolved §12** (optional batches).
 3. **Live-session attendance** — is admin-marked attendance acceptable v1 (recommended), or is
-   automated Zoom attendance expected? → *open, default = admin-marked.*
+   automated Zoom attendance expected? → *partly resolved 2026-10-04:* admin-marked, except that
+   a learner who enrolled after the session took place completes it automatically (§5). Automated
+   Zoom attendance remains open.
 4. ● **Retake policy** — gating tests and, critically, the final assessment. → **Resolved §12**
    (gating unlimited/admin-cappable; final 1 attempt, retake issues a new cert).
 5. **Written section** — confirm MCQ-only v1 (instant score preserved). Free-text/essay grading is a

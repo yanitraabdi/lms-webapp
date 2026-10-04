@@ -10,7 +10,7 @@ namespace Academy.Infrastructure.Programs;
 /// THE GATE (GR-1, KAK §9.3). Server-side only; every protected resource calls it.
 /// <c>canAccess = isEnrolled(program) AND (first session OR previous session complete)</c>.
 /// </summary>
-public class SessionAccessService(AppDbContext db) : ISessionAccessService
+public class SessionAccessService(AppDbContext db, ISessionCompletionService completion) : ISessionAccessService
 {
     public async Task<bool> CanAccessAsync(Guid userId, Guid sessionId, CancellationToken ct = default)
     {
@@ -33,15 +33,22 @@ public class SessionAccessService(AppDbContext db) : ISessionAccessService
         var isFirst = firstOrder is not null && session.OrderIndex == firstOrder.Value;
         if (isFirst) return SessionAccess.CanAccess(true, isFirstSession: true, previousCompleted: false);
 
-        var previousId = await db.ProgramSessions
+        var previous = await db.ProgramSessions
             .Where(s => s.ProgramId == session.ProgramId && s.OrderIndex < session.OrderIndex)
             .OrderByDescending(s => s.OrderIndex)
-            .Select(s => (Guid?)s.Id)
+            .Select(s => new { s.Id, s.Type })
             .FirstOrDefaultAsync(ct);
-        if (previousId is null) return true;   // defensive: nothing before it ⇒ treat as first
+        if (previous is null) return true;     // defensive: nothing before it ⇒ treat as first
 
         var previousDone = await db.SessionCompletions
-            .AnyAsync(c => c.UserId == userId && c.SessionId == previousId.Value, ct);
+            .AnyAsync(c => c.UserId == userId && c.SessionId == previous.Id, ct);
+
+        // A live session the learner enrolled after has no attendance to wait for, so it may
+        // complete on sight. TryCompleteAsync re-checks the rule and records it — the completion
+        // service stays the only thing that completes a session (GR-8). Live only: being asked
+        // about access must not start completing other session types as a side effect.
+        if (!previousDone && previous.Type == SessionType.Live)
+            previousDone = await completion.TryCompleteAsync(userId, previous.Id, ct);
 
         return SessionAccess.CanAccess(true, isFirstSession: false, previousCompleted: previousDone);
     }

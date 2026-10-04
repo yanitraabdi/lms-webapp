@@ -21,7 +21,12 @@ public enum SessionType { Video, Live, FinalAssessment }
 public enum LiveMode { Zoom, Offline }
 public enum BatchStatus { Upcoming, Running, Finished }
 public enum EnrollmentStatus { PendingPayment, Active, Completed, Revoked }
-public enum CompletionMethod { WatchAndTest, Attended, Submitted }
+/// <summary>
+/// How a session came to be complete. <c>EnrolledAfterLive</c> is a live session the learner
+/// enrolled after it had already taken place, so could not have attended — kept distinct from
+/// <c>Attended</c> so a report never presents it as attendance an admin confirmed.
+/// </summary>
+public enum CompletionMethod { WatchAndTest, Attended, Submitted, EnrolledAfterLive }
 
 // ---- INVERTA: assessment engine (FSD §6–§7) ----
 public enum AssessmentKind { Gating, Final }

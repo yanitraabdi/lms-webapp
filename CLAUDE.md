@@ -21,7 +21,7 @@ A paid, **linear** TOEFL-preparation program for Indonesian learners, in Bahasa 
 5. **Tokens:** access JWT in browser memory only (never localStorage/sessionStorage); refresh token in an httpOnly/Secure/SameSite=Lax cookie, rotating, with reuse detection.
 6. **Certificates are immutable and score-based.** A certificate is issued from a submitted **attempt** and is never mutated. A granted retake issues a **new** certificate; it never overwrites or invalidates the old one.
 7. **Progress and attempts are never hard-deleted.** Revoking an enrollment changes access only; `watch_progress`, `attempts`, `proctor_events`, and `certificates` persist indefinitely.
-8. **Linear lock is earned, never skipped.** Session *k+1* unlocks only when *k* is complete (video: watch ≥ threshold **AND** gating test passed; live: admin-marked attended; final: submitted). Completion is idempotent and **non-retroactive** — it never un-completes.
+8. **Linear lock is earned, never skipped.** Session *k+1* unlocks only when *k* is complete (video: watch ≥ threshold **AND** gating test passed; live: admin-marked attended, or the learner enrolled after it had already started; final: submitted). Completion is idempotent and **non-retroactive** — it never un-completes.
 9. **Secrets** live in server-side config/secret store only — never in the repo, never in the Next.js client bundle.
 10. **Account deletion** = soft-delete + scheduled anonymization (UU PDP); financial/audit rows retained (anonymized link).
 
@@ -127,4 +127,4 @@ M0 Foundation ✅ · M1 Auth ✅ (both inherited, delivered) → **M2 Program & 
 **Dormant (archived product, kept in-repo):** subscriptions/plans/proration, catalog browsing + tier entitlement, module feedback & notification preferences, M7 quiz tables (superseded by the assessment engine). Do not extend these; do not delete them.
 
 ## Owed by the business (blocking launch, not the build)
-Real syllabus content · **score→TOEFL-band mapping** (ships with a marked placeholder) · legal review of TOEFL naming/claims · refund policy for a one-time purchase · final price · whether live attendance must be automated.
+Real syllabus content · **score→TOEFL-band mapping** (ships with a marked placeholder) · legal review of TOEFL naming/claims · refund policy for a one-time purchase · final price · whether live attendance must be automated beyond late enrolment (Zoom attendance).
