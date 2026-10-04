@@ -24,7 +24,7 @@ public class SessionCompletionService(AppDbContext db) : ISessionCompletionServi
 
         var session = await db.ProgramSessions
             .Where(s => s.Id == sessionId)
-            .Select(s => new { s.Id, s.Type, s.AssessmentId })
+            .Select(s => new { s.Id, s.ProgramId, s.Type, s.AssessmentId, s.ScheduledAt })
             .FirstOrDefaultAsync(ct);
         if (session is null) return false;
 
@@ -32,9 +32,8 @@ public class SessionCompletionService(AppDbContext db) : ISessionCompletionServi
         {
             SessionType.Video => (await IsVideoCompleteAsync(userId, session.Id, session.AssessmentId, ct),
                                   CompletionMethod.WatchAndTest),
-            SessionType.Live => (await db.LiveAttendances.AnyAsync(
-                                      a => a.SessionId == session.Id && a.UserId == userId && a.Attended, ct),
-                                  CompletionMethod.Attended),
+            SessionType.Live => await IsLiveCompleteAsync(
+                                      userId, session.Id, session.ProgramId, session.ScheduledAt, ct),
             SessionType.FinalAssessment => (await HasSubmittedAsync(userId, session.AssessmentId, ct),
                                   CompletionMethod.Submitted),
             _ => (false, CompletionMethod.Submitted),
@@ -82,6 +81,27 @@ public class SessionCompletionService(AppDbContext db) : ISessionCompletionServi
         return SessionAccess.IsSessionComplete(
             SessionType.Video, watchPercent: percent,
             hasGatingTest: hasGatingTest, gatingTestPassed: gatingPassed);
+    }
+
+    /// <summary>
+    /// Live: admin-marked attended, or enrolled after the session had already started
+    /// (<see cref="SessionAccess.EnrolledAfterLiveSession"/>). Attendance wins when both hold, so a
+    /// learner an admin did mark is recorded as attended rather than as a late enrolment.
+    /// </summary>
+    private async Task<(bool Complete, CompletionMethod Method)> IsLiveCompleteAsync(
+        Guid userId, Guid sessionId, Guid programId, DateTimeOffset? scheduledAt, CancellationToken ct)
+    {
+        if (await db.LiveAttendances.AnyAsync(
+                a => a.SessionId == sessionId && a.UserId == userId && a.Attended, ct))
+            return (true, CompletionMethod.Attended);
+
+        var enrolledAt = await db.Enrollments
+            .Where(e => e.UserId == userId && e.ProgramId == programId
+                        && (e.Status == EnrollmentStatus.Active || e.Status == EnrollmentStatus.Completed))
+            .Select(e => e.EnrolledAt)
+            .FirstOrDefaultAsync(ct);
+
+        return (SessionAccess.EnrolledAfterLiveSession(scheduledAt, enrolledAt), CompletionMethod.EnrolledAfterLive);
     }
 
     private async Task<bool> HasSubmittedAsync(Guid userId, Guid? assessmentId, CancellationToken ct)

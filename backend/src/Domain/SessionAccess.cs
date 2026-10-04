@@ -18,9 +18,22 @@ public static class SessionAccess
         => isFirstSession || previousCompleted;
 
     /// <summary>
+    /// Whether a live session completes because the learner enrolled after it had already started
+    /// (product decision 2026-10-04). Such a learner could not have attended, and with the live
+    /// session placed first they were otherwise locked out of every lesson until an admin marked
+    /// them "attended" at a session that was over.
+    ///
+    /// Deliberately narrow. A learner enrolled BEFORE the session still needs an admin to mark
+    /// attendance — this is not a pass for anyone who skips a class. A session with no schedule
+    /// never qualifies, because "after it" has no meaning; nor does an enrolment with no date.
+    /// </summary>
+    public static bool EnrolledAfterLiveSession(DateTimeOffset? scheduledAt, DateTimeOffset? enrolledAt)
+        => scheduledAt is DateTimeOffset start && enrolledAt is DateTimeOffset enrolled && enrolled > start;
+
+    /// <summary>
     /// Whether a session counts as complete, per type (FSD §3 R2):
-    /// video → watched ≥ threshold AND gating test passed; live → admin-marked attended;
-    /// final → an attempt was submitted.
+    /// video → watched ≥ threshold AND gating test passed; live → admin-marked attended (or see
+    /// <see cref="EnrolledAfterLiveSession"/>); final → an attempt was submitted.
     /// </summary>
     public static bool IsSessionComplete(
         SessionType type,

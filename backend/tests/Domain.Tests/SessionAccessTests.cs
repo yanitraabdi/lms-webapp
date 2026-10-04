@@ -89,4 +89,35 @@ public class EnrollmentStateMachineTests
         Assert.True(EnrollmentStateMachine.CanReinstate(EnrollmentStatus.Revoked));
         Assert.False(EnrollmentStateMachine.CanTransition(EnrollmentStatus.Revoked, EnrollmentStatus.Active));
     }
+
+    // ---- a live session the learner enrolled after (product decision 2026-10-04) ----
+
+    private static readonly DateTimeOffset LiveAt = new(2026, 9, 10, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Enrolling_after_the_live_session_started_completes_it()
+        => Assert.True(SessionAccess.EnrolledAfterLiveSession(LiveAt, LiveAt.AddDays(3)));
+
+    [Fact]
+    public void Enrolling_before_the_live_session_does_not()
+        // They could have attended; attendance stays admin-marked.
+        => Assert.False(SessionAccess.EnrolledAfterLiveSession(LiveAt, LiveAt.AddDays(-3)));
+
+    [Fact]
+    public void Enrolling_at_the_very_moment_it_starts_does_not()
+        // "After" is strict: on the boundary the learner could still have joined.
+        => Assert.False(SessionAccess.EnrolledAfterLiveSession(LiveAt, LiveAt));
+
+    [Fact]
+    public void A_live_session_with_no_date_never_completes_this_way()
+        => Assert.False(SessionAccess.EnrolledAfterLiveSession(null, LiveAt));
+
+    [Fact]
+    public void An_enrolment_with_no_date_never_completes_it_this_way()
+        => Assert.False(SessionAccess.EnrolledAfterLiveSession(LiveAt, null));
+
+    [Fact]
+    public void The_comparison_is_by_instant_not_by_clock_reading()
+        // 19.00 WIB is 12:00Z: the same instant, so not "after".
+        => Assert.False(SessionAccess.EnrolledAfterLiveSession(LiveAt, LiveAt.ToOffset(TimeSpan.FromHours(7))));
 }
