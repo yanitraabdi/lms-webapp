@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   const { code } = await params;
   return {
-    title: `Verifikasi sertifikat ${code} — INVERTA`,
+    title: `Verifikasi sertifikat ${code}`,
     description: "Verifikasi keaslian sertifikat prediksi TOEFL INVERTA.",
   };
 }

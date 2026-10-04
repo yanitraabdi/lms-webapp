@@ -5,7 +5,7 @@ import { PublicShell } from "@/components/PublicShell";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Tentang — INVERTA",
+  title: "Tentang",
   description:
     "INVERTA membantu peserta Indonesia bersiap menghadapi TOEFL lewat program terstruktur berbahasa Indonesia, tes bertahap, dan prediksi skor sebelum tes resmi.",
 };

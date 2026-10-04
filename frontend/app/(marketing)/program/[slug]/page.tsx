@@ -16,7 +16,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const program = await getPublicProgram(slug).catch(() => null);
   if (!program) return { title: "Program tidak ditemukan" };
   return {
-    title: `${program.name} — INVERTA`,
+    // The root layout's template appends " — INVERTA" to every title. This one appended it too,
+    // and the seeded programme is NAMED "INVERTA — Persiapan TOEFL", so the tab read the brand
+    // three times. A name that already carries the brand is used as-is; otherwise the template
+    // adds it. Admins can rename the programme, so this cannot assume either form.
+    title: program.name.includes("INVERTA") ? { absolute: program.name } : program.name,
     description: program.summary ?? program.description.slice(0, 160),
   };
 }

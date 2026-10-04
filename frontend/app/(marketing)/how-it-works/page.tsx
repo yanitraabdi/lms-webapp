@@ -5,7 +5,7 @@ import { PublicShell } from "@/components/PublicShell";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Cara Kerja — INVERTA",
+  title: "Cara Kerja",
   description: "Empat langkah: daftar akun, bayar sekali, belajar berurutan, lalu ikuti tes akhir dan terima prediksi skor TOEFL.",
 };
 
