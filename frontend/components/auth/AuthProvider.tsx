@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { SIGNED_OUT_FLAG } from "@/components/auth/SignedOutNotice";
 import type { AuthSession, AuthUser } from "@/lib/auth/types";
 import { registerSession } from "@/lib/auth/session";
 
@@ -115,11 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    // A full navigation rather than clear(): the old page's auth guard would otherwise react to
-    // the cleared state and bounce to /login?next=… with no word about what happened. The reload
+    // A full navigation home rather than clear(): the old page's auth guard would otherwise react
+    // to the cleared state and bounce to /login?next=… with no word about what happened. The reload
     // also drops every in-memory trace of the session, the TanStack Query cache included, so the
-    // next person at this browser cannot glimpse the previous learner's data.
-    window.location.replace("/login?keluar=1");
+    // next person at this browser cannot glimpse the previous learner's data. SignedOutNotice
+    // reads the flag on the page home lands on and says the sign-out worked.
+    try { sessionStorage.setItem(SIGNED_OUT_FLAG, "1"); } catch { /* storage blocked: no notice */ }
+    window.location.replace("/");
   }, []);
 
   const value: AuthContextValue = { status, user, accessToken, login, register, logout, refresh };
