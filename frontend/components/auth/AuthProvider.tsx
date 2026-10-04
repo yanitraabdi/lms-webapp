@@ -115,8 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    clear();
-  }, [clear]);
+    // A full navigation rather than clear(): the old page's auth guard would otherwise react to
+    // the cleared state and bounce to /login?next=… with no word about what happened. The reload
+    // also drops every in-memory trace of the session, the TanStack Query cache included, so the
+    // next person at this browser cannot glimpse the previous learner's data.
+    window.location.replace("/login?keluar=1");
+  }, []);
 
   const value: AuthContextValue = { status, user, accessToken, login, register, logout, refresh };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

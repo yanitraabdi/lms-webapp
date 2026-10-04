@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AuthCard, AuthDivider, AuthError } from "@/components/auth/AuthCard";
 import { Logo } from "@/components/Logo";
 import { GoogleButton } from "@/components/auth/GoogleButton";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, Toast } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +16,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
+
+  // Logout lands here with ?keluar=1. Read from window rather than useSearchParams, which would
+  // need a Suspense boundary on this otherwise static page.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("keluar") !== "1") return;
+    setSignedOut(true);
+    window.history.replaceState(null, "", "/login");   // a refresh should not announce it again
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -38,6 +47,15 @@ export default function LoginPage() {
         <h1 className="text-[22px] font-extrabold tracking-tight">Masuk ke akun Anda</h1>
         <p className="text-[13.5px] text-ink-muted">Lanjutkan perjalanan belajar Anda.</p>
       </div>
+
+      {signedOut && (
+        <Toast
+          tone="success"
+          title="Anda berhasil keluar."
+          description="Sampai jumpa lagi. Masuk kembali kapan saja untuk melanjutkan belajar."
+          onClose={() => setSignedOut(false)}
+        />
+      )}
 
       <GoogleButton label="Lanjutkan dengan Google" />
       <AuthDivider />
