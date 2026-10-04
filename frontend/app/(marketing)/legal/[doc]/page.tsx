@@ -87,7 +87,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ doc: string }> }): Promise<Metadata> {
   const { doc } = await params;
   const d = DOCS[doc];
-  return { title: d ? `${d.title} — INVERTA` : "Dokumen tidak ditemukan" };
+  return { title: d ? d.title : "Dokumen tidak ditemukan" };
 }
 
 export default async function LegalDocPage({ params }: { params: Promise<{ doc: string }> }) {

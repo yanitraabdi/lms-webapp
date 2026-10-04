@@ -5,7 +5,7 @@ import { ContactForm } from "./ContactForm";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Kontak — INVERTA",
+  title: "Kontak",
   description: "Hubungi tim INVERTA untuk pertanyaan tentang program, pembayaran, atau kerja sama.",
 };
 
