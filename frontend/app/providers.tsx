@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { CookieConsent } from "@/components/CookieConsent";
+import { SignedOutNotice } from "@/components/auth/SignedOutNotice";
 
 /**
  * Client-side providers. Currently wires TanStack Query. The QueryClient is
@@ -27,6 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {children}
+        <SignedOutNotice />
         <CookieConsent />
       </AuthProvider>
     </QueryClientProvider>
