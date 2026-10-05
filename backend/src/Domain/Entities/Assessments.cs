@@ -22,6 +22,9 @@ public class Assessment : Entity
 public class Question : Entity
 {
     public QuestionSection Section { get; set; }
+
+    /// <summary>Exactly one bank per question. Set explicitly on every create path.</summary>
+    public QuestionBank Bank { get; set; }
     public QuestionType Type { get; set; } = QuestionType.Mcq;
     public string Prompt { get; set; } = default!;
     public string Choices { get; set; } = "[]";                 // jsonb string[]
