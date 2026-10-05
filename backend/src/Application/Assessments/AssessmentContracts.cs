@@ -20,8 +20,15 @@ public class AssessmentConfig
     /// <summary>Soft proctoring (M4). Off for gating tests by default.</summary>
     public bool ProctoringEnabled { get; set; }
 
-    /// <summary>Per-question audio play limit (M4 listening). Null ⇒ unlimited.</summary>
+    /// <summary>Plays per attempt: per question (final listening) or of the shared test audio (session test, default 1). Null ⇒ unlimited for questions.</summary>
     public int? AudioPlayLimit { get; set; }
+
+    /// <summary>One recording for the whole SESSION test, played up to AudioPlayLimit ?? 1 times per
+    /// attempt (spec 2026-10-05 §4). An R2 key, signed on serve. Null ⇒ no shared audio.</summary>
+    public string? AudioRef { get; set; }
+
+    /// <summary>Failed attempts after which the discussion video opens early. Null ⇒ only a pass opens it.</summary>
+    public int? DiscussionAfterFailures { get; set; }
 
     /// <summary>Sectional layout for the final assessment (M4). Empty for a gating test.</summary>
     public List<AssessmentSectionConfig> Sections { get; set; } = [];

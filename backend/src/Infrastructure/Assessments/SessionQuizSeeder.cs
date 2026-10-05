@@ -43,7 +43,7 @@ public class SessionQuizSeeder(AppDbContext db)
         for (var i = 0; i < videos.Count; i++)
         {
             var session = videos[i];
-            if (session.AssessmentId is not null) continue;              // never overwrite a test
+            if (await db.SessionParts.AnyAsync(p => p.SessionId == session.Id && p.Kind == SessionPartKind.Test, ct)) continue;              // never overwrite a test
             if (!Quizzes.TryGetValue(i + 1, out var quiz)) continue;     // no content for this slot
 
             var assessment = new Assessment
@@ -88,7 +88,15 @@ public class SessionQuizSeeder(AppDbContext db)
                 });
             }
 
-            session.AssessmentId = assessment.Id;
+            session.AssessmentId = assessment.Id;   // dual-write until readers switch to parts
+
+            var lastOrder = await db.SessionParts.Where(p => p.SessionId == session.Id)
+                .MaxAsync(p => (int?)p.OrderIndex, ct) ?? 0;
+            db.SessionParts.Add(new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id, OrderIndex = lastOrder + 1,
+                Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = assessment.Id,
+            });
             attached++;
         }
 

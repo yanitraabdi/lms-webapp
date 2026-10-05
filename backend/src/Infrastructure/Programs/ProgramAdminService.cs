@@ -137,6 +137,28 @@ public class ProgramAdminService(
                    .MaxAsync(s => (int?)s.OrderIndex, ct) ?? 0) + 1;
 
         db.ProgramSessions.Add(session);
+        // A video created with a video becomes a one-part session (lesson). Without one it starts
+        // empty and the parts editor fills it (spec §3: learners see "Belum tersedia").
+        if (session.Type == SessionType.Video && !string.IsNullOrWhiteSpace(session.ProviderAssetId))
+            db.SessionParts.Add(new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id, OrderIndex = 1,
+                Kind = SessionPartKind.LessonVideo, Title = session.Title,
+                ProviderAssetId = session.ProviderAssetId, DurationSeconds = session.DurationSeconds,
+            });
+        // A test sent on create becomes the Test part after the lesson; tests live on parts.
+        if (session.Type == SessionType.Video && session.AssessmentId is Guid createTest)
+        {
+            db.SessionParts.Add(new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id,
+                OrderIndex = string.IsNullOrWhiteSpace(session.ProviderAssetId) ? 1 : 2,
+                Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = createTest,
+            });
+        }
+        // session.AssessmentId is still WRITTEN here (dual-write): until Task 4 switches the
+        // readers to parts, completion and the session test route read this column. Task 4 stops
+        // writing it for video sessions.
         Audit(actor, "session_created", session.Id, new { programId, session.Title, Type = session.Type.ToString() });
         await SaveSessionsAsync(programId, ct);
         return MapSession(session);

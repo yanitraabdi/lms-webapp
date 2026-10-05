@@ -153,3 +153,26 @@ public class ScoreBandMappingConfig : IEntityTypeConfiguration<ScoreBandMapping>
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public class SessionPartConfig : IEntityTypeConfiguration<SessionPart>
+{
+    public void Configure(EntityTypeBuilder<SessionPart> e)
+    {
+        // Not unique: the parts editor rewrites the whole order in one SaveChanges, and a unique
+        // index would collide mid-update with no transaction to defer it in (retry strategy).
+        e.HasIndex(x => new { x.SessionId, x.OrderIndex });
+        // One test, one part: attempts are per assessment, so sharing one would share progress.
+        e.HasIndex(x => x.AssessmentId).IsUnique().HasFilter("assessment_id IS NOT NULL");
+        e.HasOne(x => x.Session).WithMany(s => s.Parts).HasForeignKey(x => x.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);   // intra-aggregate
+        e.HasOne(x => x.Assessment).WithMany().HasForeignKey(x => x.AssessmentId)
+            .OnDelete(DeleteBehavior.Restrict);  // attempts hang off it (GR-7)
+        e.ToTable(t =>
+        {
+            t.HasCheckConstraint("ck_session_parts_video",
+                "kind = 'Test' OR (provider_asset_id IS NOT NULL AND assessment_id IS NULL)");
+            t.HasCheckConstraint("ck_session_parts_test",
+                "kind <> 'Test' OR (assessment_id IS NOT NULL AND provider_asset_id IS NULL)");
+        });
+    }
+}

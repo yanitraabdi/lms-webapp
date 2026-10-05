@@ -150,6 +150,9 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (await db.Attempts.AnyAsync(x => x.AssessmentId == id, ct))
             throw new AssessmentException("Tes tidak bisa dihapus karena sudah dikerjakan peserta.", 409);
 
+        if (await db.SessionParts.AnyAsync(p => p.AssessmentId == id, ct))
+            throw new AssessmentException("Tes masih dipakai di sebuah sesi. Hapus bagiannya terlebih dahulu.", 409);
+
         // Detach from any session first so the FK (SetNull) intent is explicit.
         var sessions = await db.ProgramSessions.Where(s => s.AssessmentId == id).ToListAsync(ct);
         foreach (var s in sessions) s.AssessmentId = null;
@@ -205,10 +208,55 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (assessmentId is Guid aid && !await db.Assessments.AnyAsync(a => a.Id == aid, ct))
             throw new AssessmentException("Tes tidak ditemukan.", 404);
 
+        // Dual-write until Task 4: readers still use session.AssessmentId for video sessions.
         session.AssessmentId = assessmentId;
+        if (session.Type == SessionType.Video)
+        {
+            var tests = await db.SessionParts
+                .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.Test).ToListAsync(ct);
+            if (tests.Count > 1)
+                throw new AssessmentException("Sesi ini memiliki beberapa tes. Atur lewat daftar bagian.", 409);
+
+            var current = tests.SingleOrDefault();
+            if (current is not null && current.AssessmentId != assessmentId
+                && await db.Attempts.AnyAsync(a => a.AssessmentId == current.AssessmentId, ct))
+                throw new AssessmentException("Tes ini sudah dikerjakan peserta dan tidak bisa diganti.", 409);
+
+            if (assessmentId is null)
+            {
+                if (current is not null)
+                {
+                    var discussion = await db.SessionParts.FirstOrDefaultAsync(p =>
+                        p.SessionId == sessionId && p.Kind == SessionPartKind.Discussion
+                        && p.OrderIndex == current.OrderIndex + 1, ct);
+                    if (discussion is not null)
+                        throw new AssessmentException("Hapus video pembahasan tes ini terlebih dahulu.", 409);
+                    db.SessionParts.Remove(current);
+                }
+            }
+            else if (current is not null)
+            {
+                current.AssessmentId = assessmentId;
+            }
+            else
+            {
+                var lastOrder = await db.SessionParts.Where(p => p.SessionId == sessionId)
+                    .MaxAsync(p => (int?)p.OrderIndex, ct) ?? 0;
+                db.SessionParts.Add(new SessionPart
+                {
+                    Id = Guid.CreateVersion7(), SessionId = sessionId, OrderIndex = lastOrder + 1,
+                    Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = assessmentId,
+                });
+            }
+        }
+
         Audit(actor, assessmentId is null ? "assessment_detached" : "assessment_attached",
               sessionId, new { assessmentId });
-        await db.SaveChangesAsync(ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
+        {
+            throw new AssessmentException("Tes ini sudah dipakai di sesi lain.", 409);
+        }
     }
 
     private void Audit(Guid actor, string action, Guid target, object metadata)
