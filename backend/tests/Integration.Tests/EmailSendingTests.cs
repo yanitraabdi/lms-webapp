@@ -278,7 +278,7 @@ public class EmailSendingTests
             ("FromAddress", "noreply@example.com"));
 
         Assert.True(o.IsSmtp);
-        Assert.Equal("smtp.gmail.com", o.Host);
+        Assert.Equal("smtp.resend.com", o.Host);
         Assert.Equal(587, o.Port);
     }
 

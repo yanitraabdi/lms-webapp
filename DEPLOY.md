@@ -35,9 +35,9 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 | `REVALIDATE_SECRET` | Shared secret for the API→Next ISR revalidation call. Change for a real deploy. |
 | `POSTGRES_USER/PASSWORD/DB` | Database credentials. |
 | `EMAIL_PROVIDER` | `dev` (default — logs mail to the API console) or `smtp` (actually sends). |
-| `SMTP_HOST/PORT` | Relay. Defaults `smtp.gmail.com` / `587` (STARTTLS). |
-| `SMTP_USERNAME` | Authenticating mailbox. Required when `EMAIL_PROVIDER=smtp`. |
-| `SMTP_PASSWORD` | Google **app password**, not the account password. Required when `EMAIL_PROVIDER=smtp`. |
+| `SMTP_HOST/PORT` | Relay. Defaults `smtp.resend.com` / `587` (STARTTLS). |
+| `SMTP_USERNAME` | `resend` for Resend (a real mailbox for Gmail). Required when `EMAIL_PROVIDER=smtp`. |
+| `SMTP_PASSWORD` | A Resend **API key** (`re_…`); for Gmail, an app password. Required when `EMAIL_PROVIDER=smtp`. |
 | `SMTP_FROM_ADDRESS` | Visible From. Required when `EMAIL_PROVIDER=smtp`. |
 | `SMTP_FROM_NAME` | Display name (default `INVERTA`). |
 | `SMTP_REPLY_TO` | Where replies go. Set this if From is a noreply mailbox. |
@@ -104,38 +104,51 @@ the API container's log instead. Email verification is required before purchase,
 setting no real learner can complete one. This is the single setting standing between the app and
 taking money.
 
-Google Workspace, using an app password:
+Resend setup:
 
-1. Enable 2-Step Verification on the sending Workspace account.
-2. Create an **app password** (Google Account → Security → App passwords). It is a 16-character
-   string; treat it as a credential and keep it out of the repo.
-3. Put it in `.env` — which is gitignored, and must stay that way:
+1. Create an account at resend.com.
+2. **Domains → Add Domain.** A subdomain such as `mail.yourdomain.com` is recommended.
+3. Add the DNS records Resend lists at your DNS host: MX and SPF TXT on the bounce subdomain
+   (`send.…`), and the DKIM TXT. Optionally add a `_dmarc` TXT with `v=DMARC1; p=none;`.
+4. Wait until the domain shows **Verified**.
+5. **API Keys → Create API Key** with **Sending access**, restricted to that domain. Treat it as a
+   credential and keep it out of the repo.
+6. Put it in `.env` — which is gitignored, and must stay that way:
 
 ```
 EMAIL_PROVIDER=smtp
-SMTP_USERNAME=noreply@yourdomain.com
-SMTP_PASSWORD=xxxxxxxxxxxxxxxx
-SMTP_FROM_ADDRESS=noreply@yourdomain.com
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=587
+SMTP_USERNAME=resend
+SMTP_PASSWORD=re_xxxxxxxxxxxxxxxx
+SMTP_FROM_ADDRESS=noreply@mail.yourdomain.com
 SMTP_REPLY_TO=halo@yourdomain.com
 ```
 
-4. `docker compose -f docker-compose.tunnel.yml up -d` and register a throwaway address to confirm
-   a real message arrives.
+7. **Restart the API.** `.env` is read only at start:
+   `docker compose -f docker-compose.tunnel.yml up -d api`
+8. Confirm with **Admin → Kirim email uji**. It sends a test message to your own admin address and
+   reports one of:
+   - `Login SMTP ditolak …` — wrong `SMTP_USERNAME` (must be `resend`) or `SMTP_PASSWORD` (API key).
+   - `Alamat pengirim ditolak …` — the domain of `SMTP_FROM_ADDRESS` is not **Verified** in Resend.
+   - `Server SMTP tidak dapat dihubungi …` — wrong `SMTP_HOST`/`SMTP_PORT`, or the network blocks
+     outbound 587.
+   - `Pengiriman gagal (kode SMTP …)` — any other relay rejection; the code is the SMTP status.
 
 Notes:
 
-- `SMTP_USERNAME` must be a real mailbox. Google refuses to authenticate an address that exists
-  only as an alias, and `SMTP_FROM_ADDRESS` must be that mailbox or an address it is permitted to
-  send as (Gmail "Send mail as", or a Workspace alias) — otherwise Google rewrites the From and
-  the learner sees the wrong sender.
-- Workspace allows roughly **2,000 recipients a day**. Ample now; not a permanent answer.
+- The Resend free plan is limited to **100 emails per day** and **3,000 per month**.
+- `SMTP_FROM_ADDRESS` must be on the verified domain, or Resend rejects the send.
 - An incomplete `smtp` config **fails at startup** rather than falling back to the log. That is
   deliberate: a healthy API silently dropping verification mail is the failure being fixed here.
 - Six messages send: verification, password reset, password-changed, the enrolment receipt, the
-  certificate and the H-1 live-session reminder. Only the five archived subscription messages still
-  log, and nothing sends those.
+  certificate and the H-1 live-session reminder (plus the admin test). Only the five archived
+  subscription messages still log, and nothing sends those.
 - Live-session times are printed in **WIB** (fixed UTC+7). The API container runs UTC, so this is a
   conversion, not a label. A cohort outside western Indonesia needs this made configurable.
+- Gmail also works: `SMTP_HOST=smtp.gmail.com`, `SMTP_USERNAME` a real mailbox (Google refuses an
+  alias), `SMTP_PASSWORD` a Google app password (2-Step Verification on), and `SMTP_FROM_ADDRESS`
+  that mailbox or one it may send as. Roughly 2,000 recipients a day on Workspace.
 
 ## 2. Build & run
 

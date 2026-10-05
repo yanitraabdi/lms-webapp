@@ -6,8 +6,7 @@ namespace Academy.Infrastructure.Email;
 /// Outbound email settings. Mirrors <see cref="Media.MediaOptions"/>.
 ///
 /// Provider "dev" logs every message to the API console (the default, and what every test runs
-/// against). Provider "smtp" sends over SMTP — Google Workspace for now, with an app password;
-/// any other relay is the same three settings.
+/// against). Provider "smtp" sends over any SMTP relay — Resend (recommended) or Gmail.
 /// </summary>
 public class EmailOptions
 {
@@ -16,20 +15,19 @@ public class EmailOptions
     /// <summary>"dev" (log to console) or "smtp" (actually send).</summary>
     public string Provider { get; set; } = "dev";
 
-    public string Host { get; set; } = "smtp.gmail.com";
+    public string Host { get; set; } = "smtp.resend.com";
     public int Port { get; set; } = 587;                  // STARTTLS
 
-    /// <summary>The authenticating mailbox. For Workspace this is a real user or a dedicated
-    /// sending account — Google refuses to authenticate an address that is only an alias.</summary>
+    /// <summary>The SMTP login: literally "resend" for Resend; a real mailbox for Gmail (Google
+    /// refuses an alias).</summary>
     public string Username { get; set; } = "";
 
-    /// <summary>A Google APP PASSWORD, not the account password. Comes from server config or the
-    /// secret store, never the repo (GR-9).</summary>
+    /// <summary>A Resend API key ("re_…") or a Gmail app password. Server config / secret store
+    /// only, never the repo (GR-9).</summary>
     public string Password { get; set; } = "";
 
-    /// <summary>The visible From. Must be the authenticated mailbox or an address it is allowed
-    /// to send as ("Send mail as" in Gmail, or a Workspace alias) — otherwise Google rewrites it
-    /// and the learner sees the wrong sender.</summary>
+    /// <summary>The visible From. Must be on a domain the relay may send for — for Resend, a
+    /// domain shown as Verified; otherwise the relay rejects it.</summary>
     public string FromAddress { get; set; } = "";
     public string FromName { get; set; } = "INVERTA";
 
