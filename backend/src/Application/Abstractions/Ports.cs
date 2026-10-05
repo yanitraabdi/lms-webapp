@@ -101,3 +101,13 @@ public interface IContentRevalidator
 {
     Task RevalidateAsync(IReadOnlyCollection<string> paths, CancellationToken ct = default);
 }
+
+public record CreateVideoUploadRequest(string? Title);
+
+/// <summary>Admin use case over IVideoLibrary: validates the title, starts the upload, audits it.
+/// Routes stay thin and never touch the DbContext.</summary>
+public interface IVideoUploadService
+{
+    Task<UploadTicketDto> StartAsync(Guid actor, string? title, CancellationToken ct = default);
+    UploadTicketDto Renew(string videoId);
+}

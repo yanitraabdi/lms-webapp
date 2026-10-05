@@ -117,6 +117,7 @@ public static class DependencyInjection
             services.AddSingleton<IVideoLibrary>(new UnavailableVideoLibrary(videoOptions.IsBunny
                 ? "Kunci API Bunny (BUNNY_API_KEY) belum diatur. Isi ID video secara manual."
                 : "Pustaka video hanya tersedia saat penyedia video adalah Bunny. Isi ID video secara manual."));
+        services.AddScoped<IVideoUploadService, VideoUploadService>();
         services.AddSingleton<CertificatePdf>();
         services.AddScoped<ICertificateService, CertificateService>();
         services.AddScoped<ILearningService, LearningService>();
