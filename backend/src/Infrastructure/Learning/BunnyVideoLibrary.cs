@@ -9,9 +9,12 @@ namespace Academy.Infrastructure.Learning;
 /// <summary>
 /// Lists the Bunny Stream library for the admin video picker and starts direct-to-Bunny uploads.
 ///
-/// Every failure becomes an <c>Unavailable</c> message rather than an exception. The picker is a
+/// Listing never throws: every listing failure becomes an <c>Unavailable</c> message. The picker is a
 /// convenience over manual entry, and an admin who cannot reach the list must still be able to type
 /// an id and save; a 500 here would take the whole session form down with it.
+///
+/// Starting an upload is different: the admin asked for it, so a Bunny refusal or network failure
+/// throws a <see cref="ProgramException"/> with status 502 and a reason the uploader shows.
 /// </summary>
 public class BunnyVideoLibrary(HttpClient http, VideoOptions options) : IVideoLibrary
 {

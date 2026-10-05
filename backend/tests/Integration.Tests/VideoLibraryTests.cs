@@ -59,11 +59,10 @@ public class VideoLibraryTests
     [Fact]
     public void Signature_is_sha256_hex_of_library_key_expiry_and_video()
     {
-        // Independently computed: sha256("123456" + "library-api-key" + "1760000000" + "vid-1").
-        var expected = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            Encoding.UTF8.GetBytes("123456library-api-key1760000000vid-1"))).ToLowerInvariant();
+        // Known answer, computed outside .NET:
+        //   printf '%s' '123456library-api-key1760000000vid-1' | shasum -a 256
+        const string expected = "4a5d0ddda96b1cc84c6671fde885eb29b358803ad7ae23621dc213bf04bb7ba4";
         Assert.Equal(expected, BunnyUploadSigner.Sign("123456", "library-api-key", 1760000000, "vid-1"));
-        Assert.Equal(64, expected.Length);
     }
 
     [Fact]

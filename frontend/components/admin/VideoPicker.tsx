@@ -68,7 +68,13 @@ export function VideoPicker({
     refetchInterval: (query) => {
       if (Date.now() - pollFrom.current > POLL_CAP_MS) return false;
       const items = query.state.data?.items ?? [];
-      const encoding = items.some((v) => !FINAL.includes(v.status));
+      // The row being uploaded right now cannot change until its upload ends (then it is pending).
+      // A "Created" row nobody here is uploading is an abandoned upload: it never changes either,
+      // so it must not keep every open form polling Bunny.
+      const encoding = items.some((v) =>
+        v.id !== activeId &&
+        !FINAL.includes(v.status) &&
+        (v.status !== "Created" || pendingIds.includes(v.id)));
       const waiting = pendingIds.some((id) => !items.some((v) => v.id === id && v.status === "Finished"));
       return encoding || waiting ? 10_000 : false;
     },
@@ -82,47 +88,52 @@ export function VideoPicker({
     setSearch(title);
   }
 
-  if (q.data?.unavailable) {
-    return (
-      <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] leading-snug text-ink-muted">
-        {q.data.unavailable}
-      </p>
-    );
-  }
+  // Once the library has been listed, the uploader stays mounted in the same place whatever the
+  // list does next (a new search, a transient Bunny failure): unmounting it would abort an upload.
+  const [librarySeen, setLibrarySeen] = useState(false);
+  if (!librarySeen && q.data && !q.data.unavailable) setLibrarySeen(true);
 
   return (
     <div className="flex flex-col gap-2">
-      {q.data && (
+      {librarySeen && (
         <VideoUploader token={token} onActiveChange={setActiveId} onUploaded={onUploaded} />
       )}
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Cari judul video…"
-        aria-label="Cari video di pustaka"
-        className={inputBlockCls}
-      />
-      <div className="max-h-56 overflow-y-auto rounded-base border border-border">
-        {q.isPending ? (
-          <div className="flex min-h-[80px] items-center justify-center"><Spinner size={18} /></div>
-        ) : q.isError ? (
-          <p className="px-3 py-3 text-[12.5px] text-danger">Daftar video gagal dimuat.</p>
-        ) : (q.data?.items.length ?? 0) === 0 ? (
-          <p className="px-3 py-3 text-[12.5px] text-ink-muted">Tidak ada video yang cocok.</p>
-        ) : (
-          <ul>
-            {q.data!.items.map((v) => (
-              <VideoRow
-                key={v.id}
-                video={v}
-                selected={v.id === value}
-                uploading={v.id === activeId || pendingIds.includes(v.id)}
-                onPick={onPick}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
+      {q.data?.unavailable ? (
+        <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] leading-snug text-ink-muted">
+          {q.data.unavailable}
+        </p>
+      ) : (
+        <>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Cari judul video…"
+            aria-label="Cari video di pustaka"
+            className={inputBlockCls}
+          />
+          <div className="max-h-56 overflow-y-auto rounded-base border border-border">
+            {q.isPending ? (
+              <div className="flex min-h-[80px] items-center justify-center"><Spinner size={18} /></div>
+            ) : q.isError ? (
+              <p className="px-3 py-3 text-[12.5px] text-danger">Daftar video gagal dimuat.</p>
+            ) : (q.data?.items.length ?? 0) === 0 ? (
+              <p className="px-3 py-3 text-[12.5px] text-ink-muted">Tidak ada video yang cocok.</p>
+            ) : (
+              <ul>
+                {q.data!.items.map((v) => (
+                  <VideoRow
+                    key={v.id}
+                    video={v}
+                    selected={v.id === value}
+                    uploading={v.id === activeId || pendingIds.includes(v.id)}
+                    onPick={onPick}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -224,7 +235,10 @@ function VideoUploader({
 
   useEffect(() => {
     if (phase !== "uploading") return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ""; // Safari and older browsers only prompt when this is set
+    };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [phase]);
@@ -273,6 +287,9 @@ function VideoUploader({
         headers: headersOf(ticket),
         metadata: { filetype: file.type, title: name, videoId: ticket.videoId },
         onProgress: (sent, total) => setProgress({ sent, total }),
+        // Progress since the last renewal: a later expiry may be renewed again. Without progress a
+        // second 401/403 in a row still ends the upload instead of looping.
+        onChunkComplete: () => { renewed.current = false; },
         onSuccess: () => {
           finish(`“${name}” terunggah. Video bisa dipilih setelah Bunny selesai memprosesnya.`);
           onUploaded(ticket.videoId, name);
