@@ -33,6 +33,10 @@ public enum CompletionMethod { WatchAndTest, Attended, Submitted, EnrolledAfterL
 // ---- INVERTA: assessment engine (FSD §6–§7) ----
 public enum AssessmentKind { Gating, Final }
 public enum QuestionSection { Listening, Reading, Vocabulary, Structure, General }
+
+/// <summary>Which bank a question lives in (spec 2026-10-05). Each test draws only from its own:
+/// a Final assessment from Simulation, a Gating (session) test from SessionTest.</summary>
+public enum QuestionBank { Simulation, SessionTest }
 public enum QuestionType { Mcq }
 // Ignored = reported but below the grace threshold: retained for the dispute trail, never a strike.
 public enum ProctorEventKind { VisibilityHidden, WindowBlur, FullscreenExit, Warned, AutoSubmitted, Ignored }

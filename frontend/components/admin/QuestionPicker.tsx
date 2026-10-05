@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ErrorState, Spinner, SearchIcon } from "@/components/ui";
-import { listQuestions, QUESTION_SECTIONS } from "@/lib/sessions";
+import { listQuestions, QUESTION_SECTIONS, type AdminQuestion, type QuestionBankName } from "@/lib/sessions";
 
 /** Bank picker. Selection order is preserved — it becomes the question order in the test. */
 export function QuestionPicker({
-  token, section, selected, onChange,
+  token, bank, section, selected, onChange, attached,
 }: {
   token: string;
+  bank: QuestionBankName;
+  /** The test's current questions with details; those from the other bank are shown separately. */
+  attached?: AdminQuestion[];
   section?: string;
   selected: string[];
   onChange: (ids: string[]) => void;
@@ -24,12 +27,21 @@ export function QuestionPicker({
   }, [searchInput]);
 
   const q = useQuery({
-    queryKey: ["picker-questions", filter, search],
-    queryFn: () => listQuestions(token, { section: filter || undefined, search: search || undefined }),
+    queryKey: ["picker-questions", bank, filter, search],
+    queryFn: () => listQuestions(token, { bank, section: filter || undefined, search: search || undefined }),
   });
 
   function toggle(id: string) {
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  }
+
+  // The simulation editor renders one picker per section and passes the whole test, hence the section check.
+  const foreign = (attached ?? []).filter(
+    (x) => x.bank !== bank && selected.includes(x.id) && (!section || x.section === section),
+  );
+
+  function release(id: string) {
+    if (confirm("Lepas soal ini dari tes? Soal dari bank lain tidak bisa ditambahkan kembali.")) toggle(id);
   }
 
   return (
@@ -56,6 +68,32 @@ export function QuestionPicker({
         </div>
         <span className="shrink-0 text-[12px] font-bold text-ink-muted">{selected.length} dipilih</span>
       </div>
+
+      {foreign.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {foreign.map((x) => (
+            <li key={x.id} className="flex items-start gap-2.5 rounded-base border border-primary bg-primary-soft/40 px-3 py-2 text-[13px]">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-ink">{x.prompt}</span>
+                <span className="block text-[11px] text-ink-subtle">
+                  {x.section} · {x.choices.length} pilihan
+                  <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 font-bold text-warning">
+                    {x.bank === "Simulation" ? "dari bank simulasi" : "dari bank tes sesi"}
+                  </span>
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label={`Lepas soal dari tes: ${x.prompt.slice(0, 60)}`}
+                onClick={() => release(x.id)}
+                className="shrink-0 rounded-sm border border-border px-2.5 py-1 text-[12px] font-bold text-ink hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                Lepas
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {q.isPending ? (
         <div className="flex min-h-[120px] items-center justify-center"><Spinner size={20} /></div>

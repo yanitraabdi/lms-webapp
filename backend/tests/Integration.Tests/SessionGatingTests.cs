@@ -405,7 +405,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var admin = await AdminToken();
         var res = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
         {
-            section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = Array.Empty<int>(),
+            bank = "SessionTest", section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = Array.Empty<int>(),
             audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
         });
 
@@ -421,7 +421,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var admin = await AdminToken();
         var res = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
         {
-            section = "Reading", prompt = "Q", choices = new[] { "hanya satu" }, correct = new[] { 0 },
+            bank = "SessionTest", section = "Reading", prompt = "Q", choices = new[] { "hanya satu" }, correct = new[] { 0 },
             audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
         });
 
@@ -435,7 +435,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var admin = await AdminToken();
         var res = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
         {
-            section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = new[] { 5 },
+            bank = "SessionTest", section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = new[] { 5 },
             audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
         });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
@@ -537,12 +537,12 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     {
         var q1 = await PostJson<AdminQuestionDto>("/api/admin/questions", c.Admin, new
         {
-            section = "Reading", prompt = $"Q1 {Guid.NewGuid():N}", choices = new[] { "benar", "salah" },
+            bank = "SessionTest", section = "Reading", prompt = $"Q1 {Guid.NewGuid():N}", choices = new[] { "benar", "salah" },
             correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
         });
         var q2 = await PostJson<AdminQuestionDto>("/api/admin/questions", c.Admin, new
         {
-            section = "Structure", prompt = $"Q2 {Guid.NewGuid():N}", choices = new[] { "salah", "benar" },
+            bank = "SessionTest", section = "Structure", prompt = $"Q2 {Guid.NewGuid():N}", choices = new[] { "salah", "benar" },
             correct = new[] { 1 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
         });
 

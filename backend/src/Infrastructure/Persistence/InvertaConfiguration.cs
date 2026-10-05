@@ -97,6 +97,7 @@ public class QuestionConfig : IEntityTypeConfiguration<Question>
     public void Configure(EntityTypeBuilder<Question> e)
     {
         e.HasIndex(x => x.Section);
+        e.HasIndex(x => new { x.Bank, x.Section });
         e.Property(x => x.ExternalId).HasMaxLength(64);
         // Filtered: hand-authored questions all have NULL and must not collide with one another.
         e.HasIndex(x => x.ExternalId).IsUnique().HasFilter("external_id IS NOT NULL");

@@ -11,7 +11,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Spinner } from "@/components/ui";
 import {
   downloadImportTemplate, previewQuestionImport, commitQuestionImport, uploadAudioBulk,
-  type ImportResult, type BulkAudioResult,
+  QUESTION_BANKS, BANK_LABEL, type ImportResult, type BulkAudioResult, type QuestionBankName,
 } from "@/lib/sessions";
 
 const card = "rounded-lg border border-border bg-surface p-5 shadow-sm";
@@ -20,6 +20,7 @@ export default function QuestionImportPage() {
   const token = useAuth().accessToken;
   const qc = useQueryClient();
 
+  const [bank, setBank] = useState<QuestionBankName | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState<"preview" | "commit" | "audio" | null>(null);
@@ -32,16 +33,26 @@ export default function QuestionImportPage() {
     setError(null);
   }
 
+  function chooseBank(next: QuestionBankName) {
+    setBank(next);
+    setResult(null);      // a preview must never be committed into a different bank
+    setError(null);
+  }
+
   async function run(step: "preview" | "commit") {
-    if (!token || !file) return;
+    if (!token || !file || !bank) return;
     setBusy(step);
     setError(null);
     try {
       const next = step === "preview"
-        ? await previewQuestionImport(token, file)
-        : await commitQuestionImport(token, file);
+        ? await previewQuestionImport(token, file, bank)
+        : await commitQuestionImport(token, file, bank);
       setResult(next);
-      if (next.committed) qc.invalidateQueries({ queryKey: ["admin-questions"] });
+      if (next.committed) {
+        qc.invalidateQueries({ queryKey: ["admin-questions"] });
+        qc.invalidateQueries({ queryKey: ["question-bank-counts"] });
+        qc.invalidateQueries({ queryKey: ["picker-questions"] });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memproses berkas.");
     } finally {
@@ -104,18 +115,43 @@ export default function QuestionImportPage() {
           Berkas diperiksa seluruhnya dulu. Jika ada satu kesalahan, tidak ada soal yang tersimpan.
         </p>
 
+        <fieldset className="mt-3">
+          <legend className="text-[13px] font-bold text-ink">
+            Impor ke bank: <span className="text-danger" aria-hidden="true">*</span>
+          </legend>
+          <div className="mt-1.5 flex flex-wrap gap-4">
+            {QUESTION_BANKS.map((b) => (
+              <label key={b} className="flex items-center gap-2 text-[13px]">
+                <input
+                  type="radio"
+                  name="bank"
+                  value={b}
+                  required
+                  checked={bank === b}
+                  onChange={() => chooseBank(b)}
+                  disabled={busy !== null}
+                  className="accent-primary"
+                />
+                {BANK_LABEL[b]}
+              </label>
+            ))}
+          </div>
+          {!bank && <p className="mt-1.5 text-[12.5px] text-ink-muted">Pilih bank tujuan terlebih dahulu.</p>}
+        </fieldset>
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             type="file"
             accept=".xlsx"
             aria-label="Berkas soal"
+            disabled={!bank}
             onChange={(e) => pick(e.target.files?.[0] ?? null)}
             className="text-[13px] file:mr-3 file:rounded-sm file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-[13px] file:font-bold"
           />
-          <Button size="sm" variant="neutral" disabled={!file || busy !== null} onClick={() => run("preview")}>
+          <Button size="sm" variant="neutral" disabled={!bank || !file || busy !== null} onClick={() => run("preview")}>
             {busy === "preview" ? "Memeriksa…" : "Periksa"}
           </Button>
-          <Button size="sm" disabled={!clean || busy !== null} onClick={() => run("commit")}>
+          <Button size="sm" disabled={!bank || !clean || busy !== null} onClick={() => run("commit")}>
             {busy === "commit" ? "Mengimpor…" : "Impor sekarang"}
           </Button>
           {busy !== null && <Spinner size={16} />}
@@ -153,6 +189,10 @@ export default function QuestionImportPage() {
               </table>
             </div>
           </div>
+        )}
+
+        {result && bank && (
+          <p className="mt-4 text-[13px] font-bold text-ink">Bank tujuan: {BANK_LABEL[bank]}</p>
         )}
 
         {result && errors.length === 0 && (

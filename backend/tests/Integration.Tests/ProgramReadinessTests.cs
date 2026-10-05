@@ -139,7 +139,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         });
         var ids = new List<Guid>();
         foreach (var (section, count) in new[] { ("Listening", 5), ("Structure", 4), ("Reading", 5) })
-            for (var i = 0; i < count; i++) ids.Add(await NewQuestion(admin, section));
+            for (var i = 0; i < count; i++) ids.Add(await NewQuestion(admin, section, "Simulation"));
         await SetQuestions(admin, final, [.. ids]);
         await NewSession(admin, program, "FinalAssessment", 1, final);
         await PutScoreBands(admin, program, FullBands());
@@ -327,7 +327,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
             passThreshold = (int?)null, retakeCap = 1, proctoringEnabled = false,
             sections = new[] { new { section = "Reading", questions = 1, minutes = 55 } },
         });
-        var q = await NewQuestion(admin, "Reading");
+        var q = await NewQuestion(admin, "Reading", "Simulation");
         await SetQuestions(admin, final, [q]);
         await NewSession(admin, program, "FinalAssessment", 1, final);
 
@@ -477,7 +477,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         var program = await NewProgram(admin);
 
         var gating = await NewAssessment(admin, "Gating");
-        var q1 = await NewQuestion(admin, "Reading");
+        var q1 = await NewQuestion(admin, "Reading", "SessionTest");
         await SetQuestions(admin, gating, [q1]);
         await NewSession(admin, program, "Video", 1, gating);
 
@@ -537,11 +537,11 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         return (await res.Content.ReadFromJsonAsync<AssessmentIdDto>(Json))!.Id;
     }
 
-    private async Task<Guid> NewQuestion(string admin, string section)
+    private async Task<Guid> NewQuestion(string admin, string section, string bank)
     {
         var res = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
         {
-            section, prompt = $"{section} {Guid.NewGuid():N}", choices = new[] { "a", "b" },
+            bank, section, prompt = $"{section} {Guid.NewGuid():N}", choices = new[] { "a", "b" },
             correct = new[] { 0 }, audioRef = (string?)null, passageRef = (string?)null, tags = (string[]?)null,
         });
         res.EnsureSuccessStatusCode();

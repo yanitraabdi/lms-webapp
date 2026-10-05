@@ -128,14 +128,19 @@ public interface IAssessmentService
 // ---------------------------------------------------------------- admin DTOs
 
 public record AdminQuestionDto(
-    Guid Id, string Section, string Type, string Prompt,
+    Guid Id, string Section, string Bank, string Type, string Prompt,
     IReadOnlyList<string> Choices, IReadOnlyList<int> Correct,
     string? AudioRef, string? PassageRef, IReadOnlyList<string> Tags,
     int UsedInAssessments);
 
+/// <summary>Bank is read on create only (required there). Update never changes it — use move.</summary>
 public record UpsertQuestionRequest(
     string Section, string Prompt, IReadOnlyList<string> Choices, IReadOnlyList<int> Correct,
-    string? AudioRef, string? PassageRef, IReadOnlyList<string>? Tags);
+    string? AudioRef, string? PassageRef, IReadOnlyList<string>? Tags, string? Bank = null);
+
+public record MoveQuestionRequest(string Bank);
+
+public record QuestionBankCountsDto(int Simulation, int SessionTest);
 
 public record AdminAssessmentDto(
     Guid Id, string Kind, string Title, AssessmentConfig Config,
@@ -154,7 +159,9 @@ public record SetAssessmentQuestionsRequest(IReadOnlyList<Guid> QuestionIdsInOrd
 
 public interface IQuestionBankService
 {
-    Task<IReadOnlyList<AdminQuestionDto>> ListAsync(string? section, string? search, CancellationToken ct = default);
+    Task<IReadOnlyList<AdminQuestionDto>> ListAsync(string? bank, string? section, string? search, CancellationToken ct = default);
+    Task MoveAsync(Guid actor, Guid id, string bank, CancellationToken ct = default);
+    Task<QuestionBankCountsDto> CountsAsync(CancellationToken ct = default);
     Task<AdminQuestionDto> CreateAsync(Guid actor, UpsertQuestionRequest req, CancellationToken ct = default);
     Task UpdateAsync(Guid actor, Guid id, UpsertQuestionRequest req, CancellationToken ct = default);
     Task DeleteAsync(Guid actor, Guid id, CancellationToken ct = default);

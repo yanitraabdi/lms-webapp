@@ -66,6 +66,7 @@ public class SampleTestSeeder(AppDbContext db, IObjectStorage storage)
             {
                 Id = Guid.CreateVersion7(),
                 Section = section,
+                Bank = QuestionBank.SessionTest,
                 Type = QuestionType.Mcq,
                 Prompt = prompt,
                 Choices = JsonSerializer.Serialize(choices),

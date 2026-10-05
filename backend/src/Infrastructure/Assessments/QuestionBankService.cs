@@ -11,10 +11,12 @@ namespace Academy.Infrastructure.Assessments;
 public class QuestionBankService(AppDbContext db) : IQuestionBankService
 {
     public async Task<IReadOnlyList<AdminQuestionDto>> ListAsync(
-        string? section, string? search, CancellationToken ct = default)
+        string? bank, string? section, string? search, CancellationToken ct = default)
     {
         var q = db.Questions.AsQueryable();
 
+        if (TryBank(bank, out var b))
+            q = q.Where(x => x.Bank == b);
         if (Enum.TryParse<QuestionSection>(section, true, out var parsed))
             q = q.Where(x => x.Section == parsed);
         if (!string.IsNullOrWhiteSpace(search))
@@ -26,14 +28,14 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
             .Take(500)
             .Select(x => new
             {
-                x.Id, x.Section, x.Type, x.Prompt, x.Choices, x.Correct,
+                x.Id, x.Section, x.Bank, x.Type, x.Prompt, x.Choices, x.Correct,
                 x.AudioRef, x.PassageRef, x.Tags,
                 UsedIn = db.AssessmentQuestions.Count(aq => aq.QuestionId == x.Id),
             })
             .ToListAsync(ct);
 
         return rows.Select(x => new AdminQuestionDto(
-            x.Id, x.Section.ToString(), x.Type.ToString(), x.Prompt,
+            x.Id, x.Section.ToString(), x.Bank.ToString(), x.Type.ToString(), x.Prompt,
             ParseStrings(x.Choices), ParseInts(x.Correct),
             x.AudioRef, x.PassageRef, ParseStrings(x.Tags), x.UsedIn)).ToList();
     }
@@ -41,9 +43,12 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     public async Task<AdminQuestionDto> CreateAsync(
         Guid actor, UpsertQuestionRequest req, CancellationToken ct = default)
     {
+        if (!TryBank(req.Bank, out var bank))
+            throw new AssessmentException("Pilih bank soal.");
         Validate(req);
         var question = new Question { Id = Guid.CreateVersion7() };
         Apply(question, req);
+        question.Bank = bank;
         db.Questions.Add(question);
         Audit(actor, "question_created", question.Id, new { question.Section, req.Prompt });
         await db.SaveChangesAsync(ct);
@@ -58,6 +63,39 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
         Apply(question, req);
         Audit(actor, "question_updated", id, new { question.Section, req.Prompt });
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task MoveAsync(Guid actor, Guid id, string bank, CancellationToken ct = default)
+    {
+        if (!TryBank(bank, out var target))
+            throw new AssessmentException("Pilih bank soal.");
+        var question = await db.Questions.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
+        if (question.Bank == target) return;
+
+        // A test may only hold questions of its own bank; moving one out from under a test of the
+        // kind it serves would break that, so the admin detaches it first.
+        var blockingKind = target == QuestionBank.SessionTest ? AssessmentKind.Final : AssessmentKind.Gating;
+        if (await db.AssessmentQuestions.AnyAsync(
+                aq => aq.QuestionId == id && aq.Assessment.Kind == blockingKind, ct))
+            throw new AssessmentException(
+                blockingKind == AssessmentKind.Final
+                    ? "Soal ini masih dipakai di tes akhir. Lepas dari tes tersebut terlebih dahulu."
+                    : "Soal ini masih dipakai di tes sesi. Lepas dari tes tersebut terlebih dahulu.", 409);
+
+        var from = question.Bank;
+        question.Bank = target;
+        question.UpdatedAt = DateTimeOffset.UtcNow;
+        Audit(actor, "question_moved", id, new { from = from.ToString(), to = target.ToString() });
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<QuestionBankCountsDto> CountsAsync(CancellationToken ct = default)
+    {
+        var rows = await db.Questions.GroupBy(q => q.Bank)
+            .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
+        int Of(QuestionBank b) => rows.FirstOrDefault(r => r.Key == b)?.Count ?? 0;
+        return new QuestionBankCountsDto(Of(QuestionBank.Simulation), Of(QuestionBank.SessionTest));
     }
 
     public async Task DeleteAsync(Guid actor, Guid id, CancellationToken ct = default)
@@ -76,6 +114,10 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     }
 
     // ---------------------------------------------------------------- helpers
+
+    // Enum.TryParse accepts numeric strings ("99"); IsDefined keeps undefined values out.
+    private static bool TryBank(string? s, out QuestionBank bank) =>
+        Enum.TryParse(s, true, out bank) && Enum.IsDefined(bank);
 
     private static void Validate(UpsertQuestionRequest req)
     {
@@ -104,7 +146,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     }
 
     private static AdminQuestionDto Map(Question q, int usedIn) => new(
-        q.Id, q.Section.ToString(), q.Type.ToString(), q.Prompt,
+        q.Id, q.Section.ToString(), q.Bank.ToString(), q.Type.ToString(), q.Prompt,
         ParseStrings(q.Choices), ParseInts(q.Correct),
         q.AudioRef, q.PassageRef, ParseStrings(q.Tags), usedIn);
 

@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Academy.Application.Assessments;
+using Academy.Domain.Enums;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Academy.Api.Endpoints;
@@ -29,29 +31,38 @@ public static class QuestionImportEndpoints
 
         g.MapPost("/import/preview",
                 async Task<Results<Ok<ImportResultDto>, ProblemHttpResult>> (
-                    IFormFile file, IQuestionImportService s, CancellationToken ct) =>
+                    IFormFile file, [FromForm] string? bank, IQuestionImportService s, CancellationToken ct) =>
                 {
+                    if (!TryBank(bank, out var target)) return NoBank();
                     if (TooLarge(file) is ProblemHttpResult problem) return problem;
                     await using var stream = file.OpenReadStream();
-                    return TypedResults.Ok(await s.PreviewAsync(stream, ct));
+                    return TypedResults.Ok(await s.PreviewAsync(target, stream, ct));
                 })
             .DisableAntiforgery();          // required for IFormFile binding in minimal APIs
 
         g.MapPost("/import",
                 async Task<Results<Ok<ImportResultDto>, ProblemHttpResult>> (
-                    IFormFile file, ClaimsPrincipal user, IQuestionImportService s, CancellationToken ct) =>
+                    IFormFile file, [FromForm] string? bank, ClaimsPrincipal user, IQuestionImportService s, CancellationToken ct) =>
                 {
+                    if (!TryBank(bank, out var target)) return NoBank();
                     if (TooLarge(file) is ProblemHttpResult problem) return problem;
                     await using var stream = file.OpenReadStream();
                     // A file with errors comes back 200 with Committed=false and the error list:
                     // problem-details has nowhere to carry a per-cell error table, and the screen
                     // renders the same body either way.
-                    return TypedResults.Ok(await s.CommitAsync(user.UserId(), stream, ct));
+                    return TypedResults.Ok(await s.CommitAsync(user.UserId(), target, stream, ct));
                 })
             .DisableAntiforgery();
 
         return app;
     }
+
+    // TryParse alone accepts numeric strings like "99"; only a DEFINED value is a bank.
+    private static bool TryBank(string? bank, out QuestionBank target) =>
+        Enum.TryParse(bank, true, out target) && Enum.IsDefined(target);
+
+    private static ProblemHttpResult NoBank() =>
+        TypedResults.Problem(title: "Pilih bank soal tujuan impor.", statusCode: 400);
 
     private static ProblemHttpResult? TooLarge(IFormFile file) => file.Length > MaxWorkbookBytes
         ? TypedResults.Problem(title: "Berkas terlalu besar. Maksimum 5 MB.", statusCode: 400)

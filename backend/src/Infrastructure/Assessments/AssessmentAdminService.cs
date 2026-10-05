@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Academy.Application.Assessments;
+using Academy.Domain;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
@@ -42,7 +43,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             .OrderBy(q => q.OrderIndex)
             .Select(q => new
             {
-                q.Question.Id, q.Question.Section, q.Question.Type, q.Question.Prompt,
+                q.Question.Id, q.Question.Section, q.Question.Bank, q.Question.Type, q.Question.Prompt,
                 q.Question.Choices, q.Question.Correct, q.Question.AudioRef,
                 q.Question.PassageRef, q.Question.Tags,
             })
@@ -55,7 +56,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         // Admin DOES see the answer key — that's the whole point of authoring (contrast GR-11,
         // which governs the STUDENT-facing DTO).
         var mapped = questions.Select(q => new AdminQuestionDto(
-            q.Id, q.Section.ToString(), q.Type.ToString(), q.Prompt,
+            q.Id, q.Section.ToString(), q.Bank.ToString(), q.Type.ToString(), q.Prompt,
             QuestionBankService.ParseStrings(q.Choices), QuestionBankService.ParseInts(q.Correct),
             q.AudioRef, q.PassageRef, QuestionBankService.ParseStrings(q.Tags), 0)).ToList();
 
@@ -141,7 +142,14 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
         var (configJson, config) = Resolve(a.Config, req);
         ValidateAgainstQuestions(config, await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == id, ct));
-        a.Kind = Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) ? k : a.Kind;
+        if (Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) && k != a.Kind)
+        {
+            // The kind decides which question bank the test may draw from; changing it under existing questions breaks that.
+            if (await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == id, ct)
+                || await db.Attempts.AnyAsync(x => x.AssessmentId == id, ct))
+                throw new AssessmentException("Jenis tes tidak bisa diubah setelah tes memiliki soal.", 400);
+            a.Kind = k;
+        }
         a.Title = req.Title.Trim();
         a.Config = configJson;
         Audit(actor, "assessment_updated", id, new { a.Title, config.PassThreshold, config.RetakeCap });
@@ -182,6 +190,15 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         var existing = await db.Questions.Where(q => ids.Contains(q.Id)).Select(q => q.Id).ToListAsync(ct);
         if (existing.Count != ids.Count)
             throw new AssessmentException("Sebagian soal tidak ditemukan di bank soal.", 400);
+
+        // A test draws only from its own bank (spec 2026-10-05). Questions it already holds are
+        // exempt: no copies were made when banks were introduced, and past attempts point at them.
+        var bank = QuestionBanks.For(assessment.Kind);
+        var held = await db.AssessmentQuestions.Where(aq => aq.AssessmentId == id)
+            .Select(aq => aq.QuestionId).ToListAsync(ct);
+        var added = ids.Except(held).ToList();
+        if (await db.Questions.AnyAsync(q => added.Contains(q.Id) && q.Bank != bank, ct))
+            throw new AssessmentException("Soal dari bank lain tidak bisa dipakai di tes ini.", 400);
 
         // Refused BEFORE anything is removed: composing fewer questions than the stored pass mark
         // would leave a test nobody can pass.

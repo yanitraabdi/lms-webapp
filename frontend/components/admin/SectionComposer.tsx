@@ -1,17 +1,19 @@
 "use client";
 
 import { AudioUpload } from "@/components/admin/AudioUpload";
+import type { AdminQuestion } from "@/lib/sessions";
 import { QuestionPicker } from "@/components/admin/QuestionPicker";
 
 /** One section of the final assessment: how many questions it needs, and which are chosen. */
 export function SectionComposer({
-  token, section, required, selected, onChange, audioRef, onAudioChange,
+  token, section, required, selected, onChange, attached, audioRef, onAudioChange,
 }: {
   token: string;
   section: string;
   required: number;
   selected: string[];
   onChange: (ids: string[]) => void;
+  attached?: AdminQuestion[];
   /** Whole-section recording. Omit both to hide the control (non-Listening sections). */
   audioRef?: string | null;
   onAudioChange?: (key: string | null) => void;
@@ -38,7 +40,7 @@ export function SectionComposer({
           <AudioUpload token={token} value={audioRef ?? null} onChange={onAudioChange} />
         </div>
       )}
-      <QuestionPicker token={token} section={section} selected={selected} onChange={onChange} />
+      <QuestionPicker token={token} bank="Simulation" section={section} selected={selected} onChange={onChange} attached={attached} />
     </section>
   );
 }

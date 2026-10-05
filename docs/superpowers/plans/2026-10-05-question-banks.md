@@ -553,3 +553,14 @@ Rebuild the stack with `docker compose up -d --build api frontend`. As the admin
 - **Spec §3's migration default.** The spec says the migration adds the column with a default of `'SessionTest'`. The plan keeps the generated migration untouched instead (its column default is `""`) and lets the backfill's `NOT IN` clause assign every row. The outcome is the same and the snapshot rule is kept.
 - **Seeders.** Spec §3 has `ProgramSeeder` create Simulation questions, but its final assessment gets its questions from `PlaceholderFinalExamSeeder`'s import, which Task 3 points at `Simulation`. `ProgramSeeder` itself creates no `Question` rows.
 - **Student DTOs** are unchanged (`StudentQuestionDto` has no bank), so the GR-11 tests stay as they are (spec §6 last bullet).
+
+## Deferred follow-ups (from per-task and final reviews, 2026-10-05)
+
+Not blocking merge:
+
+- Task 1: minor (deferred): idempotency assertion weak (CASE deterministic); C# default Simulation hides missed create paths (Task 3 closes import); backfill test leaves rows in shared fixture DB
+- Task 2: minor (deferred): counts test exact +1 (fixture DB per class, ok); no test for move 404 / composition rows unchanged on refusal
+- Task 3: minor (deferred): no mixed-file test (cross-bank + clean row → nothing written); no same-bank Simulation re-import test; using order; seeder re-run on old dev DB could hit cross-bank error (unlikely: placeholder Qs are in Final)
+- Task 4: minor (deferred): import hint not aria-describedby-linked to disabled file input; counts label "…" forever on error; router.replace scrolls to top (use scroll:false); redundant required on radios
+- Task 5: minor (deferred): identical aria-label "Lepas soal dari tes" on every foreign row (plan copy); foreign rows ignore search/section filter (intended)
+- Final review: list endpoint treats an unknown ?bank= as no filter; the leftover DEFAULT '' on questions.bank (an insert omitting bank yields '' and breaks enum reads — re-running QuestionBankBackfill.Sql repairs); cross-bank import rows also counted as updates in the plan; move error shown at page top (not near the row).

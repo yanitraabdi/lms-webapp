@@ -13,8 +13,16 @@ public static class AssessmentAdminEndpoints
 
         // ---- question bank ----
         g.MapGet("/questions", async Task<Ok<IReadOnlyList<AdminQuestionDto>>> (
-                string? section, string? search, IQuestionBankService s, CancellationToken ct) =>
-            TypedResults.Ok(await s.ListAsync(section, search, ct)));
+                string? bank, string? section, string? search, IQuestionBankService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.ListAsync(bank, section, search, ct)));
+
+        g.MapGet("/questions/counts", async Task<Ok<QuestionBankCountsDto>> (
+                IQuestionBankService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.CountsAsync(ct)));
+
+        g.MapPost("/questions/{id:guid}/move", async Task<NoContent> (
+            Guid id, MoveQuestionRequest r, ClaimsPrincipal u, IQuestionBankService s, CancellationToken ct) =>
+        { await s.MoveAsync(u.UserId(), id, r.Bank, ct); return TypedResults.NoContent(); });
 
         g.MapPost("/questions", async Task<Ok<AdminQuestionDto>> (
                 UpsertQuestionRequest r, ClaimsPrincipal u, IQuestionBankService s, CancellationToken ct) =>

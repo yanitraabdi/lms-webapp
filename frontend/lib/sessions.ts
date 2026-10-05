@@ -94,8 +94,13 @@ export const getAttemptResult = (t: string, attemptId: string) =>
 
 // ---- admin: question bank & assessments ----
 
-export const listQuestions = (t: string, q: { section?: string; search?: string } = {}) => {
+export const QUESTION_BANKS = ["Simulation", "SessionTest"] as const;
+export type QuestionBankName = (typeof QUESTION_BANKS)[number];
+export const BANK_LABEL: Record<QuestionBankName, string> = { Simulation: "Simulasi TOEFL", SessionTest: "Tes Sesi" };
+
+export const listQuestions = (t: string, q: { bank?: string; section?: string; search?: string } = {}) => {
   const p = new URLSearchParams();
+  if (q.bank) p.set("bank", q.bank);
   if (q.section) p.set("section", q.section);
   if (q.search) p.set("search", q.search);
   return api<AdminQuestion[]>("GET", `/api/admin/questions?${p}`, t);
@@ -106,6 +111,13 @@ export const updateQuestion = (t: string, id: string, b: UpsertQuestion) =>
   api<void>("PUT", `/api/admin/questions/${id}`, t, b);
 export const deleteQuestion = (t: string, id: string) =>
   api<void>("DELETE", `/api/admin/questions/${id}`, t);
+
+export const moveQuestion = (t: string, id: string, bank: QuestionBankName) =>
+  api<void>("POST", `/api/admin/questions/${id}/move`, t, { bank });
+
+export type QuestionBankCounts = components["schemas"]["QuestionBankCountsDto"];
+export const getQuestionBankCounts = (t: string) =>
+  api<QuestionBankCounts>("GET", "/api/admin/questions/counts", t);
 
 export const listAssessments = (t: string) => api<AdminAssessment[]>("GET", "/api/admin/assessments", t);
 export const getAssessment = (t: string, id: string) => api<AdminAssessment>("GET", `/api/admin/assessments/${id}`, t);
@@ -158,15 +170,17 @@ export async function downloadImportTemplate(token: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export function previewQuestionImport(token: string, file: File): Promise<ImportResult> {
+export function previewQuestionImport(token: string, file: File, bank: QuestionBankName): Promise<ImportResult> {
   const form = new FormData();
   form.append("file", file);
+  form.append("bank", bank);
   return upload<ImportResult>("/api/admin/questions/import/preview", token, form, "Gagal membaca berkas.");
 }
 
-export function commitQuestionImport(token: string, file: File): Promise<ImportResult> {
+export function commitQuestionImport(token: string, file: File, bank: QuestionBankName): Promise<ImportResult> {
   const form = new FormData();
   form.append("file", file);
+  form.append("bank", bank);
   return upload<ImportResult>("/api/admin/questions/import", token, form, "Gagal mengimpor soal.");
 }
 

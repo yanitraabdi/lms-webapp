@@ -108,7 +108,8 @@ public record ParsedQuestion(
     int CorrectIndex,
     string? PassageText,
     string? AudioRef,
-    IReadOnlyList<string> Tags);
+    IReadOnlyList<string> Tags,
+    int RowNumber);
 
 public record ImportParseResult(
     IReadOnlyList<ParsedQuestion> Questions,
@@ -194,7 +195,7 @@ public static class QuestionImportParser
 
             if (errors.Count == errorsBefore)
                 questions.Add(new ParsedQuestion(
-                    externalId, section, prompt, choices, correctIndex, passageText, audioRef, tags));
+                    externalId, section, prompt, choices, correctIndex, passageText, audioRef, tags, row.RowNumber));
         }
 
         return new ImportParseResult(questions, errors);

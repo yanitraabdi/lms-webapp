@@ -71,6 +71,7 @@ public class SessionQuizSeeder(AppDbContext db)
                     Id = Guid.CreateVersion7(),
                     ExternalId = $"PQ-S{i + 1}-{q + 1:00}",
                     Section = quiz.Section,
+                    Bank = QuestionBank.SessionTest,
                     Type = QuestionType.Mcq,
                     Prompt = $"{Marker} {item.Prompt}",
                     Choices = JsonSerializer.Serialize(item.Choices),

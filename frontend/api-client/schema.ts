@@ -4469,6 +4469,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    bank?: string;
                     section?: string;
                     search?: string;
                 };
@@ -4511,6 +4512,80 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["AdminQuestionDto"];
                     };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/questions/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QuestionBankCountsDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/questions/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MoveQuestionRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -4853,6 +4928,8 @@ export interface paths {
                 content: {
                     "multipart/form-data": {
                         file: components["schemas"]["IFormFile"];
+                    } & {
+                        bank?: string;
                     };
                 };
             };
@@ -4894,6 +4971,8 @@ export interface paths {
                 content: {
                     "multipart/form-data": {
                         file: components["schemas"]["IFormFile"];
+                    } & {
+                        bank?: string;
                     };
                 };
             };
@@ -5827,6 +5906,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             section: string;
+            bank: string;
             type: string;
             prompt: string;
             choices: string[];
@@ -6394,6 +6474,9 @@ export interface components {
             /** Format: int32 */
             viewers: number | string;
         };
+        MoveQuestionRequest: {
+            bank: string;
+        };
         MySubscriptionDto: {
             /** Format: uuid */
             id: string;
@@ -6599,6 +6682,12 @@ export interface components {
             /** Format: date-time */
             scheduledAt: null | string;
             liveMode: null | string;
+        };
+        QuestionBankCountsDto: {
+            /** Format: int32 */
+            simulation: number | string;
+            /** Format: int32 */
+            sessionTest: number | string;
         };
         /** @enum {unknown} */
         QuestionSection: "Listening" | "Reading" | "Vocabulary" | "Structure" | "General";
@@ -6997,6 +7086,7 @@ export interface components {
             audioRef: null | string;
             passageRef: null | string;
             tags: null | string[];
+            bank?: null | string;
         };
         UpsertQuizRequest: {
             /** Format: int32 */

@@ -1,3 +1,5 @@
+using Academy.Domain.Enums;
+
 namespace Academy.Application.Assessments;
 
 /// <summary>One planned change. <c>IsUpdate</c> is the line an admin scans before committing —
@@ -23,11 +25,11 @@ public interface IQuestionImportService
     byte[] BuildTemplate();
 
     /// <summary>Parses and validates. Writes nothing, ever.</summary>
-    Task<ImportResultDto> PreviewAsync(Stream file, CancellationToken ct = default);
+    Task<ImportResultDto> PreviewAsync(QuestionBank bank, Stream file, CancellationToken ct = default);
 
     /// <summary>
     /// Re-parses, re-validates, and writes only if the file is entirely clean. Never trusts a
     /// plan the client sends back — the bank may have changed since the preview.
     /// </summary>
-    Task<ImportResultDto> CommitAsync(Guid actor, Stream file, CancellationToken ct = default);
+    Task<ImportResultDto> CommitAsync(Guid actor, QuestionBank bank, Stream file, CancellationToken ct = default);
 }
