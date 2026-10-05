@@ -323,6 +323,24 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
+    // ---- admin review ----
+
+    [Fact]
+    public async Task A_video_test_attempt_appears_in_the_admin_list_filtered_by_program()
+    {
+        // The session is created and the test attached through the admin API, so
+        // program_sessions.assessment_id stays null: the filter must find the test via its part.
+        var c = await EnrolledLearner();
+        var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);
+        await SaveProgress(c.Token, c.Session1, 900, 100m);
+        await TakeTest(c.Token, c.Session1, key, correct: false);
+        var assessmentId = await AssessmentIdFor(c.Session1);
+
+        var list = await AuthedGet<AdminAttemptListDto>($"/api/admin/attempts?programId={c.ProgramId}&take=100", c.Admin);
+
+        Assert.Contains(list.Items, a => a.UserId == c.UserId && a.AssessmentId == assessmentId);
+    }
+
     // ---- admin authoring ----
 
     [Fact]

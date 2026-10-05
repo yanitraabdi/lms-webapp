@@ -113,8 +113,9 @@ public class AdminOperationsService(AppDbContext db) : IAdminOperationsService
 
         if (flaggedOnly == true) q = q.Where(x => x.a.ProctorFlagged);
         if (programId is Guid pid)
-            q = q.Where(x => db.ProgramSessions.Any(
-                s => s.AssessmentId == x.a.AssessmentId && s.ProgramId == pid));
+            // Final tests hang off the session; video tests off a Test part (2026-10-05).
+            q = q.Where(x => db.ProgramSessions.Any(s => s.AssessmentId == x.a.AssessmentId && s.ProgramId == pid)
+                             || db.SessionParts.Any(p => p.AssessmentId == x.a.AssessmentId && p.Session.ProgramId == pid));
 
         var total = await q.CountAsync(ct);
 
