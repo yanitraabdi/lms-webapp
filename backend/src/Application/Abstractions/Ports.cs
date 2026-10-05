@@ -14,13 +14,25 @@ public interface IVideoProvider
 public record PlaybackTicket(string Url, DateTimeOffset ExpiresAt, string? CaptionsUrl = null);
 
 /// <summary>
-/// The video library an admin attaches sessions to. READ-ONLY on purpose: uploads, renames and
-/// deletes happen in Bunny's own dashboard, which is the source of truth for the files.
+/// The video library an admin attaches sessions to: lists videos AND starts uploads (the file goes
+/// browser → Bunny directly). Bunny remains the source of truth for the files; delete and rename
+/// stay in Bunny's dashboard.
 /// </summary>
 public interface IVideoLibrary
 {
     Task<VideoLibraryPageDto> ListAsync(string? search, int page, CancellationToken ct = default);
+
+    /// <summary>Creates an empty Bunny video and returns a signed TUS ticket for it (spec 2026-10-05).
+    /// The file itself never passes through this API. Throws ProgramException 409/502.</summary>
+    Task<UploadTicketDto> CreateUploadAsync(string title, CancellationToken ct = default);
+
+    /// <summary>A fresh ticket for an existing video, for an upload that outlived its ticket.</summary>
+    UploadTicketDto RenewUpload(string videoId);
 }
+
+/// <summary>What the browser needs to upload ONE file straight to Bunny over TUS. Never carries the
+/// API key (GR-9) — the signature is scoped to this video and expires.</summary>
+public record UploadTicketDto(string VideoId, string LibraryId, long ExpiresAt, string Signature, string Endpoint);
 
 /// <summary>One library video. <c>Status</c> is a name ("Finished", "Processing", …), never
 /// Bunny's integer, so the frontend does not depend on Bunny's numbering.</summary>

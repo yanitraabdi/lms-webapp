@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text;
 using Academy.Application.Abstractions;
+using Academy.Application.Programs;
 using Academy.Infrastructure.Learning;
 
 namespace Academy.Integration.Tests;
@@ -54,6 +55,77 @@ public class VideoLibraryTests
     private static BunnyVideoLibrary Library(HttpMessageHandler handler) => new(
         new HttpClient(handler),
         new VideoOptions { Provider = "bunny", LibraryId = LibraryId, ApiKey = "library-api-key" });
+
+    [Fact]
+    public void Signature_is_sha256_hex_of_library_key_expiry_and_video()
+    {
+        // Independently computed: sha256("123456" + "library-api-key" + "1760000000" + "vid-1").
+        var expected = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            Encoding.UTF8.GetBytes("123456library-api-key1760000000vid-1"))).ToLowerInvariant();
+        Assert.Equal(expected, BunnyUploadSigner.Sign("123456", "library-api-key", 1760000000, "vid-1"));
+        Assert.Equal(64, expected.Length);
+    }
+
+    [Fact]
+    public async Task Creating_an_upload_creates_the_video_and_returns_a_signed_ticket()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK,
+            """{"guid":"6f1d2c3b-0000-4000-8000-0000000000aa","title":"Sesi 9","status":0}""");
+        var before = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        var ticket = await Library(handler).CreateUploadAsync("Sesi 9");
+
+        Assert.Equal(HttpMethod.Post, handler.Last!.Method);
+        Assert.Equal($"https://video.bunnycdn.com/library/{LibraryId}/videos", handler.Last.RequestUri!.ToString());
+        Assert.Equal("library-api-key", handler.Last.Headers.GetValues("AccessKey").Single());
+        Assert.Equal("6f1d2c3b-0000-4000-8000-0000000000aa", ticket.VideoId);
+        Assert.Equal(LibraryId, ticket.LibraryId);
+        Assert.Equal("https://video.bunnycdn.com/tusupload", ticket.Endpoint);
+        Assert.InRange(ticket.ExpiresAt, before + 7200 - 5, before + 7200 + 5);
+        Assert.Equal(BunnyUploadSigner.Sign(LibraryId, "library-api-key", ticket.ExpiresAt, ticket.VideoId), ticket.Signature);
+        // GR-9: the key is never part of what the browser receives.
+        Assert.DoesNotContain("library-api-key", JsonSerializer.Serialize(ticket));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, "Bunny menolak kunci API. Periksa BUNNY_API_KEY.")]
+    [InlineData(HttpStatusCode.Forbidden, "Bunny menolak kunci API. Periksa BUNNY_API_KEY.")]
+    [InlineData(HttpStatusCode.InternalServerError, "Bunny membalas 500. Coba lagi.")]
+    public async Task Bunny_refusing_the_create_is_a_502_with_a_reason(HttpStatusCode code, string message)
+    {
+        var e = await Assert.ThrowsAsync<ProgramException>(
+            () => Library(new StubHandler(code, "{}")).CreateUploadAsync("Sesi 9"));
+        Assert.Equal(502, e.StatusCode);
+        Assert.Equal(message, e.Message);
+    }
+
+    [Fact]
+    public async Task Bunny_unreachable_on_create_is_a_502()
+    {
+        var e = await Assert.ThrowsAsync<ProgramException>(
+            () => Library(new ThrowingHandler()).CreateUploadAsync("Sesi 9"));
+        Assert.Equal(502, e.StatusCode);
+        Assert.Equal("Bunny tidak dapat dihubungi. Coba lagi.", e.Message);
+    }
+
+    [Fact]
+    public void Renewing_signs_a_fresh_ticket_for_the_same_video_without_calling_bunny()
+    {
+        var handler = new ThrowingHandler();           // any call would throw
+        var ticket = Library(handler).RenewUpload("6f1d2c3b-0000-4000-8000-0000000000aa");
+        Assert.Equal("6f1d2c3b-0000-4000-8000-0000000000aa", ticket.VideoId);
+        Assert.Equal(BunnyUploadSigner.Sign(LibraryId, "library-api-key", ticket.ExpiresAt, ticket.VideoId), ticket.Signature);
+    }
+
+    [Fact]
+    public async Task Unavailable_library_refuses_uploads_with_409()
+    {
+        var lib = new UnavailableVideoLibrary("dev");
+        var e = await Assert.ThrowsAsync<ProgramException>(() => lib.CreateUploadAsync("x"));
+        Assert.Equal(409, e.StatusCode);
+        Assert.Equal("Unggah video hanya tersedia saat Bunny aktif.", e.Message);
+        Assert.Equal(409, Assert.Throws<ProgramException>(() => lib.RenewUpload("6f1d2c3b-0000-4000-8000-0000000000aa")).StatusCode);
+    }
 
     [Fact]
     public async Task Bunny_videos_are_mapped_with_their_length_and_status()
