@@ -210,8 +210,8 @@ Create `QuestionBankRulesTests.cs` with the admin-token, `PostJson` and `Authed`
    - A `SessionTest` question in a Gating test: move to Simulation returns 409 with the tes-sesi message.
 7. `Moving_an_unused_question_changes_its_bank_and_is_audited`: returns 204. A GET list with the new bank contains it, and an `audit_logs` row with action `question_moved` exists.
 8. `Moving_to_the_same_bank_is_a_no_op`: returns 204, and the bank is unchanged.
-10. `Counts_are_per_bank`: create one question in each bank, then `GET /api/admin/questions/counts`. Both counts went up by exactly 1 compared with a read taken before the creates.
 9. `Updating_a_question_never_changes_its_bank`: PUT `/api/admin/questions/{id}` with `bank = "Simulation"` on a SessionTest question leaves it `SessionTest`.
+10. `Counts_are_per_bank`: create one question in each bank, then `GET /api/admin/questions/counts`. Both counts went up by exactly 1 compared with a read taken before the creates.
 
 Run: `dotnet test backend/tests/Integration.Tests --filter QuestionBankRulesTests`. Expected: compile failure or failures.
 
