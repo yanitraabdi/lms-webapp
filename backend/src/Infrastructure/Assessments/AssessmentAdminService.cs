@@ -81,6 +81,13 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (config.PassThreshold is int mark && mark < 1)
             throw new AssessmentException(
                 "Skor lulus minimal 1. Kosongkan jika tes ini tidak memiliki batas lulus.");
+
+        if (config.DiscussionAfterFailures is int n && n < 1)
+            throw new AssessmentException(
+                "Video pembahasan terbuka minimal setelah 1 kali gagal. Kosongkan jika hanya terbuka setelah lulus.");
+
+        if (config.AudioPlayLimit is int plays && plays < 1)
+            throw new AssessmentException("Batas pemutaran audio minimal 1.");
     }
 
     /// <summary>

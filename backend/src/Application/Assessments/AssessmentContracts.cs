@@ -65,7 +65,12 @@ public record StudentAssessmentDto(
     int? RetakeCap, int AttemptsUsed, bool CanAttempt,
     bool Passed, int? BestScore,
     bool ProctoringEnabled, int? TimeLimitMinutes,
-    IReadOnlyList<StudentQuestionDto> Questions);
+    IReadOnlyList<StudentQuestionDto> Questions,
+    bool HasTestAudio, int? TestAudioPlayLimit);
+
+public record TestAudioDto(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow, int PlaysUsed, int PlayLimit);
+
+public record StartTestAudioRequest(bool Replay);
 
 public record AttemptDto(
     Guid Id, Guid AssessmentId, DateTimeOffset StartedAt, DateTimeOffset? SubmittedAt,
@@ -109,6 +114,10 @@ public interface IAssessmentService
     /// </summary>
     Task<string> GetGatingAudioUrlAsync(
         Guid userId, Guid sessionId, Guid partId, Guid questionId, CancellationToken ct = default);
+
+    /// <summary>Starts or resumes the shared recording of a session test for the open attempt.
+    /// replay=true starts a NEW play if the per-attempt limit (audioPlayLimit ?? 1) allows.</summary>
+    Task<TestAudioDto> StartTestAudioAsync(Guid userId, Guid sessionId, Guid partId, bool replay, CancellationToken ct = default);
 }
 
 // ---------------------------------------------------------------- admin DTOs

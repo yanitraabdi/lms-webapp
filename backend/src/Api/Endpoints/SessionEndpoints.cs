@@ -46,6 +46,13 @@ public static class SessionEndpoints
             TypedResults.Ok(new GatingAudioResponse(await s.GetGatingAudioUrlAsync(u.UserId(), id, partId, questionId, ct))))
             .RequireRateLimiting("playback");
 
+        // One recording for the whole test: stamped by the server, resumed on reload, replayed only
+        // within the per-attempt limit.
+        p.MapPost("/audio", async Task<Ok<TestAudioDto>> (
+                Guid id, Guid partId, StartTestAudioRequest r, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.StartTestAudioAsync(u.UserId(), id, partId, r.Replay, ct)))
+            .RequireRateLimiting("playback");
+
         // ---- attempts ----
         var a = app.MapGroup("/api").RequireAuthorization().WithTags("Assessments");
 

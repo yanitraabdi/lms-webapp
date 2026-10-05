@@ -51,9 +51,48 @@ public class AssessmentService(
 
         // A question's own clip wins; otherwise a section recording, if the test has one.
         var storageKey = AudioResolution.StorageKey(question.AudioRef, question.Section, config)
-            ?? throw new AssessmentException("Soal ini tidak memiliki audio.", 400);
+            ?? throw new AssessmentException(
+                string.IsNullOrWhiteSpace(config.AudioRef)
+                    ? "Soal ini tidak memiliki audio."
+                    : "Audio tes ini diputar sekali untuk seluruh soal.", 400);
 
         return signer.Sign(storageKey);
+    }
+
+    public async Task<TestAudioDto> StartTestAudioAsync(
+        Guid userId, Guid sessionId, Guid partId, bool replay, CancellationToken ct = default)
+    {
+        var part = await access.EnsurePartAccessAsync(userId, sessionId, partId, ct);
+        var assessmentId = part.AssessmentId ?? throw new AssessmentException("Bagian ini bukan tes.", 400);
+        var config = ParseConfig(await db.Assessments.Where(a => a.Id == assessmentId).Select(a => a.Config).FirstAsync(ct));
+        if (string.IsNullOrWhiteSpace(config.AudioRef))
+            throw new AssessmentException("Tes ini tidak memiliki audio.", 400);
+
+        // Plays are charged to the open attempt, so a retake starts with fresh plays.
+        var attempt = await db.Attempts.FirstOrDefaultAsync(
+                a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null, ct)
+            ?? throw new AssessmentException("Mulai tes terlebih dahulu.", 409);
+
+        var state = AttemptState.Parse(attempt.State);
+        var limit = config.AudioPlayLimit ?? 1;
+        state.AudioPlays.TryGetValue(AttemptState.TestAudioKey, out var used);
+        var now = DateTimeOffset.UtcNow;
+
+        if (state.TestAudioStartedAt is null || replay)
+        {
+            if (used >= limit)
+                throw new AssessmentException("Audio sudah diputar sebanyak batas yang diizinkan.", 409);
+            state.TestAudioStartedAt = now;
+            state.AudioPlays[AttemptState.TestAudioKey] = ++used;
+            attempt.State = state.Serialize();
+            await db.SaveChangesAsync(ct);
+        }
+
+        // ponytail: read-modify-write on attempts.state with no concurrency token — two replay
+        // requests racing can both pass the limit check (one extra play). Same as the final's
+        // section audio; acceptable for deterrence. Add an xmin concurrency token if it matters.
+        // Signed, short-TTL, minted per request (GR-3). Deterrence, not a guarantee (GR-14).
+        return new TestAudioDto(signer.Sign(config.AudioRef), state.TestAudioStartedAt!.Value, now, used, limit);
     }
 
     public async Task<StudentAssessmentDto> GetForPartAsync(
@@ -213,7 +252,9 @@ public class AssessmentService(
             config.RetakeCap, used, canAttempt,
             passed, attempts.Count > 0 ? attempts.Max(a => a.TotalScore) : null,
             config.ProctoringEnabled, config.TimeLimitMinutes,
-            questions);
+            questions,
+            !string.IsNullOrWhiteSpace(config.AudioRef),
+            string.IsNullOrWhiteSpace(config.AudioRef) ? null : config.AudioPlayLimit ?? 1);
     }
 
     private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)

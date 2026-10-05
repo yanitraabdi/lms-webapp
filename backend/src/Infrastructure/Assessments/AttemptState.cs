@@ -14,6 +14,12 @@ internal class AttemptState
     public int CurrentIndex { get; set; }
     public Dictionary<string, int> AudioPlays { get; set; } = [];
 
+    /// <summary>Start of the CURRENT play of a session test's shared recording — server-stamped.
+    /// A reload resumes at now minus this; only an explicit replay (within the limit) re-stamps it.</summary>
+    public DateTimeOffset? TestAudioStartedAt { get; set; }
+
+    public const string TestAudioKey = "test";
+
     public SectionState? Current =>
         CurrentIndex >= 0 && CurrentIndex < Sections.Count ? Sections[CurrentIndex] : null;
 
