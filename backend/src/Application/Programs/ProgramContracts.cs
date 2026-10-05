@@ -1,5 +1,6 @@
 // INVERTA M2 — program, enrollment and session-access contracts (KAK §9.3–§9.4, §9.14).
 using Academy.Application.Billing;
+using Academy.Domain.Entities;
 using Academy.Domain.Enums;
 
 namespace Academy.Application.Programs;
@@ -95,6 +96,12 @@ public interface ISessionAccessService
 
     /// <summary>Same check, but throws <see cref="ProgramException"/> (403) instead of returning false.</summary>
     Task EnsureAccessAsync(Guid userId, Guid sessionId, CancellationToken ct = default);
+
+    /// <summary>The session gate AND the part is not Locked (spec 2026-10-05 §5).</summary>
+    Task<bool> CanAccessPartAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default);
+
+    /// <summary>Same check; throws 404 if the part is not in this session, 403 if locked. Returns the part.</summary>
+    Task<SessionPart> EnsurePartAccessAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default);
 }
 
 /// <summary>
