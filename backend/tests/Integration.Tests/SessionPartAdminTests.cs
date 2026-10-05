@@ -181,9 +181,69 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         await AssertError(await PutParts(c.Admin, c.Session1, Test(a1)), HttpStatusCode.Conflict,
             "tidak bisa dihapus karena sudah memiliki progres peserta");
 
-        var res = await PutParts(c.Admin, c.Session1, Lesson(l, "Judul baru"), Test(a1));
+        var res = await PutParts(c.Admin, c.Session1,
+            new { id = (Guid?)l, kind = "LessonVideo", title = "Judul baru", providerAssetId = "video-baru", durationSeconds = 70, assessmentId = (Guid?)null },
+            Test(a1));
         res.EnsureSuccessStatusCode();
-        Assert.Equal("Judul baru", (await ListParts(c.Admin, c.Session1))[0].Title);
+        var first = (await ListParts(c.Admin, c.Session1))[0];
+        Assert.Equal("Judul baru", first.Title);
+        Assert.Equal("video-baru", first.ProviderAssetId);
+    }
+
+    [Fact]
+    public async Task A_stray_assessment_id_on_a_video_part_is_ignored()
+    {
+        var c = await EnrolledLearner();
+        var l = await Lesson1(c.Session1);
+        var a1 = (await NewAssessment()).Id;
+        var res = await PutParts(c.Admin, c.Session1,
+            new { id = (Guid?)l, kind = "LessonVideo", title = "Materi", providerAssetId = "sample", durationSeconds = 60, assessmentId = (Guid?)a1 },
+            Test(a1));
+        res.EnsureSuccessStatusCode();
+        var saved = await ListParts(c.Admin, c.Session1);
+        Assert.Null(saved[0].AssessmentId);
+        Assert.Equal(a1, saved[1].AssessmentId);
+    }
+
+    [Fact]
+    public async Task Changing_the_kind_of_a_part_with_progress_is_refused()
+    {
+        var c = await EnrolledLearner();
+        var l = await Lesson1(c.Session1);
+        await WithDb(async db =>
+        {
+            db.WatchProgress.Add(new WatchProgress
+            {
+                Id = Guid.CreateVersion7(), UserId = c.UserId, SessionId = c.Session1, PartId = l,
+                PercentComplete = 50, LastWatchedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+        // Discussion must follow a test, so put a test first; the lesson part (same id) turns into a discussion.
+        var a1 = (await NewAssessment()).Id;
+        await AssertError(await PutParts(c.Admin, c.Session1, Test(a1),
+                new { id = (Guid?)l, kind = "Discussion", title = "x", providerAssetId = "sample", durationSeconds = 60, assessmentId = (Guid?)null }),
+            HttpStatusCode.Conflict, "tidak bisa diubah karena sudah memiliki progres peserta");
+    }
+
+    [Fact]
+    public async Task Changing_the_test_of_a_part_with_attempts_is_refused()
+    {
+        var c = await EnrolledLearner();
+        var a1 = await NewAssessment(); var a2 = (await NewAssessment()).Id;
+        var parts = (await (await PutParts(c.Admin, c.Session1, Lesson(await Lesson1(c.Session1)), Test(a1.Id)))
+            .Content.ReadFromJsonAsync<List<AdminSessionPartDto>>(Json))!;
+        await WithDb(async db =>
+        {
+            db.Attempts.Add(new Attempt
+            {
+                Id = Guid.CreateVersion7(), UserId = c.UserId, AssessmentId = a1.Id,
+                StartedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        });
+        await AssertError(await PutParts(c.Admin, c.Session1, Lesson(parts[0].Id), Test(a2, parts[1].Id)),
+            HttpStatusCode.Conflict, "tidak bisa diubah karena sudah memiliki progres peserta");
     }
 
     [Fact]

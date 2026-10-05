@@ -107,7 +107,11 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video) : ISes
             throw new ProgramException("Jenis bagian tidak dikenal.", 400);
         if (string.IsNullOrWhiteSpace(r.Title))
             throw new ProgramException("Judul bagian wajib diisi.", 400);
-        return new Input(r.Id, kind, r.Title.Trim(), r.ProviderAssetId?.Trim(), r.DurationSeconds, r.AssessmentId);
+        // Fields that don't belong to the kind are dropped here so no later check sees them.
+        var isTest = kind == SessionPartKind.Test;
+        return new Input(r.Id, kind, r.Title.Trim(),
+            isTest ? null : r.ProviderAssetId?.Trim(), isTest ? null : r.DurationSeconds,
+            isTest ? r.AssessmentId : null);
     }
 
     private async Task ValidateShapeAsync(Guid sessionId, List<Input> inputs, CancellationToken ct)
