@@ -142,7 +142,14 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
         var (configJson, config) = Resolve(a.Config, req);
         ValidateAgainstQuestions(config, await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == id, ct));
-        a.Kind = Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) ? k : a.Kind;
+        if (Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) && k != a.Kind)
+        {
+            // The kind decides which question bank the test may draw from; changing it under existing questions breaks that.
+            if (await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == id, ct)
+                || await db.Attempts.AnyAsync(x => x.AssessmentId == id, ct))
+                throw new AssessmentException("Jenis tes tidak bisa diubah setelah tes memiliki soal.", 400);
+            a.Kind = k;
+        }
         a.Title = req.Title.Trim();
         a.Config = configJson;
         Audit(actor, "assessment_updated", id, new { a.Title, config.PassThreshold, config.RetakeCap });

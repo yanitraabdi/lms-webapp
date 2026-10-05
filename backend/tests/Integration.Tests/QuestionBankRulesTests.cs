@@ -113,6 +113,28 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     [Fact]
+    public async Task A_kind_change_is_refused_once_the_test_has_questions()
+    {
+        var admin = await AdminToken();
+        var q = await NewQuestion(admin, "SessionTest");
+        var a = await NewAssessment(admin, "Gating");
+        await Attach(a, q.Id);
+        object Body(string kind) => new
+        {
+            kind, title = "Tes",
+            config = new { passThreshold = 1, retakeCap = (int?)null, proctoringEnabled = false, sections = Array.Empty<object>() },
+        };
+
+        var res = await Authed(HttpMethod.Put, $"/api/admin/assessments/{a}", admin, Body("Final"));
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("Jenis tes tidak bisa diubah setelah tes memiliki soal.", await res.Content.ReadAsStringAsync());
+        Assert.Equal("Gating", (await WithDbResult(db => db.Assessments.Where(x => x.Id == a).Select(x => x.Kind.ToString()).FirstAsync())));
+
+        var same = await Authed(HttpMethod.Put, $"/api/admin/assessments/{a}", admin, Body("Gating"));
+        Assert.True(same.IsSuccessStatusCode);
+    }
+
+    [Fact]
     public async Task Moving_is_refused_while_a_test_of_the_other_kind_uses_it()
     {
         var admin = await AdminToken();

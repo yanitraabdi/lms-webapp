@@ -54,6 +54,7 @@ function QuestionBank() {
   function refresh() {
     qc.invalidateQueries({ queryKey: ["admin-questions"] });
     qc.invalidateQueries({ queryKey: ["question-bank-counts"] });
+    qc.invalidateQueries({ queryKey: ["picker-questions"] });
   }
 
   async function remove(q: AdminQuestion) {
@@ -86,12 +87,12 @@ function QuestionBank() {
             key={b}
             type="button"
             aria-pressed={b === bank}
-            onClick={() => { setPageError(null); router.replace(`?bank=${b}`); }}
+            onClick={() => { setPageError(null); router.replace(`?bank=${b}`, { scroll: false }); }}
             className={`rounded-sm border px-3 py-2 text-[13px] font-bold outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
               b === bank ? "border-primary bg-primary text-primary-ink" : "border-border bg-surface text-ink hover:bg-surface-2"
             }`}
           >
-            {BANK_LABEL[b]} ({countOf(b) ?? "…"})
+            {BANK_LABEL[b]} ({countOf(b) ?? (counts.isError ? "–" : "…")})
           </button>
         ))}
       </div>

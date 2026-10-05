@@ -84,7 +84,7 @@ export function QuestionPicker({
               </span>
               <button
                 type="button"
-                aria-label="Lepas soal dari tes"
+                aria-label={`Lepas soal dari tes: ${x.prompt.slice(0, 60)}`}
                 onClick={() => release(x.id)}
                 className="shrink-0 rounded-sm border border-border px-2.5 py-1 text-[12px] font-bold text-ink hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               >

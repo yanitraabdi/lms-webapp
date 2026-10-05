@@ -51,6 +51,7 @@ export default function QuestionImportPage() {
       if (next.committed) {
         qc.invalidateQueries({ queryKey: ["admin-questions"] });
         qc.invalidateQueries({ queryKey: ["question-bank-counts"] });
+        qc.invalidateQueries({ queryKey: ["picker-questions"] });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memproses berkas.");
