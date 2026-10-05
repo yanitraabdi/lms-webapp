@@ -54,9 +54,15 @@ export function SessionForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [partsDirty, setPartsDirty] = useState(false);
+  const [partsUploading, setPartsUploading] = useState(false);
 
   function close() {
-    if (partsDirty && !confirm("Perubahan pada daftar bagian belum disimpan. Tutup tanpa menyimpan?")) return;
+    // A running upload is the bigger loss, so its warning wins when both apply.
+    if (partsUploading) {
+      if (!confirm("Unggahan video sedang berjalan dan akan dihentikan. Tutup?")) return;
+    } else if (partsDirty && !confirm("Perubahan pada daftar bagian belum disimpan. Tutup tanpa menyimpan?")) {
+      return;
+    }
     onClose();
   }
 
@@ -128,7 +134,8 @@ export function SessionForm({
         </Field>
 
         {type === "Video" && (editing ? (
-          <SessionPartsEditor token={token} sessionId={session.id} onDirtyChange={setPartsDirty} />
+          <SessionPartsEditor token={token} sessionId={session.id} onDirtyChange={setPartsDirty}
+            onUploadingChange={setPartsUploading} />
         ) : (
           <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
             Simpan sesi terlebih dahulu, lalu tambahkan video dan tes pada daftar bagian.

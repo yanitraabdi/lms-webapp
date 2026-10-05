@@ -77,6 +77,17 @@ public static class ProgramAdminEndpoints
             TypedResults.Ok(await library.ListAsync(search, page ?? 1, ct)))
             .RequireRateLimiting("media");
 
+        // Upload straight to Bunny: this mints the video + a short-lived signed ticket; the browser
+        // sends the file to Bunny over TUS. The file never crosses this API or the tunnel (spec D2).
+        g.MapPost("/video-library/uploads", async Task<Ok<UploadTicketDto>> (
+                CreateVideoUploadRequest r, ClaimsPrincipal u, IVideoUploadService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.StartAsync(u.UserId(), r.Title, ct)))
+            .RequireRateLimiting("media");
+
+        g.MapPost("/video-library/uploads/{videoId}/ticket", Ok<UploadTicketDto> (string videoId, IVideoUploadService s) =>
+            TypedResults.Ok(s.Renew(videoId)))
+            .RequireRateLimiting("media");
+
         // ---- batches ----
         g.MapGet("/programs/{programId:guid}/batches", async Task<Ok<IReadOnlyList<AdminBatchDto>>> (
                 Guid programId, IProgramAdminService s, CancellationToken ct) =>

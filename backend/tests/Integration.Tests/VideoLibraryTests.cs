@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text;
 using Academy.Application.Abstractions;
+using Academy.Application.Programs;
 using Academy.Infrastructure.Learning;
 
 namespace Academy.Integration.Tests;
@@ -54,6 +55,76 @@ public class VideoLibraryTests
     private static BunnyVideoLibrary Library(HttpMessageHandler handler) => new(
         new HttpClient(handler),
         new VideoOptions { Provider = "bunny", LibraryId = LibraryId, ApiKey = "library-api-key" });
+
+    [Fact]
+    public void Signature_is_sha256_hex_of_library_key_expiry_and_video()
+    {
+        // Known answer, computed outside .NET:
+        //   printf '%s' '123456library-api-key1760000000vid-1' | shasum -a 256
+        const string expected = "4a5d0ddda96b1cc84c6671fde885eb29b358803ad7ae23621dc213bf04bb7ba4";
+        Assert.Equal(expected, BunnyUploadSigner.Sign("123456", "library-api-key", 1760000000, "vid-1"));
+    }
+
+    [Fact]
+    public async Task Creating_an_upload_creates_the_video_and_returns_a_signed_ticket()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK,
+            """{"guid":"6f1d2c3b-0000-4000-8000-0000000000aa","title":"Sesi 9","status":0}""");
+        var before = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        var ticket = await Library(handler).CreateUploadAsync("Sesi 9");
+
+        Assert.Equal(HttpMethod.Post, handler.Last!.Method);
+        Assert.Equal($"https://video.bunnycdn.com/library/{LibraryId}/videos", handler.Last.RequestUri!.ToString());
+        Assert.Equal("library-api-key", handler.Last.Headers.GetValues("AccessKey").Single());
+        Assert.Equal("6f1d2c3b-0000-4000-8000-0000000000aa", ticket.VideoId);
+        Assert.Equal(LibraryId, ticket.LibraryId);
+        Assert.Equal("https://video.bunnycdn.com/tusupload", ticket.Endpoint);
+        Assert.InRange(ticket.ExpiresAt, before + 7200 - 5, before + 7200 + 5);
+        Assert.Equal(BunnyUploadSigner.Sign(LibraryId, "library-api-key", ticket.ExpiresAt, ticket.VideoId), ticket.Signature);
+        // GR-9: the key is never part of what the browser receives.
+        Assert.DoesNotContain("library-api-key", JsonSerializer.Serialize(ticket));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, "Bunny menolak kunci API. Periksa BUNNY_API_KEY.")]
+    [InlineData(HttpStatusCode.Forbidden, "Bunny menolak kunci API. Periksa BUNNY_API_KEY.")]
+    [InlineData(HttpStatusCode.InternalServerError, "Bunny membalas 500. Coba lagi.")]
+    public async Task Bunny_refusing_the_create_is_a_502_with_a_reason(HttpStatusCode code, string message)
+    {
+        var e = await Assert.ThrowsAsync<ProgramException>(
+            () => Library(new StubHandler(code, "{}")).CreateUploadAsync("Sesi 9"));
+        Assert.Equal(502, e.StatusCode);
+        Assert.Equal(message, e.Message);
+    }
+
+    [Fact]
+    public async Task Bunny_unreachable_on_create_is_a_502()
+    {
+        var e = await Assert.ThrowsAsync<ProgramException>(
+            () => Library(new ThrowingHandler()).CreateUploadAsync("Sesi 9"));
+        Assert.Equal(502, e.StatusCode);
+        Assert.Equal("Bunny tidak dapat dihubungi. Coba lagi.", e.Message);
+    }
+
+    [Fact]
+    public void Renewing_signs_a_fresh_ticket_for_the_same_video_without_calling_bunny()
+    {
+        var handler = new ThrowingHandler();           // any call would throw
+        var ticket = Library(handler).RenewUpload("6f1d2c3b-0000-4000-8000-0000000000aa");
+        Assert.Equal("6f1d2c3b-0000-4000-8000-0000000000aa", ticket.VideoId);
+        Assert.Equal(BunnyUploadSigner.Sign(LibraryId, "library-api-key", ticket.ExpiresAt, ticket.VideoId), ticket.Signature);
+    }
+
+    [Fact]
+    public async Task Unavailable_library_refuses_uploads_with_409()
+    {
+        var lib = new UnavailableVideoLibrary("dev");
+        var e = await Assert.ThrowsAsync<ProgramException>(() => lib.CreateUploadAsync("x"));
+        Assert.Equal(409, e.StatusCode);
+        Assert.Equal("Unggah video hanya tersedia saat Bunny aktif.", e.Message);
+        Assert.Equal(409, Assert.Throws<ProgramException>(() => lib.RenewUpload("6f1d2c3b-0000-4000-8000-0000000000aa")).StatusCode);
+    }
 
     [Fact]
     public async Task Bunny_videos_are_mapped_with_their_length_and_status()
@@ -183,6 +254,82 @@ public class VideoLibraryEndpointTests(AuthApiFactory factory) : IClassFixture<A
         var page = (await res.Content.ReadFromJsonAsync<VideoLibraryPageDto>(Json))!;
         Assert.Empty(page.Items);
         Assert.False(string.IsNullOrWhiteSpace(page.Unavailable));
+    }
+
+    [Fact]
+    public async Task Upload_routes_require_an_admin()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await _client.PostAsJsonAsync("/api/admin/video-library/uploads", new { title = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Post("/api/admin/video-library/uploads", await Token(UserRole.User), new { title = "x" })).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("  ")]
+    [InlineData(null)]
+    public async Task An_empty_title_is_400(string? title) => await AssertBadTitle(title);
+
+    [Fact]
+    public async Task An_overlong_title_is_400() => await AssertBadTitle(new string('a', 201));
+
+    private async Task AssertBadTitle(string? title)
+    {
+        var res = await Post("/api/admin/video-library/uploads", await Token(UserRole.Admin), new { title });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("Judul video wajib diisi (maksimal 200 karakter).", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Upload_on_the_dev_provider_is_409()
+    {
+        var res = await Post("/api/admin/video-library/uploads", await Token(UserRole.Admin), new { title = "Sesi 9" });
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Contains("Unggah video hanya tersedia saat Bunny aktif.", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Renew_with_a_non_guid_is_400_and_a_guid_hits_the_dev_409()
+    {
+        var token = await Token(UserRole.Admin);
+        var bad = await Post("/api/admin/video-library/uploads/not-a-guid/ticket", token, null);
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Contains("ID video tidak valid.", await bad.Content.ReadAsStringAsync());
+
+        var ok = await Post($"/api/admin/video-library/uploads/{Guid.NewGuid()}/ticket", token, null);
+        Assert.Equal(HttpStatusCode.Conflict, ok.StatusCode);
+    }
+
+    [Fact]
+    public async Task Starting_an_upload_is_audited()
+    {
+        var handler = new StubHandler(HttpStatusCode.OK, """{"guid":"6f1d2c3b-0000-4000-8000-0000000000aa"}""");
+        var lib = new BunnyVideoLibrary(new HttpClient(handler),
+            new VideoOptions { Provider = "bunny", LibraryId = "123456", ApiKey = "library-api-key" });
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var email = $"vl{Guid.NewGuid():N}@test.local";
+        (await _client.PostAsJsonAsync("/api/auth/register", new { name = "VL", email, password = Pw })).EnsureSuccessStatusCode();
+        var admin = await db.Users.FirstAsync(x => x.Email == email);
+
+        var ticket = await new VideoUploadService(lib, db).StartAsync(admin.Id, "Sesi 9");
+
+        Assert.True(await db.AuditLogs.AnyAsync(a => a.Action == "video_upload_started" && a.Target == ticket.VideoId));
+    }
+
+    private sealed class StubHandler(HttpStatusCode code, string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => Task.FromResult(new HttpResponseMessage(code) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+    }
+
+    private Task<HttpResponseMessage> Post(string url, string token, object? body)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, url)
+        { Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) } };
+        if (body is not null) req.Content = JsonContent.Create(body);
+        return _client.SendAsync(req);
     }
 
     private Task<HttpResponseMessage> Get(string url, string token)

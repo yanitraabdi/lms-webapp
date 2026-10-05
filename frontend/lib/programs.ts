@@ -100,6 +100,14 @@ export const listSessionParts = (t: string, sessionId: string) =>
 export const saveSessionParts = (t: string, sessionId: string, parts: SessionPartInput[]) =>
   api<AdminSessionPart[]>("PUT", `/api/admin/sessions/${sessionId}/parts`, t, { parts });
 
+export type UploadTicket = components["schemas"]["UploadTicketDto"];
+
+export const startVideoUpload = (t: string, title: string) =>
+  api<UploadTicket>("POST", "/api/admin/video-library/uploads", t, { title });
+
+export const renewVideoUpload = (t: string, videoId: string) =>
+  api<UploadTicket>("POST", `/api/admin/video-library/uploads/${videoId}/ticket`, t);
+
 /** The Bunny library, for the session form's picker. Admin-only; the API key never leaves the
  *  server. `unavailable` is set — and `items` empty — when there is no list to show. */
 export const listVideoLibrary = (t: string, search: string, page = 1) =>

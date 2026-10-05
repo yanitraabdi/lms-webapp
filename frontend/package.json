@@ -17,7 +17,8 @@
     "next": "15.1.6",
     "next-intl": "^3.26.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tus-js-client": "^4.3.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -516,3 +516,12 @@ This uploads a small real file to the Bunny library, so do it with the PO watchi
 
 - **The renew route never calls Bunny** (spec §3). It only re-signs for a GUID-shaped id, so a forged id gets a ticket that Bunny rejects; no harm, and no lookup cost.
 - **The spec says `Unavailable` hides the button.** The plan renders the uploader only when the list has data without `unavailable`, and the server's 409 backs that up.
+
+## Deferred follow-ups (from per-task and final reviews, 2026-10-05)
+
+Not blocking merge:
+
+- Task 1: minor (deferred): create test doesn't assert request body {"title"}; class summary still says "every failure becomes Unavailable" (create path throws 502); signature test recomputes formula rather than fixed hex vector
+- Task 2: minor (deferred): audit test doesn't assert Metadata title; orphan Bunny video if SaveChanges fails after create (acceptable)
+- Task 3: minor (deferred): deleted-video resume fails once then self-heals (tus drops fingerprint on 4xx); uploader unmounts (aborting) if the list query errors/unavailable mid-upload or row kind changes; resume picks first stored entry not newest; beforeunload without returnValue; no loading cue with keepPreviousData; empty stored title would block start
+- Final review: renew signs a ticket for any GUID, including finished videos (admins trusted; consider auditing renew or only signing videos in Created status); no 'Mulai dari awal' to drop a resumable entry; retryDelays give up after ~43s offline; UploadTicketDto.Endpoint unused by the client; focus not moved into/back from the inline test editor.
