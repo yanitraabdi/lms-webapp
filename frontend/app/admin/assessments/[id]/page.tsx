@@ -126,6 +126,7 @@ export default function AssessmentComposerPage() {
               section={name}
               required={num(s.questions ?? 0)}
               selected={bySection[name] ?? []}
+              attached={q.data.questions}
               onChange={(ids) => { setSaved(false); setBySection((b) => ({ ...b, [name]: ids })); }}
               {...(name === "Listening"
                 ? {

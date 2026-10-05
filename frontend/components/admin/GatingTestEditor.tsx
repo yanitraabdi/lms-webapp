@@ -7,7 +7,7 @@ import { QuestionPicker } from "@/components/admin/QuestionPicker";
 import {
   getAssessment, createAssessment, updateAssessment,
   setAssessmentQuestions, attachAssessment, uploadAudio, num,
-  type AssessmentConfig,
+  type AssessmentConfig, type AdminQuestion,
 } from "@/lib/sessions";
 
 type SectionRow = {
@@ -53,6 +53,7 @@ export function GatingTestEditor({
   const [passThreshold, setPassThreshold] = useState(1);
   const [retakeCap, setRetakeCap] = useState(isFinal ? "1" : "");   // blank = unlimited
   const [selected, setSelected] = useState<string[]>([]);
+  const [attachedQuestions, setAttachedQuestions] = useState<AdminQuestion[]>([]);
   const [sections, setSections] = useState<SectionRow[]>(DEFAULT_SECTIONS);
   const [audioRef, setAudioRef] = useState<string | null>(null);
   const [playLimit, setPlayLimit] = useState("1");
@@ -71,6 +72,7 @@ export function GatingTestEditor({
         setPassThreshold(num(a.config.passThreshold ?? 1));
         setRetakeCap(a.config.retakeCap == null ? "" : String(num(a.config.retakeCap)));
         setSelected(a.questions.map((q) => q.id));
+        setAttachedQuestions(a.questions);
         setAudioRef(a.config.audioRef ?? null);
         setPlayLimit(a.config.audioPlayLimit == null ? "1" : String(num(a.config.audioPlayLimit)));
         setDiscussionAfter(a.config.discussionAfterFailures == null ? "" : String(num(a.config.discussionAfterFailures)));
@@ -337,7 +339,7 @@ export function GatingTestEditor({
         <div>
           <span className="text-[12px] font-bold text-ink-muted">Soal</span>
           <div className="mt-1">
-            <QuestionPicker token={token} selected={selected} onChange={setSelected} />
+            <QuestionPicker token={token} bank="SessionTest" attached={attachedQuestions} selected={selected} onChange={setSelected} />
           </div>
         </div>
       )}
