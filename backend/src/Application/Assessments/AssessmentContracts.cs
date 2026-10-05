@@ -84,8 +84,8 @@ public record AttemptResultDto(
 
 public interface IAssessmentService
 {
-    /// <summary>The session's assessment, without answers. Null when the session has none.</summary>
-    Task<StudentAssessmentDto?> GetForSessionAsync(Guid userId, Guid sessionId, CancellationToken ct = default);
+    /// <summary>The test of a Test part, without answers (GR-11).</summary>
+    Task<StudentAssessmentDto> GetForPartAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default);
 
     /// <summary>Starts an attempt. StartedAt is SERVER-stamped and the retake cap is enforced here (GR-12).</summary>
     Task<AttemptDto> StartAttemptAsync(Guid userId, Guid assessmentId, CancellationToken ct = default);
@@ -108,7 +108,7 @@ public interface IAssessmentService
     /// fail, retry, hear it again. So there is deliberately no limit here.
     /// </summary>
     Task<string> GetGatingAudioUrlAsync(
-        Guid userId, Guid sessionId, Guid questionId, CancellationToken ct = default);
+        Guid userId, Guid sessionId, Guid partId, Guid questionId, CancellationToken ct = default);
 }
 
 // ---------------------------------------------------------------- admin DTOs

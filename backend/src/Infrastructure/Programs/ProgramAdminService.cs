@@ -156,9 +156,8 @@ public class ProgramAdminService(
                 Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = createTest,
             });
         }
-        // session.AssessmentId is still WRITTEN here (dual-write): until Task 4 switches the
-        // readers to parts, completion and the session test route read this column. Task 4 stops
-        // writing it for video sessions.
+        // A video's test lives on its Test part; only live/final sessions keep the session column.
+        if (session.Type == SessionType.Video) session.AssessmentId = null;
         Audit(actor, "session_created", session.Id, new { programId, session.Title, Type = session.Type.ToString() });
         await SaveSessionsAsync(programId, ct);
         return MapSession(session);
@@ -298,11 +297,17 @@ public class ProgramAdminService(
                 sessions.Count == 0 ? "Belum ada sesi pada program ini." : null),
         };
 
-        // Every attached assessment must actually have questions.
+        // Every attached assessment must actually have questions — on the session (live/final) or on
+        // a Test part (video, since 2026-10-05).
+        var partTests = await db.SessionParts
+            .Where(p => p.Session.ProgramId == programId && p.AssessmentId != null)
+            .Select(p => new { p.Session.Title, p.AssessmentId })
+            .ToListAsync(ct);
         var empty = new List<string>();
-        foreach (var s in sessions.Where(s => s.AssessmentId != null))
-            if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == s.AssessmentId, ct))
-                empty.Add(s.Title);
+        foreach (var t in sessions.Where(s => s.AssessmentId != null)
+                     .Select(s => new { s.Title, s.AssessmentId }).Concat(partTests))
+            if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == t.AssessmentId, ct))
+                empty.Add(t.Title);
         checks.Add(new("gating_tests_populated", "Semua tes memiliki soal", empty.Count == 0, true,
             empty.Count > 0 ? $"Tes tanpa soal: {string.Join(", ", empty)}." : null));
 

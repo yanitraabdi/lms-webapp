@@ -84,8 +84,6 @@ public class SampleTestSeeder(AppDbContext db, IObjectStorage storage)
             });
         }
 
-        session.AssessmentId = assessment.Id;   // dual-write until readers switch to parts
-
         var lastOrder = await db.SessionParts.Where(p => p.SessionId == session.Id)
             .MaxAsync(p => (int?)p.OrderIndex, ct) ?? 0;
         db.SessionParts.Add(new SessionPart

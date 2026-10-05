@@ -41,8 +41,11 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var res = await Put(c, c.VideoId, Body("Video", "Judul baru", asset: "sample", duration: 600));
         Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
 
-        var stored = await Session(c.VideoId);
-        Assert.Equal(c.AssessmentId, stored.AssessmentId);
+        // A video's quiz lives on its Test part (2026-10-05).
+        using var scope = factory.Services.CreateScope();
+        Assert.Equal(c.AssessmentId, await scope.ServiceProvider.GetRequiredService<AppDbContext>().SessionParts
+            .Where(p => p.SessionId == c.VideoId && p.Kind == SessionPartKind.Test)
+            .Select(p => p.AssessmentId).SingleAsync());
     }
 
     // ---- order and type have their own rules ----

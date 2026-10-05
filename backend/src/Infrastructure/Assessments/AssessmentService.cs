@@ -23,23 +23,18 @@ public class AssessmentService(
     /// <summary>
     /// Signed audio for a Listening question in a SESSION test.
     ///
-    /// Two checks, and both are load-bearing. EnsureAccessAsync is THE GATE (GR-1): audio is
-    /// session content, so reaching it must require session access. The question-belongs-to-this
-    /// -assessment check is what stops the route becoming a way to read any clip in the bank by
+    /// Two checks, and both are load-bearing. EnsurePartAccessAsync is THE GATE (GR-1): audio is
+    /// part content, so reaching it must require access to that (unlocked) Test part. The
+    /// question-belongs-to-this-assessment check is what stops the route becoming a way to read any clip in the bank by
     /// guessing question ids — the learner has access to this session, not to every recording.
     ///
     /// No play limit, unlike the final assessment: see IAssessmentService for why.
     /// </summary>
     public async Task<string> GetGatingAudioUrlAsync(
-        Guid userId, Guid sessionId, Guid questionId, CancellationToken ct = default)
+        Guid userId, Guid sessionId, Guid partId, Guid questionId, CancellationToken ct = default)
     {
-        await access.EnsureAccessAsync(userId, sessionId, ct);
-
-        var assessmentId = await db.ProgramSessions
-            .Where(s => s.Id == sessionId)
-            .Select(s => s.AssessmentId)
-            .FirstOrDefaultAsync(ct)
-            ?? throw new AssessmentException("Sesi ini tidak memiliki tes.", 404);
+        var part = await access.EnsurePartAccessAsync(userId, sessionId, partId, ct);
+        var assessmentId = part.AssessmentId ?? throw new AssessmentException("Bagian ini bukan tes.", 400);
 
         var belongs = await db.AssessmentQuestions
             .AnyAsync(aq => aq.AssessmentId == assessmentId && aq.QuestionId == questionId, ct);
@@ -61,22 +56,19 @@ public class AssessmentService(
         return signer.Sign(storageKey);
     }
 
-    public async Task<StudentAssessmentDto?> GetForSessionAsync(
-        Guid userId, Guid sessionId, CancellationToken ct = default)
+    public async Task<StudentAssessmentDto> GetForPartAsync(
+        Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default)
     {
-        await access.EnsureAccessAsync(userId, sessionId, ct);
-
-        var assessmentId = await db.ProgramSessions
-            .Where(s => s.Id == sessionId).Select(s => s.AssessmentId).FirstOrDefaultAsync(ct);
-        if (assessmentId is null) return null;
-
-        return await BuildStudentViewAsync(userId, assessmentId.Value, sessionId, ct);
+        var part = await access.EnsurePartAccessAsync(userId, sessionId, partId, ct);
+        if (part.AssessmentId is null) throw new AssessmentException("Bagian ini bukan tes.", 400);
+        return await BuildStudentViewAsync(userId, part.AssessmentId.Value, sessionId, ct);
     }
 
     public async Task<AttemptDto> StartAttemptAsync(Guid userId, Guid assessmentId, CancellationToken ct = default)
     {
-        var (assessment, config, sessionId) = await LoadAsync(assessmentId, ct);
-        if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
+        var (assessment, config, sessionId, partId) = await LoadAsync(assessmentId, ct);
+        if (partId is Guid pid) await access.EnsurePartAccessAsync(userId, sessionId!.Value, pid, ct);
+        else if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
 
         var questionCount = await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct);
         if (questionCount == 0)
@@ -134,7 +126,7 @@ public class AssessmentService(
             attempt.Answers = JsonSerializer.Serialize(merged);
         }
 
-        var (_, config, sessionId) = await LoadAsync(attempt.AssessmentId, ct);
+        var (_, config, sessionId, _) = await LoadAsync(attempt.AssessmentId, ct);
         await ScoreAsync(attempt, config, ct);
         attempt.SubmittedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -190,7 +182,7 @@ public class AssessmentService(
     private async Task<StudentAssessmentDto> BuildStudentViewAsync(
         Guid userId, Guid assessmentId, Guid? sessionId, CancellationToken ct)
     {
-        var (assessment, config, _) = await LoadAsync(assessmentId, ct);
+        var (assessment, config, _, _) = await LoadAsync(assessmentId, ct);
 
         // NOTE: `Correct` is deliberately absent from this projection — the answer key must not
         // leave the server (GR-11). StudentQuestionDto has no field for it either.
@@ -226,9 +218,7 @@ public class AssessmentService(
 
     private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)
     {
-        var sessionId = await db.ProgramSessions
-            .Where(s => s.AssessmentId == attempt.AssessmentId)
-            .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+        var (sessionId, _) = await OwnerOfAsync(attempt.AssessmentId, ct);
 
         var sessionCompleted = false;
         Guid? nextSessionId = null;
@@ -266,14 +256,24 @@ public class AssessmentService(
                     : $"Anda telah mencapai batas {cap} kali percobaan.", 409);
     }
 
-    private async Task<(Assessment Assessment, AssessmentConfig Config, Guid? SessionId)> LoadAsync(
+    /// <summary>A session test hangs off a PART since 2026-10-05; a final assessment still hangs
+    /// off its session. Returns the owning session and, for a session test, the part.</summary>
+    private async Task<(Guid? SessionId, Guid? PartId)> OwnerOfAsync(Guid assessmentId, CancellationToken ct)
+    {
+        var part = await db.SessionParts.Where(p => p.AssessmentId == assessmentId)
+            .Select(p => new { p.SessionId, p.Id }).FirstOrDefaultAsync(ct);
+        if (part is not null) return (part.SessionId, part.Id);
+        var sessionId = await db.ProgramSessions.Where(s => s.AssessmentId == assessmentId)
+            .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+        return (sessionId, null);
+    }
+
+    private async Task<(Assessment Assessment, AssessmentConfig Config, Guid? SessionId, Guid? PartId)> LoadAsync(
         Guid assessmentId, CancellationToken ct)
     {
         var assessment = await db.Assessments.FirstOrDefaultAsync(a => a.Id == assessmentId, ct)
             ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
-        var sessionId = await db.ProgramSessions
-            .Where(s => s.AssessmentId == assessmentId)
-            .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+        var (sessionId, partId) = await OwnerOfAsync(assessmentId, ct);
 
         var config = ParseConfig(assessment.Config);
 
@@ -284,7 +284,7 @@ public class AssessmentService(
         // start, submit, the student view's canAttempt — reads its config through here.
         if (assessment.Kind == AssessmentKind.Gating) config.RetakeCap = null;
 
-        return (assessment, config, sessionId);
+        return (assessment, config, sessionId, partId);
     }
 
     private async Task<Attempt> LoadOwnedAttemptAsync(Guid userId, Guid attemptId, CancellationToken ct)

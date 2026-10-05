@@ -36,8 +36,9 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     {
         var c = await EnrolledLearner();
         await AttachGatingTest(c, c.Session1, passThreshold: 2);
+        await SaveProgress(c.Token, c.Session1, 900, 100m);   // parts: the test opens after the lesson
 
-        var res = await Authed(HttpMethod.Get, $"/api/sessions/{c.Session1}/assessment", c.Token);
+        var res = await Authed(HttpMethod.Get, await AssessmentUrl(c.Session1), c.Token);
         res.EnsureSuccessStatusCode();
         var raw = await res.Content.ReadAsStringAsync();
 
@@ -61,8 +62,8 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
 
         var progress = await SaveProgress(c.Token, c.Session1, 900, 100m);
 
-        Assert.True(progress.WatchThresholdMet);   // the test unlocks …
-        Assert.False(progress.Completed);          // … but the session does NOT complete
+        Assert.True(progress.Done);                // the test unlocks …
+        Assert.False(progress.SessionCompleted);   // … but the session does NOT complete
         Assert.False(await CanAccess(c.UserId, c.Session2));
     }
 
@@ -105,16 +106,19 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);
 
-        // Pass the test but never watch: the watch threshold is the other half of the rule.
-        var result = await TakeTest(c.Token, c.Session1, key, correct: true);
-
-        Assert.True(result.Passed);
-        Assert.False(result.SessionCompleted);
+        // Try the test without watching: the watch threshold is the other half of the rule. Since
+        // parts (2026-10-05) the test part is locked until the lesson is watched, so the attempt is
+        // refused outright rather than recorded and held back.
+        var assessmentId = await AssessmentIdFor(c.Session1);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Authed(HttpMethod.Post, $"/api/assessments/{assessmentId}/attempts", c.Token)).StatusCode);
         Assert.False(await CanAccess(c.UserId, c.Session2));
 
-        // Watching then finishes it, without retaking the test.
+        // Watching alone does not finish it; passing after watching does.
         var progress = await SaveProgress(c.Token, c.Session1, 900, 100m);
-        Assert.True(progress.Completed);
+        Assert.False(progress.SessionCompleted);
+        var result = await TakeTest(c.Token, c.Session1, key, correct: true);
+        Assert.True(result.SessionCompleted);
         Assert.True(await CanAccess(c.UserId, c.Session2));
     }
 
@@ -130,6 +134,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         // only the next save.
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2, retakeCap: 1);
+        await SaveProgress(c.Token, c.Session1, 900, 100m);   // parts: the test opens after the lesson
 
         var first = await TakeTest(c.Token, c.Session1, key, correct: false);
         Assert.False(first.Passed);
@@ -137,7 +142,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var second = await TakeTest(c.Token, c.Session1, key, correct: true);
         Assert.True(second.Passed);
 
-        var view = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.Session1}/assessment", c.Token);
+        var view = await AuthedGet<StudentAssessmentDto>(await AssessmentUrl(c.Session1), c.Token);
         Assert.True(view.CanAttempt);
         Assert.Null(view.RetakeCap);        // never advertised to the client either
         Assert.Equal(2, view.AttemptsUsed);
@@ -196,6 +201,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         // Either side can create it, so both are checked.
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);   // 2 questions, mark 2
+        await SaveProgress(c.Token, c.Session1, 900, 100m);   // parts: the test opens after the lesson
         var admin = await AdminToken();
         var assessmentId = await AssessmentIdFor(c.Session1);
 
@@ -213,7 +219,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         Assert.Equal(HttpStatusCode.BadRequest, shrink.StatusCode);
 
         // And the refusal left the test intact — a rejected composition must not half-apply.
-        var view = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.Session1}/assessment", c.Token);
+        var view = await AuthedGet<StudentAssessmentDto>(await AssessmentUrl(c.Session1), c.Token);
         Assert.Equal(2, view.QuestionCount);
         Assert.Equal(2, view.PassThreshold);
     }
@@ -223,13 +229,14 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     {
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);   // no cap
+        await SaveProgress(c.Token, c.Session1, 900, 100m);   // parts: the test opens after the lesson
 
         await TakeTest(c.Token, c.Session1, key, correct: false);
         await TakeTest(c.Token, c.Session1, key, correct: false);
         var third = await TakeTest(c.Token, c.Session1, key, correct: true);
 
         Assert.True(third.Passed);
-        var view = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.Session1}/assessment", c.Token);
+        var view = await AuthedGet<StudentAssessmentDto>(await AssessmentUrl(c.Session1), c.Token);
         Assert.Equal(3, view.AttemptsUsed);
         Assert.True(view.Passed);
     }
@@ -243,14 +250,14 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
 
         // Complete session 1 with no gating test attached.
         var done = await SaveProgress(c.Token, c.Session1, 900, 100m);
-        Assert.True(done.Completed);
+        Assert.True(done.SessionCompleted);
 
         // Admin now attaches a gating test.
         await AttachGatingTest(c, c.Session1, passThreshold: 2);
 
         // Still complete, and the next session stays unlocked.
         var after = await GetProgress(c.Token, c.Session1);
-        Assert.True(after.Completed);
+        Assert.True(after.SessionCompleted);
         Assert.True(await CanAccess(c.UserId, c.Session2));
     }
 
@@ -260,13 +267,14 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     public async Task Locked_session_refuses_playback_progress_and_assessment()
     {
         var c = await EnrolledLearner();
+        var part = $"/api/sessions/{c.Session2}/parts/{await LessonPart(c.Session2)}";
 
         Assert.Equal(HttpStatusCode.Forbidden,
-            (await Authed(HttpMethod.Post, $"/api/sessions/{c.Session2}/playback", c.Token)).StatusCode);
+            (await Authed(HttpMethod.Post, $"{part}/playback", c.Token)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden,
-            (await Authed(HttpMethod.Get, $"/api/sessions/{c.Session2}/assessment", c.Token)).StatusCode);
+            (await Authed(HttpMethod.Get, $"{part}/assessment", c.Token)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden,
-            (await Authed(HttpMethod.Put, $"/api/sessions/{c.Session2}/progress", c.Token,
+            (await Authed(HttpMethod.Put, $"{part}/progress", c.Token,
                 new { positionSeconds = 10, percent = 50m })).StatusCode);
     }
 
@@ -274,10 +282,11 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     public async Task Playback_is_signed_short_lived_and_hides_the_asset_id()
     {
         var c = await EnrolledLearner();
-        var res = await Authed(HttpMethod.Post, $"/api/sessions/{c.Session1}/playback", c.Token);
+        var res = await Authed(HttpMethod.Post,
+            $"/api/sessions/{c.Session1}/parts/{await LessonPart(c.Session1)}/playback", c.Token);
         res.EnsureSuccessStatusCode();
         var raw = await res.Content.ReadAsStringAsync();
-        var ticket = JsonSerializer.Deserialize<SessionPlaybackDto>(raw, Json)!;
+        var ticket = JsonSerializer.Deserialize<PartPlaybackDto>(raw, Json)!;
 
         Assert.False(string.IsNullOrWhiteSpace(ticket.Url));
         Assert.True(ticket.ExpiresAt > DateTimeOffset.UtcNow);
@@ -302,6 +311,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     {
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);
+        await SaveProgress(c.Token, c.Session1, 900, 100m);   // parts: the test opens after the lesson
         var assessmentId = await AssessmentIdFor(c.Session1);
 
         var start = await Authed(HttpMethod.Post, $"/api/assessments/{assessmentId}/attempts", c.Token);
@@ -330,6 +340,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     {
         var c = await EnrolledLearner();
         var key = await AttachGatingTest(c, c.Session1, passThreshold: 2);
+        await SaveProgress(c.Token, c.Session1, 900, 100m);   // parts: the test opens after the lesson
         await TakeTest(c.Token, c.Session1, key, correct: true);
 
         var assessmentId = await AssessmentIdFor(c.Session1);
@@ -566,19 +577,30 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         return (await res.Content.ReadFromJsonAsync<AttemptResultDto>(Json))!;
     }
 
-    private Task<Guid> AssessmentIdFor(Guid sessionId) => WithDbResult(db => db.ProgramSessions
-        .Where(s => s.Id == sessionId).Select(s => s.AssessmentId!.Value).FirstAsync());
+    private Task<Guid> AssessmentIdFor(Guid sessionId) => WithDbResult(db => db.SessionParts
+        .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.Test)
+        .Select(p => p.AssessmentId!.Value).FirstAsync());
 
-    private async Task<SessionProgressDto> SaveProgress(string token, Guid sessionId, int pos, decimal pct)
+    private Task<Guid> LessonPart(Guid sessionId) => WithDbResult(db => db.SessionParts
+        .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.LessonVideo).Select(p => p.Id).FirstAsync());
+
+    private async Task<string> AssessmentUrl(Guid sessionId)
     {
-        var res = await Authed(HttpMethod.Put, $"/api/sessions/{sessionId}/progress", token,
-            new { positionSeconds = pos, percent = pct });
-        res.EnsureSuccessStatusCode();
-        return (await res.Content.ReadFromJsonAsync<SessionProgressDto>(Json))!;
+        var testPart = await WithDbResult(db => db.SessionParts
+            .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.Test).Select(p => p.Id).FirstAsync());
+        return $"/api/sessions/{sessionId}/parts/{testPart}/assessment";
     }
 
-    private Task<SessionProgressDto> GetProgress(string token, Guid sessionId)
-        => AuthedGet<SessionProgressDto>($"/api/sessions/{sessionId}/progress", token);
+    private async Task<PartProgressDto> SaveProgress(string token, Guid sessionId, int pos, decimal pct)
+    {
+        var res = await Authed(HttpMethod.Put, $"/api/sessions/{sessionId}/parts/{await LessonPart(sessionId)}/progress",
+            token, new { positionSeconds = pos, percent = pct });
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<PartProgressDto>(Json))!;
+    }
+
+    private async Task<PartProgressDto> GetProgress(string token, Guid sessionId)
+        => await AuthedGet<PartProgressDto>($"/api/sessions/{sessionId}/parts/{await LessonPart(sessionId)}/progress", token);
 
     private async Task<bool> CanAccess(Guid userId, Guid sessionId)
     {

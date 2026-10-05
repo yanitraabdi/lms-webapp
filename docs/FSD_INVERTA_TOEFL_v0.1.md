@@ -107,6 +107,12 @@ Program (e.g. "INVERTA TOEFL Prep Batch 1")
 progress tracked as before (`watch_progress` reused as-is). On reaching the watch threshold, the
 **gating test unlocks** (same page).
 
+**Session parts (decided 2026-10-05):** a video session is an admin-ordered list of **parts** —
+lesson video, test, discussion video — unlocked in order: a part opens when every part before it is
+done. A discussion video directly after a test opens once that test is passed or has failed N times
+(§6.1). The session completes when every part is done; a video session with no parts never
+completes. Progress is tracked per part. See `docs/superpowers/specs/2026-10-05-session-parts-design.md`.
+
 **Live sessions (new, kept deliberately thin):**
 - Store schedule (datetime, mode zoom/offline, join URL or location), show it in the student's
   program view, send a reminder email (e.g. H-1). **No Zoom API integration in v1** — the join URL is
@@ -129,6 +135,10 @@ progress tracked as before (`watch_progress` reused as-is). On reaching the watc
 - **Retake policy:** unlimited retries by default, admin-cappable per test. *(Default chosen for a
   paid program — failing students who paid is a support problem; confirmed §12.)*
 - Passing unlocks the next session (R2 §3). Attempts recorded (score, timestamps, answers).
+- A session test may have **one shared audio** for all its questions, played `audioPlayLimit`
+  (default 1) times per attempt with no pause or seek. This is deterrence, not a guarantee.
+- A test can name **N**, the number of failed attempts after which its discussion video opens
+  (§5, session parts, 2026-10-05). Retakes stay unlimited.
 
 ### 6.2 Final assessment (multi-section)
 - **Sections:** Listening (audio + MCQ), Reading (passage + MCQ), Vocabulary (MCQ),
@@ -198,6 +208,9 @@ enrollments(id, user_id FK, program_id FK, batch_id FK NULL,
         amount_paid_idr, xendit_ref, enrolled_at)
 session_completions(id, user_id FK, session_id FK, completed_at, method)  -- watch+test | attended | submitted | enrolled-after-live
 live_attendance(id, session_id FK, user_id FK, attended bool, marked_by FK)
+session_parts(id, session_id FK, order_index, kind,                    -- LessonVideo|Test|Discussion (2026-10-05)
+        title, provider_asset_id NULL, duration_seconds NULL, assessment_id FK NULL UNIQUE)
+watch_progress: + part_id FK NULL                                      -- one row per user per part
 assessments(id, session_id FK NULL, kind,                              -- gating|final
         config JSONB: sections[], per-section time limits, pass_threshold, retake_cap, proctoring on/off)
 questions(id, section, type, prompt, choices JSONB, correct JSONB,

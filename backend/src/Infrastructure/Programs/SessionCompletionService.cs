@@ -12,7 +12,7 @@ namespace Academy.Infrastructure.Programs;
 /// Idempotent and non-retroactive: once a <see cref="SessionCompletion"/> row exists it is never
 /// removed, so attaching a gating test to an already-complete session cannot un-complete it.
 /// </summary>
-public class SessionCompletionService(AppDbContext db) : ISessionCompletionService
+public class SessionCompletionService(AppDbContext db, SessionPartStates partStates) : ISessionCompletionService
 {
     public Task<bool> IsCompleteAsync(Guid userId, Guid sessionId, CancellationToken ct = default)
         => db.SessionCompletions.AnyAsync(c => c.UserId == userId && c.SessionId == sessionId, ct);
@@ -30,8 +30,7 @@ public class SessionCompletionService(AppDbContext db) : ISessionCompletionServi
 
         var (complete, method) = session.Type switch
         {
-            SessionType.Video => (await IsVideoCompleteAsync(userId, session.Id, session.AssessmentId, ct),
-                                  CompletionMethod.WatchAndTest),
+            SessionType.Video => (await IsVideoCompleteAsync(userId, session.Id, ct), CompletionMethod.WatchAndTest),
             SessionType.Live => await IsLiveCompleteAsync(
                                       userId, session.Id, session.ProgramId, session.ScheduledAt, ct),
             SessionType.FinalAssessment => (await HasSubmittedAsync(userId, session.AssessmentId, ct),
@@ -59,28 +58,11 @@ public class SessionCompletionService(AppDbContext db) : ISessionCompletionServi
         return true;
     }
 
-    /// <summary>Video: watched ≥ threshold AND (no gating assessment OR a passing attempt exists).</summary>
-    private async Task<bool> IsVideoCompleteAsync(Guid userId, Guid sessionId, Guid? assessmentId, CancellationToken ct)
+    /// <summary>Video: every part done (spec 2026-10-05 §3). No parts ⇒ never complete.</summary>
+    private async Task<bool> IsVideoCompleteAsync(Guid userId, Guid sessionId, CancellationToken ct)
     {
-        var percent = await db.WatchProgress
-            .Where(w => w.UserId == userId && w.SessionId == sessionId)
-            .Select(w => (decimal?)w.PercentComplete)
-            .FirstOrDefaultAsync(ct) ?? 0m;
-
-        var hasGatingTest = false;
-        var gatingPassed = false;
-        if (assessmentId is Guid aid)
-        {
-            // An assessment with no questions cannot gate anything.
-            hasGatingTest = await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == aid, ct);
-            if (hasGatingTest)
-                gatingPassed = await db.Attempts.AnyAsync(
-                    a => a.UserId == userId && a.AssessmentId == aid && a.SubmittedAt != null && a.Passed, ct);
-        }
-
-        return SessionAccess.IsSessionComplete(
-            SessionType.Video, watchPercent: percent,
-            hasGatingTest: hasGatingTest, gatingTestPassed: gatingPassed);
+        var states = await partStates.LoadAsync(userId, sessionId, ct);
+        return SessionParts.IsComplete(states.Select(s => s.Facts).ToList());
     }
 
     /// <summary>

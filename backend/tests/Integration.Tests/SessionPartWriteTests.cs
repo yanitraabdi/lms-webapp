@@ -62,8 +62,8 @@ public class SessionPartWriteTests(AuthApiFactory factory) : IClassFixture<AuthA
         var parts = await PartsOf(s.Id);
         Assert.Equal([SessionPartKind.LessonVideo, SessionPartKind.Test], parts.Select(p => p.Kind));
         Assert.Equal(a.Id, parts[1].AssessmentId);
-        // Dual-write until readers switch to parts.
-        Assert.Equal(a.Id, await WithDbResult(db => db.ProgramSessions
+        // Readers use parts now; the legacy session column is no longer written for video.
+        Assert.Null(await WithDbResult(db => db.ProgramSessions
             .Where(x => x.Id == s.Id).Select(x => x.AssessmentId).SingleAsync()));
     }
 

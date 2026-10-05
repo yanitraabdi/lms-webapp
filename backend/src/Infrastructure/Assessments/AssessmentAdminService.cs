@@ -208,8 +208,8 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (assessmentId is Guid aid && !await db.Assessments.AnyAsync(a => a.Id == aid, ct))
             throw new AssessmentException("Tes tidak ditemukan.", 404);
 
-        // Dual-write until Task 4: readers still use session.AssessmentId for video sessions.
-        session.AssessmentId = assessmentId;
+        // A video's test lives on its Test part; only other types keep the session column.
+        if (session.Type != SessionType.Video) session.AssessmentId = assessmentId;
         if (session.Type == SessionType.Video)
         {
             var tests = await db.SessionParts
