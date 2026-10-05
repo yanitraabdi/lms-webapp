@@ -2,34 +2,40 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Spinner, CheckIcon, LockIcon } from "@/components/ui";
+import { Button, Spinner, CheckIcon } from "@/components/ui";
+import { LiveAudioPlayer } from "@/components/learn/LiveAudioPlayer";
 import {
-  getSessionAssessment, getGatingAudioUrl, startAttempt, submitAttempt, num,
-  type AttemptResult, type StudentAssessment,
+  getPartAssessment, getGatingAudioUrl, startAttempt, startTestAudio, submitAttempt, num,
+  type Attempt, type AttemptResult, type SessionPart, type StudentAssessment, type TestAudio,
 } from "@/lib/sessions";
 
 /**
- * The gating test shown under the player. It unlocks once the watch threshold is met —
+ * The test of one Test part. The part list only opens it once the parts before it are done —
  * but the real gate is server-side: the session only completes when this is passed (GR-8).
  */
 export function GatingTest({
-  token, sessionId, watchThresholdMet, onPassed,
+  token, sessionId, part, onChanged,
 }: {
   token: string;
   sessionId: string;
-  watchThresholdMet: boolean;
-  onPassed: () => void;
+  part: SessionPart;
+  onChanged: () => void;
 }) {
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: ["session-assessment", sessionId],
-    queryFn: () => getSessionAssessment(token, sessionId),
+    queryKey: ["part-assessment", part.id],
+    queryFn: () => getPartAssessment(token, sessionId, part.id),
   });
 
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Shared-audio tests only: the attempt is opened up front so the recording's plays are charged
+  // against it; the latest audio ticket carries plays used/limit; the key remounts the player.
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [audio, setAudio] = useState<TestAudio | null>(null);
+  const [audioKey, setAudioKey] = useState(0);
 
   if (q.isPending) {
     return (
@@ -41,7 +47,11 @@ export function GatingTest({
   if (!q.data) return null;              // no gating test on this session
 
   const test: StudentAssessment = q.data;
-  const alreadyPassed = test.passed || result?.passed === true;
+  const alreadyPassed = test.passed || part.passed || result?.passed === true;
+  const shared = test.hasTestAudio;
+  const failed = num(part.failedAttempts);
+  const playLimit = num(test.testAudioPlayLimit ?? 1);
+  const playsLeft = audio ? num(audio.playLimit) - num(audio.playsUsed) : 0;
   const total = test.questions.length;
   const answered = Object.keys(answers).length;
 
@@ -49,11 +59,12 @@ export function GatingTest({
     setBusy(true);
     setError(null);
     try {
-      const attempt = await startAttempt(token, test.id);
-      const r = await submitAttempt(token, attempt.id, answers);
+      const open = shared && attempt ? attempt : await startAttempt(token, test.id);
+      const r = await submitAttempt(token, open.id, answers);
       setResult(r);
-      await qc.invalidateQueries({ queryKey: ["session-assessment", sessionId] });
-      if (r.sessionCompleted) onPassed();
+      await qc.invalidateQueries({ queryKey: ["part-assessment", part.id] });
+      // Pass or fail, the part list changes (failures can open the discussion), so refetch it.
+      onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal mengirim jawaban.");
     } finally {
@@ -64,21 +75,31 @@ export function GatingTest({
   function retry() {
     setResult(null);
     setAnswers({});
+    // A new attempt starts with fresh plays, so drop the old one and its audio.
+    setAttempt(null);
+    setAudio(null);
   }
 
-  // Locked until the learner has actually watched the video.
-  if (!watchThresholdMet && !alreadyPassed) {
-    return (
-      <div className="flex items-start gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm">
-        <LockIcon size={18} className="mt-0.5 shrink-0 text-ink-subtle" />
-        <div>
-          <h3 className="text-base font-extrabold">Tes sesi</h3>
-          <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-            Tonton video sampai selesai untuk membuka tes. Lulus tes ini membuka sesi berikutnya.
-          </p>
-        </div>
-      </div>
-    );
+  async function begin() {
+    setBusy(true);
+    setError(null);
+    try {
+      setAttempt(await startAttempt(token, test.id)); // returns the open attempt on a reload
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal memulai tes.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function replay() {
+    setError(null);
+    try {
+      setAudio(await startTestAudio(token, sessionId, part.id, true));
+      setAudioKey((k) => k + 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Audio tidak dapat diputar ulang.");
+    }
   }
 
   return (
@@ -102,14 +123,45 @@ export function GatingTest({
           : "Jawab semua pertanyaan untuk menyelesaikan sesi ini."}
       </p>
 
-      {!alreadyPassed && (
+      {!alreadyPassed && shared && !attempt && (
         <>
+          {error && (
+            <div className="mt-4 rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div>
+          )}
+          <div className="mt-4">
+            <Button onClick={begin} loading={busy}>Mulai tes</Button>
+          </div>
+        </>
+      )}
+
+      {!alreadyPassed && (!shared || attempt) && (
+        <>
+          {shared && !result && (
+            <div>
+              <LiveAudioPlayer
+                key={audioKey}
+                start={async () => {
+                  const r = await startTestAudio(token, sessionId, part.id, false);
+                  setAudio(r);
+                  return r;
+                }}
+                startedAt={null}
+                intro="Satu rekaman untuk semua soal tes ini. Audio diputar tanpa jeda dan tanpa mundur — pastikan suara perangkat Anda aktif."
+                endedLabel="Audio tes sudah selesai diputar."
+              />
+              {playLimit > 1 && audio && playsLeft > 0 && (
+                <Button size="sm" variant="neutral" className="mt-2" onClick={replay}>
+                  Putar ulang (sisa {playsLeft}×)
+                </Button>
+              )}
+            </div>
+          )}
           <ol className="mt-4 flex flex-col gap-5">
             {test.questions.map((question, qi) => (
               <li key={question.id}>
                 <p className="text-sm font-bold text-ink">{qi + 1}. {question.prompt}</p>
                 {question.hasAudio && (
-                  <QuestionAudio token={token} sessionId={sessionId} questionId={question.id} />
+                  <QuestionAudio token={token} sessionId={sessionId} partId={part.id} questionId={question.id} />
                 )}
                 {question.passageRef && (
                   <p className="mt-1 rounded-base bg-surface-2 px-3 py-2 text-[12.5px] leading-relaxed text-ink-muted">
@@ -151,6 +203,14 @@ export function GatingTest({
               Skor Anda {result.score}/{result.maxScore}. Belum mencapai batas lulus — coba lagi.
             </div>
           )}
+          {failed > 0 && (
+            <div className="mt-2 text-[13px] text-ink-muted">
+              <p>Gagal {failed} kali.</p>
+              {part.discussionAfterFailures != null && failed >= num(part.discussionAfterFailures) && (
+                <p>Video pembahasan sudah terbuka. Tonton, lalu ulangi tes sampai lulus.</p>
+              )}
+            </div>
+          )}
           {error && (
             <div className="mt-4 rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div>
           )}
@@ -187,8 +247,8 @@ export function GatingTest({
  * there is nothing to charge a play against, and unlimited retakes would make a cap meaningless.
  */
 function QuestionAudio({
-  token, sessionId, questionId,
-}: { token: string; sessionId: string; questionId: string }) {
+  token, sessionId, partId, questionId,
+}: { token: string; sessionId: string; partId: string; questionId: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +257,7 @@ function QuestionAudio({
     setBusy(true);
     setError(null);
     try {
-      setUrl((await getGatingAudioUrl(token, sessionId, questionId)).url);
+      setUrl((await getGatingAudioUrl(token, sessionId, partId, questionId)).url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Audio tidak dapat dimuat.");
     } finally {

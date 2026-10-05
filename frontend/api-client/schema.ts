@@ -3709,6 +3709,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/sessions/{id}/parts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminSessionPartDto"][];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveSessionPartsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminSessionPartDto"][];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/programs/{programId}/sessions/reorder": {
         parameters: {
             query?: never;
@@ -3978,143 +4040,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sessions/{id}/assessment/audio/{questionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    questionId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["GatingAudioResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{id}/playback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SessionPlaybackDto"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{id}/progress": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SessionProgressDto"];
-                    };
-                };
-            };
-        };
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SaveProgressRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SessionProgressDto"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/sessions/{id}/assessment": {
         parameters: {
             query?: never;
@@ -4153,6 +4078,227 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{id}/parts/{partId}/playback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    partId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartPlaybackDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{id}/parts/{partId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    partId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartProgressDto"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    partId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveProgressRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartProgressDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{id}/parts/{partId}/assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    partId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StudentAssessmentDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{id}/parts/{partId}/audio/{questionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    partId: string;
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GatingAudioResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{id}/parts/{partId}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    partId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartTestAudioRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TestAudioDto"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -5739,6 +5885,21 @@ export interface components {
             /** Format: uuid */
             assessmentId: null | string;
         };
+        AdminSessionPartDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            orderIndex: number | string;
+            kind: string;
+            title: string;
+            providerAssetId: null | string;
+            /** Format: int32 */
+            durationSeconds: null | number | string;
+            /** Format: uuid */
+            assessmentId: null | string;
+            assessmentTitle: null | string;
+            hasLearnerData: boolean;
+        };
         AdminUserDetailDto: {
             /** Format: uuid */
             id: string;
@@ -5791,6 +5952,9 @@ export interface components {
             proctoringEnabled?: boolean;
             /** Format: int32 */
             audioPlayLimit?: null | number | string;
+            audioRef?: null | string;
+            /** Format: int32 */
+            discussionAfterFailures?: null | number | string;
             sections?: components["schemas"]["AssessmentSectionConfig"][];
             /** Format: int32 */
             timeLimitMinutes?: null | number | string;
@@ -6282,6 +6446,24 @@ export interface components {
             /** Format: double */
             percent: number | string;
         };
+        PartPlaybackDto: {
+            /** Format: uuid */
+            partId: string;
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+            captionsUrl: null | string;
+        };
+        PartProgressDto: {
+            /** Format: uuid */
+            partId: string;
+            /** Format: int32 */
+            resumePositionSeconds: number | string;
+            /** Format: double */
+            percentComplete: number | string;
+            done: boolean;
+            sessionCompleted: boolean;
+        };
         /** @enum {unknown} */
         PaymentKind: "Cycle" | "ProrationUpgrade" | "ProgramPurchase";
         /** @enum {unknown} */
@@ -6502,6 +6684,9 @@ export interface components {
             /** Format: double */
             percent: number | string;
         };
+        SaveSessionPartsRequest: {
+            parts: components["schemas"]["SessionPartInput"][];
+        };
         SaveSurveyRequest: {
             role: null | string;
             goals: string[];
@@ -6541,39 +6726,53 @@ export interface components {
             type: string;
             title: string;
             description: null | string;
-            /** Format: int32 */
-            durationSeconds: null | number | string;
             /** Format: date-time */
             scheduledAt: null | string;
             liveMode: null | string;
             joinUrl: null | string;
             location: null | string;
-            progress: components["schemas"]["SessionProgressDto"];
-            hasAssessment: boolean;
-            assessmentPassed: boolean;
+            completed: boolean;
+            /** Format: date-time */
+            completedAt: null | string;
+            parts: components["schemas"]["SessionPartDto"][];
             /** Format: uuid */
             nextSessionId: null | string;
             nextSessionUnlocked: boolean;
         };
-        SessionPlaybackDto: {
+        SessionPartDto: {
             /** Format: uuid */
-            sessionId: string;
-            url: string;
-            /** Format: date-time */
-            expiresAt: string;
-            captionsUrl: null | string;
-        };
-        SessionProgressDto: {
-            /** Format: uuid */
-            sessionId: string;
+            id: string;
+            /** Format: int32 */
+            orderIndex: number | string;
+            kind: string;
+            title: string;
+            status: string;
+            /** Format: int32 */
+            durationSeconds: null | number | string;
             /** Format: int32 */
             resumePositionSeconds: number | string;
             /** Format: double */
             percentComplete: number | string;
-            completed: boolean;
-            /** Format: date-time */
-            completedAt: null | string;
-            watchThresholdMet: boolean;
+            /** Format: uuid */
+            assessmentId: null | string;
+            /** Format: int32 */
+            attemptsUsed: number | string;
+            /** Format: int32 */
+            failedAttempts: number | string;
+            passed: boolean;
+            /** Format: int32 */
+            discussionAfterFailures: null | number | string;
+        };
+        SessionPartInput: {
+            /** Format: uuid */
+            id: null | string;
+            kind: string;
+            title: string;
+            providerAssetId: null | string;
+            /** Format: int32 */
+            durationSeconds: null | number | string;
+            /** Format: uuid */
+            assessmentId: null | string;
         };
         /** @enum {unknown} */
         SessionState: "Locked" | "Available" | "Completed";
@@ -6588,6 +6787,9 @@ export interface components {
         };
         SetUserStatusRequest: {
             status: string;
+        };
+        StartTestAudioRequest: {
+            replay: boolean;
         };
         StudentAssessmentDto: {
             /** Format: uuid */
@@ -6612,6 +6814,9 @@ export interface components {
             /** Format: int32 */
             timeLimitMinutes: null | number | string;
             questions: components["schemas"]["StudentQuestionDto"][];
+            hasTestAudio: boolean;
+            /** Format: int32 */
+            testAudioPlayLimit: null | number | string;
         };
         StudentProgramDto: {
             /** Format: uuid */
@@ -6676,6 +6881,17 @@ export interface components {
             id: string;
             name: string;
             slug: string;
+        };
+        TestAudioDto: {
+            url: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            serverNow: string;
+            /** Format: int32 */
+            playsUsed: number | string;
+            /** Format: int32 */
+            playLimit: number | string;
         };
         /** @enum {unknown} */
         TourStatus: "Completed" | "Skipped";

@@ -3,8 +3,6 @@ import type { components } from "@/api-client/schema";
 import { apiFetch } from "@/lib/auth/session";
 
 export type SessionContext = components["schemas"]["SessionContextDto"];
-export type SessionPlayback = components["schemas"]["SessionPlaybackDto"];
-export type SessionProgress = components["schemas"]["SessionProgressDto"];
 export type StudentAssessment = components["schemas"]["StudentAssessmentDto"];
 export type StudentQuestion = components["schemas"]["StudentQuestionDto"];
 export type Attempt = components["schemas"]["AttemptDto"];
@@ -44,23 +42,35 @@ async function api<T>(method: string, path: string, token: string, body?: unknow
 export const getSessionContext = (t: string, id: string) =>
   api<SessionContext>("GET", `/api/sessions/${id}`, t);
 
-export const getPlayback = (t: string, id: string) =>
-  api<SessionPlayback>("POST", `/api/sessions/${id}/playback`, t);
+export type SessionPart = components["schemas"]["SessionPartDto"];
+export type PartPlayback = components["schemas"]["PartPlaybackDto"];
+export type PartProgress = components["schemas"]["PartProgressDto"];
+export type TestAudio = components["schemas"]["TestAudioDto"];
 
-export const getSessionProgress = (t: string, id: string) =>
-  api<SessionProgress>("GET", `/api/sessions/${id}/progress`, t);
+const part = (sessionId: string, partId: string) => `/api/sessions/${sessionId}/parts/${partId}`;
 
-export const saveSessionProgress = (t: string, id: string, positionSeconds: number, percent: number) =>
-  api<SessionProgress>("PUT", `/api/sessions/${id}/progress`, t, {
+export const getPartPlayback = (t: string, sessionId: string, partId: string) =>
+  api<PartPlayback>("POST", `${part(sessionId, partId)}/playback`, t);
+
+export const savePartProgress = (t: string, sessionId: string, partId: string, positionSeconds: number, percent: number) =>
+  api<PartProgress>("PUT", `${part(sessionId, partId)}/progress`, t, {
     positionSeconds: Math.round(positionSeconds),
     percent,
   });
 
-/** The session's gating test, WITHOUT answers. Null when the session has none (204). */
-/** Signed, short-TTL URL for a Listening question's clip in a session test (GR-3). */
-export const getGatingAudioUrl = (t: string, sessionId: string, questionId: string) =>
-  api<{ url: string }>("GET", `/api/sessions/${sessionId}/assessment/audio/${questionId}`, t);
+/** The test of a Test part, WITHOUT answers (GR-11). */
+export const getPartAssessment = (t: string, sessionId: string, partId: string) =>
+  api<StudentAssessment>("GET", `${part(sessionId, partId)}/assessment`, t);
 
+/** Signed, short-TTL URL for a question's own clip (GR-3). */
+export const getGatingAudioUrl = (t: string, sessionId: string, partId: string, questionId: string) =>
+  api<{ url: string }>("GET", `${part(sessionId, partId)}/audio/${questionId}`, t);
+
+/** Starts — or, with replay=false, resumes — the test's shared recording for the open attempt. */
+export const startTestAudio = (t: string, sessionId: string, partId: string, replay: boolean) =>
+  api<TestAudio>("POST", `${part(sessionId, partId)}/audio`, t, { replay });
+
+/** The final assessment of a FINAL session, WITHOUT answers. Null for any other session (204). */
 export async function getSessionAssessment(t: string, id: string): Promise<StudentAssessment | null> {
   const res = await apiFetch(`${API}/api/sessions/${id}/assessment`, { cache: "no-store" }, t);
   if (res.status === 204) return null;
