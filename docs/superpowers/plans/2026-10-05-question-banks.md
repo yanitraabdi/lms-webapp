@@ -22,8 +22,8 @@
   - create without a bank: 400 `Pilih bank soal.`
   - move refused: 409 `Soal ini masih dipakai di tes akhir. Lepas dari tes tersebut terlebih dahulu.` when moving to `SessionTest`, or `Soal ini masih dipakai di tes sesi. Lepas dari tes tersebut terlebih dahulu.` when moving to `Simulation`
   - import without a bank: 400 `Pilih bank soal tujuan impor.`
-  - import row error: `ID {ExternalId} sudah ada di bank {Simulasi TOEFL|Tes Sesi}.` in column `id`
-- **UI labels:** `Simulasi TOEFL` and `Tes Sesi` for the banks; `Pindahkan ke bank lain`; badges `dari bank simulasi` / `dari bank tes sesi`; `Impor ke bank:`.
+  - import row error: `ID {ExternalId} sudah ada di bank {Simulasi TOEFL|Tes Sesi}. Ganti ID-nya, atau impor ke bank tersebut.` in column `id`
+- **UI labels:** `Simulasi TOEFL` and `Tes Sesi` for the banks; `Pindahkan ke bank lain`; badges `dari bank simulasi` / `dari bank tes sesi`; `Impor ke bank:`; remove-from-test button `Lepas`; empty bank `Belum ada soal di bank {label}.`
 - **Migrations:** additive. Generate them with `dotnet ef`, never hand-edit them away from the snapshot; `migrationBuilder.Sql` data steps are allowed. Enums are stored as strings by the global convention.
 - **No user transactions,** because `EnableRetryOnFailure` refuses them. Each write is a single `SaveChangesAsync`.
 - **Frontend API types** come only from the regenerated `frontend/api-client/schema.ts`, which is never hand-edited.
@@ -189,7 +189,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `GET /api/admin/questions?bank=&section=&search=`;
   - `POST /api/admin/questions/{id}/move` with body `{ "bank": "Simulation"|"SessionTest" }`, returning 204;
   - `IQuestionBankService.ListAsync(string? bank, string? section, string? search, CancellationToken)`;
-  - `IQuestionBankService.MoveAsync(Guid actor, Guid id, string bank, CancellationToken)`.
+  - `IQuestionBankService.MoveAsync(Guid actor, Guid id, string bank, CancellationToken)`;
+  - `GET /api/admin/questions/counts` → `QuestionBankCountsDto(int Simulation, int SessionTest)` via `IQuestionBankService.CountsAsync(CancellationToken)`. One grouped query; the list endpoint caps at 500 rows, so counts must never be derived from it.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -209,6 +210,7 @@ Create `QuestionBankRulesTests.cs` with the admin-token, `PostJson` and `Authed`
    - A `SessionTest` question in a Gating test: move to Simulation returns 409 with the tes-sesi message.
 7. `Moving_an_unused_question_changes_its_bank_and_is_audited`: returns 204. A GET list with the new bank contains it, and an `audit_logs` row with action `question_moved` exists.
 8. `Moving_to_the_same_bank_is_a_no_op`: returns 204, and the bank is unchanged.
+10. `Counts_are_per_bank`: create one question in each bank, then `GET /api/admin/questions/counts`. Both counts went up by exactly 1 compared with a read taken before the creates.
 9. `Updating_a_question_never_changes_its_bank`: PUT `/api/admin/questions/{id}` with `bank = "Simulation"` on a SessionTest question leaves it `SessionTest`.
 
 Run: `dotnet test backend/tests/Integration.Tests --filter QuestionBankRulesTests`. Expected: compile failure or failures.
@@ -230,9 +232,11 @@ public record UpsertQuestionRequest(
     string? AudioRef, string? PassageRef, IReadOnlyList<string>? Tags, string? Bank = null);
 
 public record MoveQuestionRequest(string Bank);
+
+public record QuestionBankCountsDto(int Simulation, int SessionTest);
 ```
 
-In `IQuestionBankService`, change `ListAsync` to `(string? bank, string? section, string? search, CancellationToken ct = default)` and add `Task MoveAsync(Guid actor, Guid id, string bank, CancellationToken ct = default);`.
+In `IQuestionBankService`, change `ListAsync` to `(string? bank, string? section, string? search, CancellationToken ct = default)` and add `Task MoveAsync(Guid actor, Guid id, string bank, CancellationToken ct = default);` and `Task<QuestionBankCountsDto> CountsAsync(CancellationToken ct = default);`.
 
 Fix every `new AdminQuestionDto(` call site so it passes the bank (`grep -rn "new AdminQuestionDto" backend/src`). In `AssessmentAdminService.GetAsync` that means adding `q.Question.Bank` to the projection and passing `q.Bank.ToString()`.
 
@@ -277,6 +281,18 @@ Fix every `new AdminQuestionDto(` call site so it passes the bank (`grep -rn "ne
     }
 ```
 
+- **`CountsAsync`:**
+
+```csharp
+    public async Task<QuestionBankCountsDto> CountsAsync(CancellationToken ct = default)
+    {
+        var rows = await db.Questions.GroupBy(q => q.Bank)
+            .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
+        int Of(QuestionBank b) => rows.FirstOrDefault(r => r.Key == b)?.Count ?? 0;
+        return new QuestionBankCountsDto(Of(QuestionBank.Simulation), Of(QuestionBank.SessionTest));
+    }
+```
+
 - [ ] **Step 4: Endpoints**
 
 In `AssessmentAdminEndpoints.cs`:
@@ -287,6 +303,10 @@ In `AssessmentAdminEndpoints.cs`:
         g.MapPost("/questions/{id:guid}/move", async Task<NoContent> (
             Guid id, MoveQuestionRequest r, ClaimsPrincipal u, IQuestionBankService s, CancellationToken ct) =>
         { await s.MoveAsync(u.UserId(), id, r.Bank, ct); return TypedResults.NoContent(); });
+
+        g.MapGet("/questions/counts", async Task<Ok<QuestionBankCountsDto>> (
+                IQuestionBankService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.CountsAsync(ct)));
 ```
 
 - [ ] **Step 5: Composing rule**
@@ -347,7 +367,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 2. `Imported_questions_land_in_the_chosen_bank`: commit a one-row workbook with `bank=SessionTest`. The question with that external id has `Bank == SessionTest`.
 3. `An_id_that_exists_in_the_other_bank_is_a_row_error`:
    - Commit external id `XB1` into `Simulation`.
-   - Preview the same id into `SessionTest`: `Committed == false`, and `Errors` contains Column `id`, the right Row, and the message `ID XB1 sudah ada di bank Simulasi TOEFL.`
+   - Preview the same id into `SessionTest`: `Committed == false`, and `Errors` contains Column `id`, the right Row, and the message `ID XB1 sudah ada di bank Simulasi TOEFL. Ganti ID-nya, atau impor ke bank tersebut.`
    - Commit the same: still not committed, and the question is unchanged, still Simulation with the same prompt.
 
 Update the existing import test calls to send a bank. For tests that only check parsing, use `SessionTest` unless a test asserts a Simulation flow.
@@ -364,7 +384,7 @@ Update the existing import test calls to send a bank. For tests that only check 
         var crossBank = parsed.Questions
             .Where(q => byExternalId.TryGetValue(q.ExternalId, out var e) && e.Bank != bank)
             .Select(q => new ImportError(q.RowNumber, "id",
-                $"ID {q.ExternalId} sudah ada di bank {label(byExternalId[q.ExternalId].Bank)}."))
+                $"ID {q.ExternalId} sudah ada di bank {label(byExternalId[q.ExternalId].Bank)}. Ganti ID-nya, atau impor ke bank tersebut."))
             .ToList();
         var errors = parsed.Errors.Concat(crossBank).ToList();
 ```
@@ -446,6 +466,10 @@ export const listQuestions = (t: string, q: { bank?: string; section?: string; s
 
 export const moveQuestion = (t: string, id: string, bank: QuestionBankName) =>
   api<void>("POST", `/api/admin/questions/${id}/move`, t, { bank });
+
+export type QuestionBankCounts = components["schemas"]["QuestionBankCountsDto"];
+export const getQuestionBankCounts = (t: string) =>
+  api<QuestionBankCounts>("GET", "/api/admin/questions/counts", t);
 ```
 
 The import helpers gain a `bank: QuestionBankName` parameter and `form.append("bank", bank);`. `createQuestion` callers pass `bank` in the body (`UpsertQuestion` now has `bank?`).
@@ -453,7 +477,8 @@ The import helpers gain a `bank: QuestionBankName` parameter and `form.append("b
 - [ ] **Step 3: /admin/questions**
 
 - **Tabs and URL:** the active bank comes from `useSearchParams().get("bank")`, defaulting to `"SessionTest"`. Write it back with `router.replace(`?bank=${b}`)` on tab change, so a reload and the back button keep it. Wrap in `Suspense` if Next requires it for `useSearchParams` in this page.
-- **Tab bar:** two buttons, `Simulasi TOEFL (n)` and `Tes Sesi (n)`. Mark them up with `role="tablist"` / `role="tab"` / `aria-selected`, plus focus-visible styles. Counts come from two `listQuestions` queries with only `bank` set. The current list query gains `bank` in its key and params.
+- **Bank switch:** two toggle buttons, `Simulasi TOEFL (n)` and `Tes Sesi (n)`, in a `role="group"` with `aria-label="Bank soal"`. Each has `aria-pressed` and focus-visible styles. Do NOT use `role="tablist"`/`"tab"`: that promises arrow-key navigation this page does not implement. Counts come from ONE `getQuestionBankCounts` query (key `["question-bank-counts"]`), which is invalidated after create, move, delete and import. Never count by fetching a list, since the list caps at 500 rows. The list query gains `bank` in its key and params.
+- **Empty bank:** when the active bank has no questions and there is no search or section filter, show `Belum ada soal di bank {BANK_LABEL[bank]}.` with two actions, `Tambah soal` (opens the form) and `Impor dari Excel` (links to `/admin/questions/import`). With a filter active, keep the existing "no results" text.
 - **Form:** "Tambah soal" opens the form with the active bank. The form shows `Bank: {BANK_LABEL[bank]}` read-only and sends `bank` on create only.
 - **Move action:** each row gets a text button `Pindahkan ke bank lain`. It calls `confirm(`Pindahkan soal ini ke bank ${BANK_LABEL[other]}?`)`, then `moveQuestion`. On error it shows the API's message in the page's existing error area; on success it invalidates the questions queries.
 
@@ -492,8 +517,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 Add the props `bank: QuestionBankName` (required) and `attached?: AdminQuestion[]`, meaning the test's current questions with their details. Then:
 - the query key and params include `bank`;
-- compute `foreign = (attached ?? []).filter((x) => x.bank !== bank && selected.includes(x.id))`;
-- when `foreign.length > 0`, render them ABOVE the list as selected rows. Each shows a badge `dari bank simulasi` (when `x.bank === "Simulation"`) or `dari bank tes sesi`, and a `Hapus` button that removes it from `selected`. They can't be re-added from here;
+- compute `foreign = (attached ?? []).filter((x) => x.bank !== bank && selected.includes(x.id) && (!section || x.section === section))`. The section filter matters: the simulation editor renders one picker per section and passes the whole test's questions to each, so without it every section would list the others' questions;
+- when `foreign.length > 0`, render them ABOVE the list as selected rows. Each shows a badge `dari bank simulasi` (when `x.bank === "Simulation"`) or `dari bank tes sesi`, and a `Lepas` button (aria-label `Lepas soal dari tes`). Because a question from the other bank cannot be re-added once removed, `Lepas` first asks `confirm("Lepas soal ini dari tes? Soal dari bank lain tidak bisa ditambahkan kembali.")`;
 - the "{n} dipilih" count still counts everything in `selected`.
 
 - [ ] **Step 2: Callers**
@@ -515,7 +540,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 4: Browser check (controller)**
 
 Rebuild the stack with `docker compose up -d --build api frontend`. As the admin:
-1. Both tabs show counts.
+1. The bank switch shows both counts; an empty bank shows its empty state.
 2. Creating a question in Tes Sesi lands it there.
 3. A move is refused for a question in use.
 4. Import requires a bank first.
