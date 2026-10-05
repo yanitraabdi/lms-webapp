@@ -62,6 +62,9 @@ Resend's SMTP settings:
   - in `dev` mode: `Sent=false`, Message `Mode dev — email hanya ditulis ke log API, tidak benar-benar dikirim.`;
   - in `smtp` mode, on success: `Sent=true`, Message `Email uji terkirim ke {email}. Periksa kotak masuk (dan folder spam).`;
   - in `smtp` mode, on `SmtpException`: throws `AdminException(message, 502)`, with the message from `SmtpErrorMessage.For(e)`.
+  - in `smtp` mode, when the send takes longer than **20 seconds** (`SmtpClient.Timeout` does not apply to `SendMailAsync`): throws `AdminException("Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.", 502)`.
+
+  The card also shows the recipient before sending ("Dikirim ke {email}"), and in `dev` mode a warning-toned badge with `Email belum benar-benar dikirim. Atur EMAIL_PROVIDER=smtp untuk mengirim.`
 
 **`SmtpErrorMessage.For(SmtpException e)`** is a pure function in Infrastructure/Email that returns Indonesian text with no secrets:
 

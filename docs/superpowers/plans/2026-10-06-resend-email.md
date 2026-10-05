@@ -93,6 +93,7 @@
     [InlineData(SmtpStatusCode.MailboxUnavailable, "x")]
     [InlineData(SmtpStatusCode.MailboxNameNotAllowed, "x")]
     [InlineData(SmtpStatusCode.TransactionFailed, "The mail.example.com domain is not verified")]
+    [InlineData(SmtpStatusCode.TransactionFailed, "Unauthorized sender domain")]
     public void Sender_rejections_point_at_the_verified_domain(SmtpStatusCode code, string message)
         => Assert.Equal("Alamat pengirim ditolak — pastikan domain SMTP_FROM_ADDRESS sudah Verified di Resend.",
             SmtpErrorMessage.For(new SmtpException(code, message)));
@@ -167,20 +168,29 @@ namespace Academy.Infrastructure.Email;
 /// any credential (GR-9).</summary>
 public static class SmtpErrorMessage
 {
+    private const string Auth = "Login SMTP ditolak — periksa SMTP_USERNAME dan SMTP_PASSWORD (API key Resend).";
+    private const string Sender = "Alamat pengirim ditolak — pastikan domain SMTP_FROM_ADDRESS sudah Verified di Resend.";
+    public const string Unreachable = "Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.";
+
     public static string For(SmtpException e)
     {
         var text = (e.Message + " " + e.InnerException?.Message).ToLowerInvariant();
         var code = (int)e.StatusCode;
 
-        if (e.StatusCode == SmtpStatusCode.ClientNotPermitted || code == 535 || text.Contains("auth"))
-            return "Login SMTP ditolak — periksa SMTP_USERNAME dan SMTP_PASSWORD (API key Resend).";
+        // Status codes first, then text: a sender rejection such as "unauthorized sender domain"
+        // contains "auth", so the sender text check must run before the auth text check.
+        if (e.StatusCode == SmtpStatusCode.ClientNotPermitted || code == 535)
+            return Auth;
 
         if (e.StatusCode is SmtpStatusCode.MailboxUnavailable or SmtpStatusCode.MailboxNameNotAllowed
             || text.Contains("domain") || text.Contains("not verified"))
-            return "Alamat pengirim ditolak — pastikan domain SMTP_FROM_ADDRESS sudah Verified di Resend.";
+            return Sender;
+
+        if (text.Contains("auth"))
+            return Auth;
 
         if (e.InnerException is SocketException or IOException || e.StatusCode == SmtpStatusCode.GeneralFailure)
-            return "Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.";
+            return Unreachable;
 
         return $"Pengiriman gagal (kode SMTP {code}).";
     }
@@ -231,6 +241,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
    - Use an `AppDbContext` from `factory.Services` holding a registered user, created via the API as other tests do.
    - `SendTestAsync(userId)` throws `AdminException` with `StatusCode` 502 and the sender-rejected message, and the message does not contain `re_secret`.
 5. `An_smtp_success_names_the_recipient`: same setup, with a fake sender that succeeds. The result has `Sent == true` and message `Email uji terkirim ke {that user's email}. Periksa kotak masuk (dan folder spam).`
+6. `A_relay_that_never_answers_times_out_as_unreachable`: a fake sender whose `SendTestAsync` awaits `Task.Delay(Timeout.Infinite, ct)`. Build the service with `SendTimeout = TimeSpan.FromMilliseconds(200)` (object initializer; make the test project see internals via `InternalsVisibleTo` if it doesn't already, or make the property public with a comment). `SendTestAsync` then throws `AdminException` 502 with `Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.`
 
 The fake `IEmailSender` can derive from `DevEmailSender`, overriding `SendTestAsync`, with `NullLogger<DevEmailSender>.Instance`, so it doesn't have to implement the whole interface.
 
@@ -271,6 +282,9 @@ namespace Academy.Infrastructure.Email;
 
 public class EmailDiagnosticsService(EmailOptions options, IEmailSender sender, AppDbContext db) : IEmailDiagnosticsService
 {
+    /// <summary>Bounds one test send. Settable (init) so tests can shorten it.</summary>
+    internal TimeSpan SendTimeout { get; init; } = TimeSpan.FromSeconds(20);
+
     public EmailStatusDto GetStatus() => new(
         options.IsSmtp ? "smtp" : "dev", options.Host, options.Port,
         options.FromAddress, options.FromName, options.ReplyTo);
@@ -284,13 +298,22 @@ public class EmailDiagnosticsService(EmailOptions options, IEmailSender sender, 
         if (!options.IsSmtp)
             return new(false, "Mode dev — email hanya ditulis ke log API, tidak benar-benar dikirim.");
 
+        // SmtpClient.Timeout does not apply to SendMailAsync, so an unreachable host (dropped SYN)
+        // would hang the button; bound it here. A timeout surfaces as OperationCanceledException,
+        // not SmtpException, and must not become a 500.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(SendTimeout);
         try
         {
-            await sender.SendTestAsync(admin.Email, admin.Name, ct);
+            await sender.SendTestAsync(admin.Email, admin.Name, timeout.Token);
         }
         catch (SmtpException e)
         {
             throw new AdminException(SmtpErrorMessage.For(e), 502);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new AdminException(SmtpErrorMessage.Unreachable, 502);
         }
         return new(true, $"Email uji terkirim ke {admin.Email}. Periksa kotak masuk (dan folder spam).");
     }
@@ -468,6 +491,8 @@ Below the KPI grid, add an `EmailCard` component in the same file. It is styled 
 - **Data:** `useQuery(["admin-email-status"], getEmailStatus)`.
 - **Header:** `Email`, with a small badge: `SMTP` when `provider === "smtp"`, otherwise `Dev — hanya log`.
 - **Details:** a definition list of `Server` (`{host}:{port}`), `Pengirim` (`{fromName} <{fromAddress}>`) and `Balasan ke` (`{replyTo}`). Each row is shown only when its value is non-empty.
+- **Dev-mode warning:** when `provider !== "smtp"`, render the badge in the warning tone (`text-warning` / `bg-warning-soft`, as `QuestionPicker`'s badge does), plus a line under the header: `Email belum benar-benar dikirim. Atur EMAIL_PROVIDER=smtp untuk mengirim.`
+- **Recipient** (muted, small, above the button): `Dikirim ke {useAuth().user?.email}`, so the admin knows where to look before clicking.
 - **Button:** `<Button>` `Kirim email uji`. It calls `sendTestEmail` through a `useMutation`, and is disabled with a spinner while pending.
 - **Result** goes in a `<p aria-live="polite">` below the button:
   - success: `result.message` in normal ink;
