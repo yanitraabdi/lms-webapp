@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Spinner, XIcon } from "@/components/ui";
 import { inputBlockCls } from "@/components/admin/fields";
 import { VideoPicker } from "@/components/admin/VideoPicker";
@@ -89,7 +89,11 @@ export function SessionPartsEditor({
     return () => { cancelled = true; };
   }, [token, sessionId]);
 
-  const dirty = JSON.stringify(toInput(rows)) !== JSON.stringify(toInput(saved));
+  // Uploads running in this editor's video pickers; closing the form would abort them.
+  const [uploads, setUploads] = useState(0);
+  const onBusyChange = useCallback((b: boolean) => setUploads((n) => n + (b ? 1 : -1)), []);
+
+  const dirty = JSON.stringify(toInput(rows)) !== JSON.stringify(toInput(saved)) || uploads > 0;
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
   const update = (i: number, patch: Partial<Row>) =>
@@ -198,6 +202,7 @@ export function SessionPartsEditor({
                   token={token}
                   value={r.providerAssetId ?? ""}
                   onPick={(v) => update(i, { providerAssetId: v.id, durationSeconds: v.lengthSeconds })}
+                  onBusyChange={onBusyChange}
                 />
                 {r.durationSeconds != null && (
                   <span className="text-[11.5px] text-ink-subtle">{minutesLabel(r.durationSeconds)}</span>

@@ -3848,6 +3848,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/video-library/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateVideoUploadRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UploadTicketDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/video-library/uploads/{videoId}/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    videoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UploadTicketDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/programs/{programId}/batches": {
         parameters: {
             query?: never;
@@ -6260,6 +6336,9 @@ export interface components {
             type: string;
             text: null | string;
         };
+        CreateVideoUploadRequest: {
+            title: null | string;
+        };
         DashboardDto: {
             /** Format: int32 */
             activeTier: null | number | string;
@@ -7018,6 +7097,14 @@ export interface components {
             remainingDays: number | string;
             /** Format: int32 */
             cycleDays: number | string;
+        };
+        UploadTicketDto: {
+            videoId: string;
+            libraryId: string;
+            /** Format: int64 */
+            expiresAt: number | string;
+            signature: string;
+            endpoint: string;
         };
         UpsertAssessmentRequest: {
             kind: string;
