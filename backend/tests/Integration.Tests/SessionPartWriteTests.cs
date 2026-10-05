@@ -136,6 +136,75 @@ public class SessionPartWriteTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
     }
 
+    [Fact]
+    public async Task Backfill_fails_loudly_when_two_legacy_sessions_share_a_test()
+    {
+        var (admin, programId) = await NewProgram();
+        var a = await NewGatingAssessment(admin);
+        var ids = new[] { Guid.CreateVersion7(), Guid.CreateVersion7() };
+        await WithDb(async db =>
+        {
+            for (var i = 0; i < 2; i++)
+                db.ProgramSessions.Add(new ProgramSession
+                {
+                    Id = ids[i], ProgramId = programId, OrderIndex = 90 + i, Type = SessionType.Video,
+                    Title = $"Dup {i}", ProviderAssetId = "sample", DurationSeconds = 60, AssessmentId = a.Id,
+                });
+            await db.SaveChangesAsync();
+        });
+        try
+        {
+            var ex = await Assert.ThrowsAnyAsync<Exception>(() => WithDb(
+                db => db.Database.ExecuteSqlRawAsync(SessionPartBackfill.Sql)));
+            Assert.Contains("is attached to more than one video session", ex.ToString());
+        }
+        finally
+        {
+            // Hermetic: the poisoned rows must not break other backfill runs.
+            await WithDb(db => db.ProgramSessions.Where(x => ids.Contains(x.Id)).ExecuteDeleteAsync());
+        }
+    }
+
+    [Fact]
+    public async Task Attaching_one_test_to_two_sessions_returns_409()
+    {
+        var (admin, programId) = await NewProgram();
+        var s1 = await CreateVideoSession(admin, programId, "sample", 60);
+        var s2 = await CreateVideoSession(admin, programId, "sample", 60);
+        var a = await NewGatingAssessment(admin);
+        (await Authed(HttpMethod.Put, $"/api/admin/sessions/{s1.Id}/assessment", admin,
+            new { assessmentId = a.Id })).EnsureSuccessStatusCode();
+
+        var res = await Authed(HttpMethod.Put, $"/api/admin/sessions/{s2.Id}/assessment", admin,
+            new { assessmentId = a.Id });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Contains("Tes ini sudah dipakai di sesi lain.", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Creating_a_session_with_an_already_used_test_returns_409()
+    {
+        var (admin, programId) = await NewProgram();
+        var s1 = await CreateVideoSession(admin, programId, "sample", 60);
+        var a = await NewGatingAssessment(admin);
+        (await Authed(HttpMethod.Put, $"/api/admin/sessions/{s1.Id}/assessment", admin,
+            new { assessmentId = a.Id })).EnsureSuccessStatusCode();
+
+        var res = await Authed(HttpMethod.Post, $"/api/admin/programs/{programId}/sessions", admin, new
+        {
+            type = "Video", title = "Dua", description = (string?)null, orderIndex = 0,
+            providerAssetId = "sample", durationSeconds = 60,
+            scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = a.Id,
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        var body = await res.Content.ReadAsStringAsync();
+        Assert.Contains("Tes ini sudah dipakai di sesi lain.", body);
+        Assert.DoesNotContain("Urutan sesi bentrok", body);
+    }
+
     // ---- helpers ----
 
     private Task<List<SessionPart>> PartsOf(Guid sessionId) => WithDbResult(db => db.SessionParts

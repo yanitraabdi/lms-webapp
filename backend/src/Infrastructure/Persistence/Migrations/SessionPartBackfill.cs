@@ -10,6 +10,18 @@ namespace Academy.Infrastructure.Persistence.Migrations;
 public static class SessionPartBackfill
 {
     public const string Sql = """
+        -- Fail loudly rather than drop a test: one test per part, so a shared assessment cannot be backfilled.
+        DO $$
+        DECLARE dup uuid;
+        BEGIN
+            SELECT assessment_id INTO dup FROM program_sessions
+            WHERE type = 'Video' AND assessment_id IS NOT NULL
+            GROUP BY assessment_id HAVING count(*) > 1 LIMIT 1;
+            IF dup IS NOT NULL THEN
+                RAISE EXCEPTION 'session_parts backfill: assessment % is attached to more than one video session — detach the duplicates before migrating', dup;
+            END IF;
+        END $$;
+
         INSERT INTO session_parts (id, session_id, order_index, kind, title, provider_asset_id,
                                    duration_seconds, assessment_id, created_at, updated_at)
         SELECT gen_random_uuid(), s.id, 1, 'LessonVideo', s.title,

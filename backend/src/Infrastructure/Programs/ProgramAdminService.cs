@@ -602,6 +602,10 @@ public class ProgramAdminService(
         {
             await db.SaveChangesAsync(ct);
         }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
+        {
+            throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
+        }
         catch (DbUpdateException)
         {
             throw new ProgramException("Urutan sesi bentrok. Muat ulang lalu coba lagi.", 409);
