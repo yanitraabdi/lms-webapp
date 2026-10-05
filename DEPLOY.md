@@ -126,7 +126,7 @@ SMTP_REPLY_TO=halo@yourdomain.com
 ```
 
 7. **Restart the API.** `.env` is read only at start:
-   `docker compose -f docker-compose.tunnel.yml up -d api`
+   `docker compose -f docker-compose.tunnel.yml up -d api` (local stack: `docker compose up -d api`)
 8. Confirm with **Admin → Kirim email uji**. It sends a test message to your own admin address and
    reports one of:
    - `Login SMTP ditolak …` — wrong `SMTP_USERNAME` (must be `resend`) or `SMTP_PASSWORD` (API key).
@@ -137,6 +137,12 @@ SMTP_REPLY_TO=halo@yourdomain.com
 
 Notes:
 
+- Use port **587** (or Resend's **2587** if 587 is blocked). Never 465/2465: System.Net.Mail cannot do
+  implicit TLS, so the connection hangs until the timeout and shows the "tidak dapat dihubungi" message.
+- The local `docker-compose.yml` forwards the same `EMAIL_PROVIDER`/`SMTP_*` from `.env`. A local
+  `docker compose up` therefore sends **real** email through Resend when `.env` says `smtp` (using the
+  100/day free quota), and an incomplete smtp config stops the local API at startup. Set
+  `EMAIL_PROVIDER=dev` locally unless you mean to send.
 - The Resend free plan is limited to **100 emails per day** and **3,000 per month**.
 - `SMTP_FROM_ADDRESS` must be on the verified domain, or Resend rejects the send.
 - An incomplete `smtp` config **fails at startup** rather than falling back to the log. That is

@@ -319,4 +319,9 @@ public class EmailSendingTests
     public void Anything_else_reports_the_smtp_code_without_secrets()
         => Assert.Equal("Pengiriman gagal (kode SMTP 552).",
             SmtpErrorMessage.For(new SmtpException(SmtpStatusCode.ExceededStorageAllocation, "x")));
+
+    [Fact]
+    public void A_rejected_recipient_points_at_the_admin_address_not_the_sender()
+        => Assert.Equal("Alamat penerima ditolak — periksa alamat email akun admin Anda atau daftar suppression di Resend.",
+            SmtpErrorMessage.For(new SmtpFailedRecipientException(SmtpStatusCode.MailboxUnavailable, "a@b.c", "domain not verified")));
 }

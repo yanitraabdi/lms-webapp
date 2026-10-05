@@ -110,6 +110,22 @@ public class EmailDiagnosticsTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.Equal("Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.", ex.Message);
     }
 
+    [Fact]
+    public async Task A_sender_that_ignores_cancellation_still_returns_unreachable()
+    {
+        var (_, id) = await NewUser(UserRole.Admin);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var svc = new EmailDiagnosticsService(Smtp(),
+            new FakeSender(_ => new TaskCompletionSource().Task), db)
+        { SendTimeout = TimeSpan.FromMilliseconds(200) };
+
+        var ex = await Assert.ThrowsAsync<AdminException>(() => svc.SendTestAsync(id));
+
+        Assert.Equal(502, ex.StatusCode);
+        Assert.Equal("Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.", ex.Message);
+    }
+
     private Task<HttpResponseMessage> Send(HttpMethod m, string url, string token) =>
         _client.SendAsync(new HttpRequestMessage(m, url)
         { Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) } });

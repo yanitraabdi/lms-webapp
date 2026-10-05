@@ -25,13 +25,14 @@ public class EmailDiagnosticsService(EmailOptions options, IEmailSender sender, 
             return new(false, "Mode dev — email hanya ditulis ke log API, tidak benar-benar dikirim.");
 
         // SmtpClient.Timeout does not apply to SendMailAsync, so an unreachable host (dropped SYN)
-        // would hang the button; bound it here. A timeout surfaces as OperationCanceledException,
+        // would hang the button; bound it here. WaitAsync guarantees the return even if the send
+        // ignores the token (the send may keep running in the background — fine for a test email). A timeout surfaces as OperationCanceledException,
         // not SmtpException, and must not become a 500.
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(SendTimeout);
         try
         {
-            await sender.SendTestAsync(admin.Email, admin.Name, timeout.Token);
+            await sender.SendTestAsync(admin.Email, admin.Name, timeout.Token).WaitAsync(timeout.Token);
         }
         catch (SmtpException e)
         {
