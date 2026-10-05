@@ -1,19 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState, SearchIcon, XIcon } from "@/components/ui";
 import { AudioUpload } from "@/components/admin/AudioUpload";
 import {
-  listQuestions, createQuestion, updateQuestion, deleteQuestion,
-  QUESTION_SECTIONS, num, type AdminQuestion, type UpsertQuestion,
+  listQuestions, createQuestion, updateQuestion, deleteQuestion, moveQuestion, getQuestionBankCounts,
+  QUESTION_SECTIONS, QUESTION_BANKS, BANK_LABEL, num,
+  type AdminQuestion, type UpsertQuestion, type QuestionBankName,
 } from "@/lib/sessions";
 
 export default function AdminQuestionsPage() {
+  // useSearchParams needs a Suspense boundary for the static build.
+  return <Suspense><QuestionBank /></Suspense>;
+}
+
+function QuestionBank() {
   const token = useAuth().accessToken;
   const qc = useQueryClient();
+  const router = useRouter();
+  const param = useSearchParams().get("bank");
+  const bank: QuestionBankName = param === "Simulation" ? "Simulation" : "SessionTest";
+  const other: QuestionBankName = bank === "Simulation" ? "SessionTest" : "Simulation";
+  const [pageError, setPageError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [section, setSection] = useState("");
@@ -26,23 +38,68 @@ export default function AdminQuestionsPage() {
   }, [searchInput]);
 
   const questions = useQuery({
-    queryKey: ["admin-questions", section, search],
-    queryFn: () => listQuestions(token!, { section: section || undefined, search: search || undefined }),
+    queryKey: ["admin-questions", bank, section, search],
+    queryFn: () => listQuestions(token!, { bank, section: section || undefined, search: search || undefined }),
     enabled: !!token,
   });
+  // Counts come from their own endpoint: the list caps at 500 rows, so it can't be counted.
+  const counts = useQuery({
+    queryKey: ["question-bank-counts"],
+    queryFn: () => getQuestionBankCounts(token!),
+    enabled: !!token,
+  });
+  const countOf = (b: QuestionBankName) =>
+    counts.data ? num(b === "Simulation" ? counts.data.simulation : counts.data.sessionTest) : null;
+
+  function refresh() {
+    qc.invalidateQueries({ queryKey: ["admin-questions"] });
+    qc.invalidateQueries({ queryKey: ["question-bank-counts"] });
+  }
 
   async function remove(q: AdminQuestion) {
     if (!token || !confirm(`Hapus soal "${q.prompt.slice(0, 50)}…"?`)) return;
+    setPageError(null);
     try {
       await deleteQuestion(token, q.id);
-      qc.invalidateQueries({ queryKey: ["admin-questions"] });
+      refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Gagal menghapus.");
+      setPageError(e instanceof Error ? e.message : "Gagal menghapus.");
+    }
+  }
+
+  async function move(q: AdminQuestion) {
+    if (!token || !confirm(`Pindahkan soal ini ke bank ${BANK_LABEL[other]}?`)) return;
+    setPageError(null);
+    try {
+      await moveQuestion(token, q.id, other);
+      refresh();
+    } catch (e) {
+      setPageError(e instanceof Error ? e.message : "Gagal memindahkan soal.");
     }
   }
 
   return (
     <div className="flex flex-col gap-3">
+      <div role="group" aria-label="Bank soal" className="flex flex-wrap gap-2">
+        {QUESTION_BANKS.map((b) => (
+          <button
+            key={b}
+            type="button"
+            aria-pressed={b === bank}
+            onClick={() => { setPageError(null); router.replace(`?bank=${b}`); }}
+            className={`rounded-sm border px-3 py-2 text-[13px] font-bold outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+              b === bank ? "border-primary bg-primary text-primary-ink" : "border-border bg-surface text-ink hover:bg-surface-2"
+            }`}
+          >
+            {BANK_LABEL[b]} ({countOf(b) ?? "…"})
+          </button>
+        ))}
+      </div>
+
+      {pageError && (
+        <div role="alert" className="rounded-base bg-danger-soft px-4 py-3 text-[13px] font-semibold text-danger">{pageError}</div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-ink-subtle">
           Bank soal untuk tes sesi dan tes akhir. Soal disusun menjadi tes di halaman Program.
@@ -83,6 +140,19 @@ export default function AdminQuestionsPage() {
             <ErrorState title="Gagal memuat bank soal"
               action={<Button variant="neutral" size="sm" onClick={() => questions.refetch()}>Muat ulang</Button>} />
           </div>
+        ) : questions.data.length === 0 && !section && !search ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+            <p className="text-sm text-ink-muted">Belum ada soal di bank {BANK_LABEL[bank]}.</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setCreating(true)}>Tambah soal</Button>
+              <Link
+                href="/admin/questions/import"
+                className="rounded-sm border border-border px-3 py-2 text-[13px] font-bold text-ink hover:bg-surface-2"
+              >
+                Impor dari Excel
+              </Link>
+            </div>
+          </div>
         ) : questions.data.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-ink-muted">Belum ada soal.</p>
         ) : (
@@ -113,6 +183,7 @@ export default function AdminQuestionsPage() {
                   <td className="px-5 py-3.5">
                     <div className="flex justify-end gap-2">
                       <Button variant="neutral" size="sm" onClick={() => setEditing(q)}>Edit</Button>
+                      <Button variant="neutral" size="sm" onClick={() => move(q)}>Pindahkan ke bank lain</Button>
                       <button
                         type="button"
                         onClick={() => remove(q)}
@@ -134,10 +205,11 @@ export default function AdminQuestionsPage() {
         <QuestionForm
           token={token}
           question={editing}
+          bank={bank}
           onClose={() => {
             setCreating(false);
             setEditing(null);
-            qc.invalidateQueries({ queryKey: ["admin-questions"] });
+            refresh();
           }}
         />
       )}
@@ -146,8 +218,8 @@ export default function AdminQuestionsPage() {
 }
 
 function QuestionForm({
-  token, question, onClose,
-}: { token: string; question: AdminQuestion | null; onClose: () => void }) {
+  token, question, bank, onClose,
+}: { token: string; question: AdminQuestion | null; bank: QuestionBankName; onClose: () => void }) {
   const [section, setSection] = useState(question?.section ?? "Reading");
   const [prompt, setPrompt] = useState(question?.prompt ?? "");
   const [choices, setChoices] = useState<string[]>(question?.choices ?? ["", ""]);
@@ -174,7 +246,7 @@ function QuestionForm({
         tags: null,
       };
       if (question) await updateQuestion(token, question.id, body);
-      else await createQuestion(token, body);
+      else await createQuestion(token, { ...body, bank });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menyimpan soal.");
@@ -197,6 +269,10 @@ function QuestionForm({
     >
       <div className="flex flex-col gap-3">
         {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
+
+        <p className="text-[12px] font-bold text-ink-muted">
+          Bank: {BANK_LABEL[(question?.bank ?? bank) as QuestionBankName] ?? question?.bank}
+        </p>
 
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-bold text-ink-muted">Bagian</span>
