@@ -86,7 +86,7 @@ public class PlaceholderFinalExamSeeder(
             throw new InvalidOperationException(
                 "Placeholder exam needs an admin to attribute the import to. Run DevAdminSeeder first.");
 
-        var result = await import.CommitAsync(actorId, stream, ct);
+        var result = await import.CommitAsync(actorId, QuestionBank.Simulation, stream, ct);
         if (!result.Committed)
             throw new InvalidOperationException(
                 "Placeholder exam workbook failed validation: " +

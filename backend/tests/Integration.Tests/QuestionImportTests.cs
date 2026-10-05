@@ -84,7 +84,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         var committed = await WithService(async (service, db) =>
         {
             using var file = Workbook($"{id}|Reading|Main idea?|Trade|Rivers|A");
-            var result = await service.CommitAsync(await SeedActorAsync(db), file);
+            var result = await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, file);
 
             Assert.True(result.Committed);
             Assert.Equal(1, result.CreateCount);
@@ -110,7 +110,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
                 $"{a}|Reading|Q1|X|Y|A|P1",
                 $"{b}|Reading|Q2|X|Y|B|P1");
 
-            Assert.True((await service.CommitAsync(await SeedActorAsync(db), file)).Committed);
+            Assert.True((await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, file)).Committed);
 
             var stored = await db.Questions.Where(q => q.ExternalId == a || q.ExternalId == b).ToListAsync();
             Assert.All(stored, q => Assert.Equal("The passage body.", q.PassageRef));
@@ -127,11 +127,11 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         await WithService(async (service, db) =>
         {
             using var first = Workbook($"{id}|Reading|Original|X|Y|A");
-            await service.CommitAsync(await SeedActorAsync(db), first);
+            await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, first);
             var originalKey = (await db.Questions.SingleAsync(q => q.ExternalId == id)).Id;
 
             using var second = Workbook($"{id}|Reading|Corrected|X|Y|B");
-            var result = await service.CommitAsync(await SeedActorAsync(db), second);
+            var result = await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, second);
 
             Assert.Equal(0, result.CreateCount);
             Assert.Equal(1, result.UpdateCount);
@@ -156,7 +156,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
                 $"{good}|Reading|Fine|X|Y|A",
                 $"{bad}|Speaking|Bad section|X|Y|A");
 
-            var result = await service.CommitAsync(await SeedActorAsync(db), file);
+            var result = await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, file);
 
             Assert.False(result.Committed);
             Assert.Single(result.Errors);
@@ -172,7 +172,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         await WithService(async (service, db) =>
         {
             using var file = Workbook($"{id}|Reading|Q|X|Y|A");
-            var result = await service.PreviewAsync(file);
+            var result = await service.PreviewAsync(QuestionBank.SessionTest, file);
 
             Assert.False(result.Committed);
             Assert.Equal(1, result.CreateCount);
@@ -190,10 +190,10 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         await WithService(async (service, db) =>
         {
             using var first = Workbook($"{id}|Reading|Original|X|Y|A");
-            await service.CommitAsync(await SeedActorAsync(db), first);
+            await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, first);
 
             using var second = Workbook($"{id}|Reading|Different question entirely|X|Y|A");
-            var result = await service.PreviewAsync(second);
+            var result = await service.PreviewAsync(QuestionBank.SessionTest, second);
 
             Assert.True(Assert.Single(result.Items).IsUpdate);
             Assert.Equal(1, result.UpdateCount);
@@ -221,7 +221,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
             handAuthored = question.Id;
 
             using var file = Workbook($"{Id("R")}|Reading|Imported|X|Y|A");
-            await service.CommitAsync(await SeedActorAsync(db), file);
+            await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, file);
 
             var after = await db.Questions.AsNoTracking().SingleAsync(q => q.Id == handAuthored);
             Assert.Equal("Written in the admin UI", after.Prompt);
@@ -240,11 +240,11 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         await WithService(async (service, db) =>
         {
             using var withAudio = Workbook($"{id}|Listening|Q|X|Y|A||L99.mp3");
-            await service.CommitAsync(await SeedActorAsync(db), withAudio);
+            await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, withAudio);
             Assert.Equal("audio/l99.mp3", (await db.Questions.SingleAsync(q => q.ExternalId == id)).AudioRef);
 
             using var withoutAudio = Workbook($"{id}|Listening|Q corrected|X|Y|A");
-            await service.CommitAsync(await SeedActorAsync(db), withoutAudio);
+            await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, withoutAudio);
 
             var stored = await db.Questions.SingleAsync(q => q.ExternalId == id);
             Assert.Equal("Q corrected", stored.Prompt);
@@ -262,7 +262,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         await WithService(async (service, db) =>
         {
             using var file = Workbook($"{id}|Reading|Original|X|Y|A");
-            await service.CommitAsync(await SeedActorAsync(db), file);
+            await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, file);
             var question = await db.Questions.SingleAsync(q => q.ExternalId == id);
 
             var assessment = new Assessment
@@ -278,7 +278,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
             await db.SaveChangesAsync();
 
             using var corrected = Workbook($"{id}|Reading|Corrected|X|Y|A");
-            Assert.True((await service.CommitAsync(await SeedActorAsync(db), corrected)).Committed);
+            Assert.True((await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, corrected)).Committed);
 
             Assert.Equal("Corrected", (await db.Questions.SingleAsync(q => q.ExternalId == id)).Prompt);
             Assert.True(await db.AssessmentQuestions.AnyAsync(aq => aq.QuestionId == question.Id));
@@ -293,7 +293,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         {
             var actor = await SeedActorAsync(db);
             using var file = Workbook($"{Id("R")}|Reading|Q|X|Y|A");
-            await service.CommitAsync(actor, file);
+            await service.CommitAsync(actor, QuestionBank.SessionTest, file);
 
             Assert.True(await db.AuditLogs.AnyAsync(a => a.Action == "questions_bulk_imported"));
             return 0;
@@ -310,7 +310,7 @@ public class QuestionImportTests(AuthApiFactory factory) : IClassFixture<AuthApi
         {
             using var file = Workbook($"{id}|Listening|Q|X|Y|A||L42.mp3");
 
-            Assert.True((await service.CommitAsync(await SeedActorAsync(db), file)).Committed);
+            Assert.True((await service.CommitAsync(await SeedActorAsync(db), QuestionBank.SessionTest, file)).Committed);
             Assert.Equal("audio/l42.mp3", (await db.Questions.SingleAsync(q => q.ExternalId == id)).AudioRef);
             return 0;
         });

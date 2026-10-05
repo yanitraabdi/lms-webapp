@@ -31,7 +31,9 @@ public class QuestionImportApiTests(AuthApiFactory factory) : IClassFixture<Auth
 
     private static string Id(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..12].ToUpperInvariant();
 
-    private static MultipartFormDataContent Sheet(params string[] rows)
+    private static MultipartFormDataContent Sheet(params string[] rows) => SheetIn("SessionTest", rows);
+
+    private static MultipartFormDataContent SheetIn(string? bank, params string[] rows)
     {
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Questions");
@@ -49,7 +51,9 @@ public class QuestionImportApiTests(AuthApiFactory factory) : IClassFixture<Auth
         var file = new ByteArrayContent(ms.ToArray());
         file.Headers.ContentType = new MediaTypeHeaderValue(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        return new MultipartFormDataContent { { file, "file", "bank.xlsx" } };
+        var form = new MultipartFormDataContent { { file, "file", "bank.xlsx" } };
+        if (bank is not null) form.Add(new StringContent(bank), "bank");
+        return form;
     }
 
     private async Task<HttpResponseMessage> Post(string url, string? token, HttpContent content)
@@ -125,12 +129,64 @@ public class QuestionImportApiTests(AuthApiFactory factory) : IClassFixture<Auth
         Assert.Equal("section", Assert.Single(result.Errors).Column);
     }
 
+    [Theory]
+    [InlineData("/api/admin/questions/import/preview", null)]
+    [InlineData("/api/admin/questions/import", null)]
+    [InlineData("/api/admin/questions/import/preview", "99")]
+    [InlineData("/api/admin/questions/import", "99")]
+    public async Task Import_without_a_defined_bank_is_refused(string url, string? bank)
+    {
+        var res = await Post(url, await AdminToken(), SheetIn(bank, $"{Id("R")}|Reading|Q|X|Y|A"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("Pilih bank soal tujuan impor.", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Imported_questions_land_in_the_chosen_bank()
+    {
+        var id = Id("R");
+        (await Post("/api/admin/questions/import", await AdminToken(),
+            SheetIn("SessionTest", $"{id}|Reading|Q|X|Y|A"))).EnsureSuccessStatusCode();
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(QuestionBank.SessionTest, (await db.Questions.SingleAsync(q => q.ExternalId == id)).Bank);
+    }
+
+    [Fact]
+    public async Task An_id_that_exists_in_the_other_bank_is_a_row_error()
+    {
+        var token = await AdminToken();
+        var id = Id("XB");
+        var first = await Post("/api/admin/questions/import", token, SheetIn("Simulation", $"{id}|Reading|Original|X|Y|A"));
+        Assert.True((await first.Content.ReadFromJsonAsync<Result>(Json))!.Committed);
+
+        var expected = $"ID {id} sudah ada di bank Simulasi TOEFL. Ganti ID-nya, atau impor ke bank tersebut.";
+        foreach (var url in new[] { "/api/admin/questions/import/preview", "/api/admin/questions/import" })
+        {
+            var res = await Post(url, token, SheetIn("SessionTest", $"{id}|Reading|Changed|X|Y|A"));
+            var result = (await res.Content.ReadFromJsonAsync<Result>(Json))!;
+            Assert.False(result.Committed);
+            var error = Assert.Single(result.Errors);
+            Assert.Equal("id", error.Column);
+            Assert.Equal(2, error.Row);
+            Assert.Equal(expected, error.Message);
+        }
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var q = await db.Questions.SingleAsync(x => x.ExternalId == id);
+        Assert.Equal(QuestionBank.Simulation, q.Bank);
+        Assert.Equal("Original", q.Prompt);
+    }
+
     [Fact]
     public async Task A_non_workbook_upload_is_a_400_with_an_admin_facing_message()
     {
         var junk = new ByteArrayContent("not a spreadsheet"u8.ToArray());
         junk.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        var form = new MultipartFormDataContent { { junk, "file", "bank.xlsx" } };
+        var form = new MultipartFormDataContent { { junk, "file", "bank.xlsx" }, { new StringContent("SessionTest"), "bank" } };
 
         var res = await Post("/api/admin/questions/import/preview", await AdminToken(), form);
 

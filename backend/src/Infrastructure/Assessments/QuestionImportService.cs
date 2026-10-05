@@ -21,13 +21,13 @@ public class QuestionImportService(AppDbContext db) : IQuestionImportService
 
     public byte[] BuildTemplate() => XlsxWorkbookReader.BuildTemplate();
 
-    public Task<ImportResultDto> PreviewAsync(Stream file, CancellationToken ct = default)
-        => RunAsync(file, actor: null, ct);
+    public Task<ImportResultDto> PreviewAsync(QuestionBank bank, Stream file, CancellationToken ct = default)
+        => RunAsync(bank, file, actor: null, ct);
 
-    public Task<ImportResultDto> CommitAsync(Guid actor, Stream file, CancellationToken ct = default)
-        => RunAsync(file, actor, ct);
+    public Task<ImportResultDto> CommitAsync(Guid actor, QuestionBank bank, Stream file, CancellationToken ct = default)
+        => RunAsync(bank, file, actor, ct);
 
-    private async Task<ImportResultDto> RunAsync(Stream file, Guid? actor, CancellationToken ct)
+    private async Task<ImportResultDto> RunAsync(QuestionBank bank, Stream file, Guid? actor, CancellationToken ct)
     {
         var parsed = QuestionImportParser.Parse(XlsxWorkbookReader.Read(file));
 
@@ -39,6 +39,15 @@ public class QuestionImportService(AppDbContext db) : IQuestionImportService
                 .Where(q => q.ExternalId != null && ids.Contains(q.ExternalId))
                 .ToListAsync(ct);
         var byExternalId = existing.ToDictionary(q => q.ExternalId!, StringComparer.Ordinal);
+
+        // An id already in the OTHER bank is an error, not a silent move (spec §4.6).
+        var label = (QuestionBank b) => b == QuestionBank.Simulation ? "Simulasi TOEFL" : "Tes Sesi";
+        var crossBank = parsed.Questions
+            .Where(q => byExternalId.TryGetValue(q.ExternalId, out var e) && e.Bank != bank)
+            .Select(q => new ImportError(q.RowNumber, "id",
+                $"ID {q.ExternalId} sudah ada di bank {label(byExternalId[q.ExternalId].Bank)}. Ganti ID-nya, atau impor ke bank tersebut."))
+            .ToList();
+        var errors = parsed.Errors.Concat(crossBank).ToList();
 
         var items = parsed.Questions
             .Select(q => new ImportPlanItem(
@@ -54,14 +63,14 @@ public class QuestionImportService(AppDbContext db) : IQuestionImportService
 
         // A preview never writes; a commit with any error never writes. Both return the same shape
         // so the screen can render errors identically either way.
-        if (actor is not Guid actorId || parsed.Errors.Count > 0)
-            return new ImportResultDto(false, createCount, updateCount, perSection, items, parsed.Errors);
+        if (actor is not Guid actorId || errors.Count > 0)
+            return new ImportResultDto(false, createCount, updateCount, perSection, items, errors);
 
         foreach (var question in parsed.Questions)
         {
             if (!byExternalId.TryGetValue(question.ExternalId, out var entity))
             {
-                entity = new Question { Id = Guid.CreateVersion7(), ExternalId = question.ExternalId };
+                entity = new Question { Id = Guid.CreateVersion7(), ExternalId = question.ExternalId, Bank = bank };
                 db.Questions.Add(entity);
             }
             Apply(entity, question);
