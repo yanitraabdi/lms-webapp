@@ -29,10 +29,11 @@
 - **Errors** are thrown as `ProgramException(message, status)`; the existing exception handler maps them to problem details.
 - **Audit:** `video_upload_started` with `{ videoId, title }` on create, written through `AppDbContext.AuditLogs` the same way other admin services do. Renewing isn't audited.
 - **UI copy:**
-  - buttons: `Unggah video baru`, `Mulai unggah`, `Batal`, `Batalkan`;
+  - buttons: `Unggah video baru`, `Mulai unggah`, `Batal` (before starting), `Hentikan unggahan` (while uploading);
   - progress: `Mengunggah {pct}% · {sent} dari {total}`;
-  - statuses: `Terunggah — Bunny sedang memproses video.`, `Unggahan terputus. Pilih file yang sama untuk melanjutkan.`, `Unggahan tidak selesai`.
-- **TUS settings:** `chunkSize` 50 MB (`50 * 1024 * 1024`), `retryDelays` `[0, 3000, 10000, 30000]`, metadata `{ filetype, title }`.
+  - statuses: `“{judul}” terunggah. Video bisa dipilih setelah Bunny selesai memprosesnya.`, `Unggahan terputus. Pilih file yang sama untuk melanjutkan.`, `Unggahan tidak selesai`.
+- **TUS settings:** `chunkSize` 50 MB (`50 * 1024 * 1024`), `retryDelays` `[0, 3000, 10000, 30000]`, metadata `{ filetype, title, videoId }`. `videoId` is ours: it lets a resume find which Bunny video the half-finished upload belongs to.
+- **Layering:** routes never touch `AppDbContext`. Title validation, the upload call and the audit log go through an `IVideoUploadService` (Application port, Infrastructure implementation), like every other admin service.
 - **Frontend API types** come only from the regenerated `frontend/api-client/schema.ts`.
 - **Commits** end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Backend checks:** `dotnet build backend/Academy.slnx` with 0 warnings and `dotnet test backend/Academy.slnx` green.
@@ -48,7 +49,8 @@
 | `backend/src/Infrastructure/Learning/BunnyVideoLibrary.cs` | 1 | Create video + ticket, renew |
 | `backend/src/Infrastructure/Learning/UnavailableVideoLibrary.cs` | 1 | Refuses both with 409 |
 | `backend/tests/Integration.Tests/VideoLibraryTests.cs` | 1, 2 | Service + endpoint tests |
-| `backend/src/Api/Endpoints/ProgramAdminEndpoints.cs` | 2 | Two routes + title validation + audit |
+| `backend/src/Application/Abstractions/Ports.cs` (`IVideoUploadService`), `backend/src/Infrastructure/Learning/VideoUploadService.cs` (new), `DependencyInjection.cs` | 2 | Title validation + upload + audit |
+| `backend/src/Api/Endpoints/ProgramAdminEndpoints.cs` | 2 | Two thin routes |
 | `frontend/package.json`, `lib/programs.ts`, `components/admin/VideoPicker.tsx`, `api-client/schema.ts` | 3 | Upload UI |
 
 ---
@@ -255,16 +257,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: Admin upload routes
+### Task 2: Upload service and admin routes
 
 **Files:**
+- Modify: `backend/src/Application/Abstractions/Ports.cs` (add `IVideoUploadService`, `CreateVideoUploadRequest`)
+- Create: `backend/src/Infrastructure/Learning/VideoUploadService.cs`
+- Modify: `backend/src/Infrastructure/DependencyInjection.cs` (register it as scoped)
 - Modify: `backend/src/Api/Endpoints/ProgramAdminEndpoints.cs` (next to `GET /video-library`)
 - Test: `backend/tests/Integration.Tests/VideoLibraryTests.cs` (the existing `VideoLibraryEndpointTests` class, which runs on the dev provider)
 
 **Interfaces:**
 - Consumes: Task 1's `IVideoLibrary.CreateUploadAsync`/`RenewUpload` and `UploadTicketDto`.
 - Produces:
-  - `POST /api/admin/video-library/uploads` with body `CreateVideoUploadRequest(string Title)`, returning 200 `UploadTicketDto`;
+  - `IVideoUploadService.StartAsync(Guid actor, string? title, CancellationToken ct) : Task<UploadTicketDto>`;
+  - `IVideoUploadService.Renew(string videoId) : UploadTicketDto`;
+  - `POST /api/admin/video-library/uploads` with body `CreateVideoUploadRequest(string? Title)`, returning 200 `UploadTicketDto`;
   - `POST /api/admin/video-library/uploads/{videoId}/ticket`, returning 200 `UploadTicketDto`.
 
 - [ ] **Step 1: Write the failing tests** (in `VideoLibraryEndpointTests`, using its existing `Token(UserRole)` / request helpers; add a `Post` helper like its `Get` if there is none)
@@ -273,48 +280,84 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 2. `An_empty_or_overlong_title_is_400`: as admin, `title = "  "` and `title = new string('a', 201)` each return 400, with a body containing `Judul video wajib diisi (maksimal 200 karakter).`
 3. `Upload_on_the_dev_provider_is_409`: as admin, `title = "Sesi 9"` returns 409, with a body containing `Unggah video hanya tersedia saat Bunny aktif.`
 4. `Renew_with_a_non_guid_is_400`: as admin, `POST /api/admin/video-library/uploads/not-a-guid/ticket` returns 400 with `ID video tidak valid.`. With a valid GUID, the dev provider returns 409.
+5. `Starting_an_upload_is_audited` (service-level, in `VideoLibraryTests`): build `VideoUploadService` with the Bunny `Library(StubHandler(... guid ...))` from Task 1's tests, plus a scoped `AppDbContext` from an `AuthApiFactory`; or, if `VideoLibraryTests` has no factory, put this test in `VideoLibraryEndpointTests` and resolve `AppDbContext` from `factory.Services`. Call `StartAsync(adminId, "Sesi 9")`; an `audit_logs` row exists with action `video_upload_started` and target = the returned video id.
 
-Run: `dotnet test backend/tests/Integration.Tests --filter VideoLibraryEndpointTests`. Expected: 404s or failures.
+Run: `dotnet test backend/tests/Integration.Tests --filter "VideoLibraryEndpointTests|VideoLibraryTests"`. Expected: 404s, compile errors or failures.
 
 - [ ] **Step 2: Implement**
 
-In `ProgramAdminEndpoints.cs`, add the request record at the bottom of the file, or wherever that file keeps its request records: `public record CreateVideoUploadRequest(string Title);`. Then add these routes:
+In `Ports.cs`:
+
+```csharp
+public record CreateVideoUploadRequest(string? Title);
+
+/// <summary>Admin use case over IVideoLibrary: validates the title, starts the upload, audits it.
+/// Routes stay thin and never touch the DbContext.</summary>
+public interface IVideoUploadService
+{
+    Task<UploadTicketDto> StartAsync(Guid actor, string? title, CancellationToken ct = default);
+    UploadTicketDto Renew(string videoId);
+}
+```
+
+`backend/src/Infrastructure/Learning/VideoUploadService.cs`:
+
+```csharp
+using System.Text.Json;
+using Academy.Application.Abstractions;
+using Academy.Application.Programs;
+using Academy.Domain.Entities;
+using Academy.Infrastructure.Persistence;
+
+namespace Academy.Infrastructure.Learning;
+
+public class VideoUploadService(IVideoLibrary library, AppDbContext db) : IVideoUploadService
+{
+    public async Task<UploadTicketDto> StartAsync(Guid actor, string? title, CancellationToken ct = default)
+    {
+        var clean = title?.Trim() ?? "";
+        if (clean.Length is 0 or > 200)
+            throw new ProgramException("Judul video wajib diisi (maksimal 200 karakter).", 400);
+
+        var ticket = await library.CreateUploadAsync(clean, ct);
+        db.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.CreateVersion7(), ActorUserId = actor, Action = "video_upload_started",
+            Target = ticket.VideoId, Metadata = JsonSerializer.Serialize(new { videoId = ticket.VideoId, title = clean }),
+        });
+        await db.SaveChangesAsync(ct);
+        return ticket;
+    }
+
+    public UploadTicketDto Renew(string videoId)
+    {
+        if (!Guid.TryParseExact(videoId, "D", out _))
+            throw new ProgramException("ID video tidak valid.", 400);
+        return library.RenewUpload(videoId);
+    }
+}
+```
+
+Register it with `services.AddScoped<IVideoUploadService, VideoUploadService>();` next to the `IVideoLibrary` registration.
+
+Routes in `ProgramAdminEndpoints.cs`:
 
 ```csharp
         // Upload straight to Bunny: this mints the video + a short-lived signed ticket; the browser
         // sends the file to Bunny over TUS. The file never crosses this API or the tunnel (spec D2).
         g.MapPost("/video-library/uploads", async Task<Ok<UploadTicketDto>> (
-                CreateVideoUploadRequest r, ClaimsPrincipal u, IVideoLibrary library, AppDbContext db, CancellationToken ct) =>
-            {
-                var title = r.Title?.Trim() ?? "";
-                if (title.Length is 0 or > 200)
-                    throw new ProgramException("Judul video wajib diisi (maksimal 200 karakter).", 400);
-
-                var ticket = await library.CreateUploadAsync(title, ct);
-                db.AuditLogs.Add(new AuditLog
-                {
-                    Id = Guid.CreateVersion7(), ActorUserId = u.UserId(), Action = "video_upload_started",
-                    Target = ticket.VideoId, Metadata = JsonSerializer.Serialize(new { videoId = ticket.VideoId, title }),
-                });
-                await db.SaveChangesAsync(ct);
-                return TypedResults.Ok(ticket);
-            })
+                CreateVideoUploadRequest r, ClaimsPrincipal u, IVideoUploadService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.StartAsync(u.UserId(), r.Title, ct)))
             .RequireRateLimiting("media");
 
-        g.MapPost("/video-library/uploads/{videoId}/ticket", Ok<UploadTicketDto> (string videoId, IVideoLibrary library) =>
-            {
-                if (!Guid.TryParseExact(videoId, "D", out _))
-                    throw new ProgramException("ID video tidak valid.", 400);
-                return TypedResults.Ok(library.RenewUpload(videoId));
-            })
+        g.MapPost("/video-library/uploads/{videoId}/ticket", Ok<UploadTicketDto> (string videoId, IVideoUploadService s) =>
+            TypedResults.Ok(s.Renew(videoId)))
             .RequireRateLimiting("media");
 ```
 
-Add any missing usings: `System.Text.Json`, `Academy.Domain.Entities` for `AuditLog`, and `Academy.Infrastructure.Persistence` for `AppDbContext`. The Api project already references Infrastructure; follow how other endpoint files get `AppDbContext`. If endpoints in this codebase never inject `AppDbContext` directly, move the audit write behind a small method on an existing admin service, such as `IProgramAdminService.AuditAsync`, and report which you did.
-
 - [ ] **Step 3: Run and commit**
 
-Run: the endpoint tests, then the 0-warning build and the full suite. Expected: all pass.
+Run: the tests above, then the 0-warning build and the full suite. Expected: all pass.
 
 ```bash
 git add backend
@@ -381,22 +424,31 @@ Add a `VideoUploader` sub-component in the same file, rendered above the search 
 
 **Preparing.** A row shows the file name and a title input prefilled with `file.name.replace(/\.[^.]+$/, "")`, plus `Mulai unggah` and `Batal`. `Mulai unggah` is disabled when the trimmed title is empty or over 200 characters.
 
-**Uploading.** On `Mulai unggah`:
+**Uploading.** On `Mulai unggah`, resume first and only create when there is nothing to resume. Creating first would point a resumed upload at the OLD video's TUS URL with the NEW video's signature, which Bunny rejects, and every retry would leave another empty video in the library.
 
 ```ts
-const ticket = await startVideoUpload(token, title.trim());
 const headersOf = (t: UploadTicket) => ({
   AuthorizationSignature: t.signature,
   AuthorizationExpire: String(t.expiresAt),
   VideoId: t.videoId,
   LibraryId: t.libraryId,
 });
+
+// tus-js-client remembers unfinished uploads in localStorage (upload URL + metadata). That is
+// not a credential — Bunny still requires the signed headers — so GR-5 is not affected.
+const probe = new tus.Upload(file, { endpoint: "https://video.bunnycdn.com/tusupload" });
+const previous = (await probe.findPreviousUploads()).find((p) => p.metadata?.videoId);
+
+const ticket = previous
+  ? await renewVideoUpload(token, previous.metadata.videoId)      // same Bunny video
+  : await startVideoUpload(token, title.trim());                   // new Bunny video
+
 const upload = new tus.Upload(file, {
   endpoint: ticket.endpoint,
   chunkSize: 50 * 1024 * 1024,
   retryDelays: [0, 3000, 10000, 30000],
   headers: headersOf(ticket),
-  metadata: { filetype: file.type, title: title.trim() },
+  metadata: { filetype: file.type, title: title.trim(), videoId: ticket.videoId },
   onProgress: (sent, total) => setProgress({ sent, total }),
   onSuccess: () => setPhase("done"),
   onError: async (err) => {
@@ -412,22 +464,28 @@ const upload = new tus.Upload(file, {
     setPhase("failed");
   },
 });
-const previous = await upload.findPreviousUploads();
-if (previous.length) upload.resumeFromPreviousUpload(previous[0]);
+if (previous) upload.resumeFromPreviousUpload(previous);
 upload.start();
 ```
 
-Keep `upload` in a ref so `Batalkan` can call `upload.abort()` and return to idle. While uploading, register a `beforeunload` handler that calls `e.preventDefault()`, and remove it on done, failed or cancel. Show a `<progress max={total} value={sent} aria-label="Progres unggah video">` plus the text `Mengunggah {pct}% · {mb(sent)} dari {mb(total)}`, where `mb(n)` is `${Math.round(n / 1048576)} MB`, and `Batalkan`.
+Keep `upload` in a ref so `Hentikan unggahan` can call `upload.abort()` and return to idle. The upload can be continued later by choosing the same file.
 
-**Done.** The text is `Terunggah — Bunny sedang memproses video.`, and the uploader calls an `onUploaded(videoId)` prop.
+**Leaving mid-upload:**
+- While uploading, register a `beforeunload` handler that calls `e.preventDefault()`, and remove it on done, failed or stop.
+- On unmount (for example the session form pop-up closes), call `upload.abort()` in the effect cleanup, so nothing keeps uploading invisibly.
+- Report "upload in progress" upward through an `onBusyChange(busy: boolean)` prop on `VideoPicker` → `SessionPartsEditor` → `SessionForm`. SessionForm's existing unsaved-changes confirmation (`Perubahan pada daftar bagian belum disimpan. Tutup tanpa menyimpan?`) treats busy as dirty. Read `SessionPartsEditor`'s existing `onDirtyChange` wiring and OR the two flags.
+
+**Progress.** Show a `<progress max={total} value={sent} aria-label="Progres unggah video">` plus the text `Mengunggah {pct}% · {mb(sent)} dari {mb(total)}`, where `mb(n)` is `${Math.round(n / 1048576)} MB`, and a `Hentikan unggahan` button.
+
+**Done.** The text is `“{title}” terunggah. Video bisa dipilih setelah Bunny selesai memprosesnya.`, and the uploader calls an `onUploaded(videoId, title)` prop.
 
 **Failed.** The text is `Unggahan terputus. Pilih file yang sama untuk melanjutkan.`, and the uploader returns to idle so the admin can choose the file again. tus-js-client's default fingerprint storage resumes it.
 
 Put the status texts in an `aria-live="polite"` region. Show API errors (`startVideoUpload` / `renewVideoUpload` rejections) using the error's message.
 
 **Changes to VideoPicker itself:**
-- Keep `pendingIds: string[]` in state, filled by `onUploaded`.
-- The library `useQuery` gets `refetchInterval: (query) => …`. It returns `10_000` while any item is in a non-final status (anything other than `Finished`, `Error` or `UploadFailed`) or any `pendingIds` entry is not yet listed as `Finished`, and `false` otherwise.
+- Keep `pendingIds: string[]` in state, filled by `onUploaded`. `onUploaded` also sets the search input to the uploaded title, so the new video is on the first page of the (paged, title-ordered) list. Without that it might never appear, and polling would never stop.
+- The library `useQuery` gets `refetchInterval: (query) => …`. It returns `10_000` while any item is in a non-final status (anything other than `Finished`, `Error` or `UploadFailed`) or any `pendingIds` entry is not yet listed as `Finished`, and `false` otherwise. It also returns `false` once 30 minutes have passed since the last upload finished, kept in a ref, so an open picker never polls Bunny forever.
 - A row whose `status === "Created"` and whose id is not the upload currently running in this tab shows `Unggahan tidak selesai` and is disabled. Extend the existing `note` logic in `VideoRow`, passing the active upload id down.
 - There is no auto-select: `onPick` is only ever called by a click.
 
@@ -447,7 +505,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 This uploads a small real file to the Bunny library, so do it with the PO watching:
 1. Rebuild the stack with `docker compose up -d --build api frontend`.
 2. In a video session's parts editor, pick a ~5 MB file and upload it.
-3. Check the progress bar runs and the row reads `Terunggah…`.
+3. Check the progress bar runs and the row reads `“…” terunggah…`.
+   Also stop an upload halfway, choose the same file again, and check it continues; the Bunny library must not gain a second empty video.
 4. Within a few minutes, check the video becomes pickable.
 5. Check the network tab shows the file going to `video.bunnycdn.com`, not to our API.
 
