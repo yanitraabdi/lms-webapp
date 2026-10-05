@@ -16,6 +16,7 @@ public class WatchProgress : Entity
     public Guid UserId { get; set; }
     public Guid? ModuleId { get; set; }                        // dormant — archived product
     public Guid? SessionId { get; set; }                       // INVERTA program session
+    public Guid? PartId { get; set; }                          // INVERTA session part (2026-10-05)
     public int ResumePositionSeconds { get; set; }
     public decimal PercentComplete { get; set; }
     public bool Completed { get; set; }
