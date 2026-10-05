@@ -142,6 +142,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionAccessService, SessionAccessService>();
         services.AddScoped<ISessionCompletionService, SessionCompletionService>();
         services.AddScoped<IProgramAdminService, ProgramAdminService>();
+        services.AddScoped<ISessionPartAdminService, SessionPartAdminService>();
         services.AddScoped<ProgramSeeder>();
         services.AddScoped<Assessments.SampleTestSeeder>();
         services.AddScoped<Assessments.PlaceholderFinalExamSeeder>();

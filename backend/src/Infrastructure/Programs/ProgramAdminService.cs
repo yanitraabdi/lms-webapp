@@ -175,15 +175,21 @@ public class ProgramAdminService(
         //   OrderIndex   — a stale index collided with UNIQUE(program_id, order_index) or quietly
         //                  moved the session. Reorder: POST …/sessions/reorder.
         //   Type         — a Video could become Live after learners had watched it. Immutable.
-        var (type, order, assessmentId, scheduledAt) =
-            (session.Type, session.OrderIndex, session.AssessmentId, session.ScheduledAt);
+        //   ProviderAssetId/DurationSeconds (Video) — owned by the parts editor: PUT …/sessions/{id}/parts.
+        var (type, order, assessmentId, scheduledAt, assetId, duration) =
+            (session.Type, session.OrderIndex, session.AssessmentId, session.ScheduledAt,
+             session.ProviderAssetId, session.DurationSeconds);
 
         ApplySession(session, req);
 
         session.Type = type;
         session.OrderIndex = order;
         session.AssessmentId = assessmentId;
-        ValidateVideoAsset(session.Type, session.ProviderAssetId, video);
+        if (type == SessionType.Video)
+        {
+            session.ProviderAssetId = assetId;
+            session.DurationSeconds = duration;
+        }
 
         // The H-1 sweep claims a session by stamping ReminderSentAt and never revisits it, so a
         // rescheduled session would get no reminder for its new slot. Re-arm it. Compared at minute
@@ -296,6 +302,12 @@ public class ProgramAdminService(
             new("has_sessions", "Program memiliki sesi", sessions.Count > 0, true,
                 sessions.Count == 0 ? "Belum ada sesi pada program ini." : null),
         };
+
+        var emptyVideo = await db.ProgramSessions
+            .Where(s => s.ProgramId == programId && s.Type == SessionType.Video && !s.Parts.Any())
+            .Select(s => s.Title).ToListAsync(ct);
+        checks.Add(new("video_sessions_have_parts", "Setiap sesi video memiliki bagian", emptyVideo.Count == 0, true,
+            emptyVideo.Count > 0 ? $"Sesi tanpa bagian: {string.Join(", ", emptyVideo)}." : null));
 
         // Every attached assessment must actually have questions — on the session (live/final) or on
         // a Test part (video, since 2026-10-05).

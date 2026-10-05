@@ -21,8 +21,8 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             {
                 a.Id, a.Kind, a.Title, a.Config,
                 QuestionCount = db.AssessmentQuestions.Count(q => q.AssessmentId == a.Id),
-                AttachedSessionId = db.ProgramSessions
-                    .Where(s => s.AssessmentId == a.Id).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                AttachedSessionId = db.SessionParts.Where(p => p.AssessmentId == a.Id).Select(p => (Guid?)p.SessionId).FirstOrDefault()
+                    ?? db.ProgramSessions.Where(s => s.AssessmentId == a.Id).Select(s => (Guid?)s.Id).FirstOrDefault(),
                 AttemptCount = db.Attempts.Count(x => x.AssessmentId == a.Id),
             })
             .ToListAsync(ct);
@@ -48,8 +48,8 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             })
             .ToListAsync(ct);
 
-        var attachedSessionId = await db.ProgramSessions
-            .Where(s => s.AssessmentId == id).Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+        var attachedSessionId = await db.SessionParts.Where(p => p.AssessmentId == id).Select(p => (Guid?)p.SessionId).FirstOrDefaultAsync(ct)
+            ?? await db.ProgramSessions.Where(s => s.AssessmentId == id).Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
         var attemptCount = await db.Attempts.CountAsync(x => x.AssessmentId == id, ct);
 
         // Admin DOES see the answer key — that's the whole point of authoring (contrast GR-11,
