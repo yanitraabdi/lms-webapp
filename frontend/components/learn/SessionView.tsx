@@ -145,16 +145,18 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
   const nextOpen = parts.find((p) => p.status === "Open");
   const [activeId, setActiveId] = useState<string | undefined>(nextOpen?.id ?? parts.at(-1)?.id);
 
-  // Move forward on its own: when fresh data shows the part on screen is now Done and a later
-  // part has opened, show that part. Otherwise a learner who finishes the lesson stays on it.
-  const doneKey = parts.map((p) => p.status).join();
-  const prevDoneKey = useRef(doneKey);
+  // Move forward on its own only after a VIDEO part plays to its end AND the data shows it Done
+  // (either can come first). Never at the ~90% save, which would cut the lesson off, and never
+  // from a test — its result stays on screen with a button to go on.
+  const [advanceFrom, setAdvanceFrom] = useState<string | null>(null);
   useEffect(() => {
-    if (prevDoneKey.current === doneKey) return;
-    prevDoneKey.current = doneKey;
-    const current = parts.find((p) => p.id === activeId);
-    if (current?.status === "Done" && nextOpen) setActiveId(nextOpen.id);
-  }, [doneKey, parts, activeId, nextOpen]);
+    if (!advanceFrom || advanceFrom !== activeId) return;
+    const current = parts.find((p) => p.id === advanceFrom);
+    if (current?.status === "Done" && nextOpen) {
+      setAdvanceFrom(null);
+      setActiveId(nextOpen.id);
+    }
+  }, [advanceFrom, parts, activeId, nextOpen]);
 
   const active = parts.find((p) => p.id === activeId && p.status !== "Locked") ?? nextOpen;
 
@@ -200,15 +202,17 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
         })}
       </ol>
       {active && (active.kind === "Test"
-        ? <GatingTest key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged} />
-        : <VideoPart key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged} />)}
+        ? <GatingTest key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged}
+            onNext={nextOpen && parts.indexOf(nextOpen) > parts.indexOf(active) ? () => setActiveId(nextOpen.id) : undefined} />
+        : <VideoPart key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged}
+            onEnded={() => setAdvanceFrom(active.id)} />)}
     </div>
   );
 }
 
 function VideoPart({
-  token, sessionId, part, onChanged,
-}: { token: string; sessionId: string; part: SessionPart; onChanged: () => void }) {
+  token, sessionId, part, onChanged, onEnded,
+}: { token: string; sessionId: string; part: SessionPart; onChanged: () => void; onEnded: () => void }) {
   const ticket = useQuery({
     queryKey: ["part-playback", part.id],
     queryFn: () => getPartPlayback(token, sessionId, part.id),
@@ -254,6 +258,7 @@ function VideoPart({
           captionsSrc={ticket.data.captionsUrl}
           resumeSeconds={num(part.resumePositionSeconds)}
           onProgress={onProgress}
+          onEnded={onEnded}
         />
       </div>
       <div className="flex flex-col gap-2">

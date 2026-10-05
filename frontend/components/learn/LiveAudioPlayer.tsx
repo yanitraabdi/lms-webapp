@@ -19,11 +19,13 @@ import { clock } from "@/lib/sessions";
  * it must never be described to learners as tamper-proof (GR-14).
  */
 export function LiveAudioPlayer({
-  start, startedAt, endedLabel = "Audio bagian ini sudah selesai diputar.",
+  start, startedAt, autoBegin = false, endedLabel = "Audio bagian ini sudah selesai diputar.",
   intro = "Satu rekaman untuk seluruh bagian ini. Audio diputar satu kali tanpa jeda dan tidak dapat diulang — pastikan suara perangkat Anda aktif.",
 }: {
   start: () => Promise<{ url: string; startedAt: string; serverNow: string }>;
   startedAt: string | null;
+  /** Begin on mount — for a mount that a learner's tap just caused (a replay). */
+  autoBegin?: boolean;
   endedLabel?: string;
   intro?: string;
 }) {
@@ -42,6 +44,12 @@ export function LiveAudioPlayer({
   useEffect(() => () => {
     gone.current = true;
     el.current?.pause();
+  }, []);
+
+  // Mount-only on purpose: begin() once. If the browser refuses sound, "blocked" asks for a tap.
+  useEffect(() => {
+    if (autoBegin) void begin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Where the recording IS right now, by the server's clock. */

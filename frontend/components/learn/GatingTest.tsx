@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Spinner, CheckIcon } from "@/components/ui";
 import { LiveAudioPlayer } from "@/components/learn/LiveAudioPlayer";
@@ -14,12 +14,14 @@ import {
  * but the real gate is server-side: the session only completes when this is passed (GR-8).
  */
 export function GatingTest({
-  token, sessionId, part, onChanged,
+  token, sessionId, part, onChanged, onNext,
 }: {
   token: string;
   sessionId: string;
   part: SessionPart;
   onChanged: () => void;
+  /** Selects the next open part; set only when a later part is open. */
+  onNext?: () => void;
 }) {
   const qc = useQueryClient();
   const q = useQuery({
@@ -36,6 +38,9 @@ export function GatingTest({
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [audio, setAudio] = useState<TestAudio | null>(null);
   const [audioKey, setAudioKey] = useState(0);
+  // True between a "Putar ulang" tap and the remounted player's first start: that first call is
+  // the one that spends the replay; any later one ("Lanjutkan" after a drop) only resumes it.
+  const replayPending = useRef(false);
 
   if (q.isPending) {
     return (
@@ -78,6 +83,7 @@ export function GatingTest({
     // A new attempt starts with fresh plays, so drop the old one and its audio.
     setAttempt(null);
     setAudio(null);
+    setAudioKey(0); // the next attempt's player waits for a tap again
   }
 
   async function begin() {
@@ -92,13 +98,24 @@ export function GatingTest({
     }
   }
 
-  async function replay() {
+  // The remounted player auto-begins, so the tap itself starts the replay; its first start()
+  // spends the play, later ones resume. Errors (e.g. the limit) surface in the error line.
+  function replay() {
     setError(null);
+    replayPending.current = true;
+    setAudioKey((k) => k + 1);
+  }
+
+  async function startAudio() {
+    const isReplay = replayPending.current;
+    replayPending.current = false;
     try {
-      setAudio(await startTestAudio(token, sessionId, part.id, true));
-      setAudioKey((k) => k + 1);
+      const r = await startTestAudio(token, sessionId, part.id, isReplay);
+      setAudio(r);
+      return r;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Audio tidak dapat diputar ulang.");
+      if (isReplay) setError(e instanceof Error ? e.message : "Audio tidak dapat diputar ulang.");
+      throw e;
     }
   }
 
@@ -140,12 +157,9 @@ export function GatingTest({
             <div>
               <LiveAudioPlayer
                 key={audioKey}
-                start={async () => {
-                  const r = await startTestAudio(token, sessionId, part.id, false);
-                  setAudio(r);
-                  return r;
-                }}
+                start={startAudio}
                 startedAt={null}
+                autoBegin={audioKey > 0}
                 intro="Satu rekaman untuk semua soal tes ini. Audio diputar tanpa jeda dan tanpa mundur — pastikan suara perangkat Anda aktif."
                 endedLabel="Audio tes sudah selesai diputar."
               />
@@ -231,6 +245,11 @@ export function GatingTest({
       {result?.passed && (
         <div className="mt-4 rounded-base bg-success-soft px-4 py-3 text-sm font-semibold text-success">
           Selamat! Skor {result.score}/{result.maxScore}. Sesi berikutnya sudah terbuka.
+        </div>
+      )}
+      {alreadyPassed && onNext && (
+        <div className="mt-4">
+          <Button onClick={onNext}>Lanjut ke bagian berikutnya</Button>
         </div>
       )}
     </div>

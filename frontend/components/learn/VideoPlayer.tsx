@@ -8,10 +8,12 @@ interface Props {
   resumeSeconds?: number;
   /** Throttled progress callback (every ~5s + on pause/hide/ended). */
   onProgress: (positionSeconds: number, percent: number) => void;
+  /** Fired when playback reaches the end. */
+  onEnded?: () => void;
 }
 
 /// HLS via hls.js (Chrome/Firefox) or native (Safari); falls back to direct src for MP4.
-export function VideoPlayer({ src, captionsSrc, resumeSeconds = 0, onProgress }: Props) {
+export function VideoPlayer({ src, captionsSrc, resumeSeconds = 0, onProgress, onEnded }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastSave = useRef(0);
   const resumed = useRef(false);
@@ -78,7 +80,7 @@ export function VideoPlayer({ src, captionsSrc, resumeSeconds = 0, onProgress }:
       }}
       onTimeUpdate={() => report(false)}
       onPause={() => report(true)}
-      onEnded={() => report(true)}
+      onEnded={() => { report(true); onEnded?.(); }}
     >
       {captionsSrc && <track kind="subtitles" src={captionsSrc} srcLang="id" label="Bahasa Indonesia" default />}
     </video>
