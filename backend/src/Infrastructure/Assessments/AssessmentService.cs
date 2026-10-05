@@ -118,6 +118,9 @@ public class AssessmentService(
         var (assessment, config, sessionId, partId) = await LoadAsync(assessmentId, ct);
         if (partId is Guid pid) await access.EnsurePartAccessAsync(userId, sessionId!.Value, pid, ct);
         else if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
+        // A test no session or part owns (detached, or replaced on a video session) has no gate to
+        // pass, so a learner never starts it (GR-1).
+        else throw new AssessmentException("Tes tidak ditemukan.", 404);
 
         var questionCount = await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct);
         if (questionCount == 0)
@@ -314,7 +317,7 @@ public class AssessmentService(
         var part = await db.SessionParts.Where(p => p.AssessmentId == assessmentId)
             .Select(p => new { p.SessionId, p.Id }).FirstOrDefaultAsync(ct);
         if (part is not null) return (part.SessionId, part.Id);
-        var sessionId = await db.ProgramSessions.Where(s => s.AssessmentId == assessmentId)
+        var sessionId = await db.ProgramSessions.Where(s => s.AssessmentId == assessmentId && s.Type != SessionType.Video)
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
         return (sessionId, null);
     }

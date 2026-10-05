@@ -104,8 +104,8 @@ Program (e.g. "INVERTA TOEFL Prep Batch 1")
 ## 5. Sessions
 
 **Video sessions:** inherited player (signed Bunny HLS, resume, quality selector, captions);
-progress tracked as before (`watch_progress` reused as-is). On reaching the watch threshold, the
-**gating test unlocks** (same page).
+progress tracked per part (`watch_progress`). On reaching the watch threshold of a video part,
+the **next part unlocks** (same page) — a test part when one follows (see Session parts below).
 
 **Session parts (decided 2026-10-05):** a video session is an admin-ordered list of **parts** —
 lesson video, test, discussion video — unlocked in order: a part opens when every part before it is
@@ -134,7 +134,8 @@ completes. Progress is tracked per part. See `docs/superpowers/specs/2026-10-05-
 - Short (e.g. 5–10 questions), MCQ-first; per-test **pass threshold** (admin-set); instant auto-score.
 - **Retake policy:** unlimited retries by default, admin-cappable per test. *(Default chosen for a
   paid program — failing students who paid is a support problem; confirmed §12.)*
-- Passing unlocks the next session (R2 §3). Attempts recorded (score, timestamps, answers).
+- Passing marks the test part done and unlocks the next part; the next session unlocks once every
+  part of the session is done (R2 §3). Attempts recorded (score, timestamps, answers).
 - A session test may have **one shared audio** for all its questions, played `audioPlayLimit`
   (default 1) times per attempt with no pause or seek. This is deterrence, not a guarantee.
 - A test can name **N**, the number of failed attempts after which its discussion video opens

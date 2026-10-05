@@ -14,7 +14,7 @@ import {
  * but the real gate is server-side: the session only completes when this is passed (GR-8).
  */
 export function GatingTest({
-  token, sessionId, part, onChanged, onNext,
+  token, sessionId, part, onChanged, onNext, morePartsFollow,
 }: {
   token: string;
   sessionId: string;
@@ -22,6 +22,8 @@ export function GatingTest({
   onChanged: () => void;
   /** Selects the next open part; set only when a later part is open. */
   onNext?: () => void;
+  /** A later part exists in this session; session-level messages stay with SessionView. */
+  morePartsFollow: boolean;
 }) {
   const qc = useQueryClient();
   const q = useQuery({
@@ -136,8 +138,10 @@ export function GatingTest({
 
       <p className="mt-1 text-[13px] text-ink-muted">
         {alreadyPassed
-          ? "Anda sudah lulus tes ini. Sesi berikutnya sudah terbuka."
-          : "Jawab semua pertanyaan untuk menyelesaikan sesi ini."}
+          ? (morePartsFollow ? "Anda sudah lulus tes ini. Bagian berikutnya sudah terbuka." : "Anda sudah lulus tes ini.")
+          : morePartsFollow
+            ? "Jawab semua pertanyaan untuk membuka bagian berikutnya."
+            : "Jawab semua pertanyaan untuk menyelesaikan sesi ini."}
       </p>
 
       {!alreadyPassed && shared && !attempt && (
@@ -244,7 +248,7 @@ export function GatingTest({
 
       {result?.passed && (
         <div className="mt-4 rounded-base bg-success-soft px-4 py-3 text-sm font-semibold text-success">
-          Selamat! Skor {result.score}/{result.maxScore}. Sesi berikutnya sudah terbuka.
+          Selamat! Skor {result.score}/{result.maxScore}.{morePartsFollow && " Bagian berikutnya sudah terbuka."}
         </div>
       )}
       {alreadyPassed && onNext && (

@@ -99,6 +99,9 @@ namespace Academy.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Not reversible once part-level progress exists: a learner with progress on two parts of
+            // one session has two watch_progress rows for that (user_id, session_id), so recreating the
+            // unique (user_id, session_id) index below fails and the rollback aborts.
             migrationBuilder.DropForeignKey(
                 name: "fk_watch_progress_session_parts_part_id",
                 table: "watch_progress");

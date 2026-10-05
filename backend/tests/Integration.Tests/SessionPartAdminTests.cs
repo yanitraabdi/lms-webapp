@@ -330,6 +330,57 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             (await Authed(HttpMethod.Get, $"/api/sessions/{c.Session2}", c.Token)).StatusCode);
     }
 
+    [Fact]
+    public async Task Readiness_ignores_the_old_session_column_once_the_test_part_is_replaced()
+    {
+        var c = await EnrolledLearner();
+        var l = await Lesson1(c.Session1);
+        // A migrated video session: the backfill left its (empty) test on the old column too.
+        var old = new Assessment { Id = Guid.CreateVersion7(), Kind = AssessmentKind.Gating, Title = "Tes lama kosong",
+            Config = """{"passThreshold":1,"proctoringEnabled":false,"sections":[]}""" };
+        await WithDb(async db =>
+        {
+            db.Assessments.Add(old);
+            await db.SaveChangesAsync();
+            await db.ProgramSessions.Where(s => s.Id == c.Session1)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.AssessmentId, old.Id));
+        });
+        (await PutParts(c.Admin, c.Session1, Lesson(l), Test(old.Id))).EnsureSuccessStatusCode();
+        var parts = await ListParts(c.Admin, c.Session1);
+
+        var fresh = await NewAssessment();
+        (await PutParts(c.Admin, c.Session1, Lesson(l), Test(fresh.Id, parts[1].Id))).EnsureSuccessStatusCode();
+
+        var r = await AuthedGet<ProgramReadinessDto>($"/api/admin/programs/{c.ProgramId}/readiness", c.Admin);
+        var check = r.Checks.Single(x => x.Key == "gating_tests_populated");
+        Assert.True(check.Passed, check.Detail);
+        Assert.Null(check.Detail);
+    }
+
+    [Fact]
+    public async Task Removing_the_last_unstarted_part_completes_the_session_on_next_visit()
+    {
+        var c = await EnrolledLearner();
+        var l = await Lesson1(c.Session1);
+        var a = await NewAssessment();
+        var parts = (await (await PutParts(c.Admin, c.Session1, Lesson(l), Test(a.Id), Lesson(null, "Materi 2")))
+            .Content.ReadFromJsonAsync<List<AdminSessionPartDto>>(Json))!;
+
+        await Save(c, parts[0].Id);
+        Assert.True((await Take(c.Token, a.Id, a.Correct)).Passed);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Authed(HttpMethod.Get, $"/api/sessions/{c.Session2}", c.Token)).StatusCode);
+
+        // Admin drops the part the learner never started — every remaining part is Done.
+        (await PutParts(c.Admin, c.Session1, Lesson(parts[0].Id), Test(a.Id, parts[1].Id))).EnsureSuccessStatusCode();
+
+        var ctx = await AuthedGet<SessionContextDto>($"/api/sessions/{c.Session1}", c.Token);
+        Assert.True(ctx.Completed);
+        Assert.True(ctx.NextSessionUnlocked);
+        Assert.Equal(HttpStatusCode.OK,
+            (await Authed(HttpMethod.Get, $"/api/sessions/{c.Session2}", c.Token)).StatusCode);
+    }
+
     private async Task<PartProgressDto> Save(Ctx c, Guid partId)
     {
         var res = await Authed(HttpMethod.Put, $"/api/sessions/{c.Session1}/parts/{partId}/progress", c.Token,

@@ -75,7 +75,9 @@ public class SessionAccessService(AppDbContext db, ISessionCompletionService com
             ?? throw new ProgramException("Bagian tidak ditemukan.", 404);
         await EnsureAccessAsync(userId, sessionId, ct);
         var states = await partStates.LoadAsync(userId, sessionId, ct);
-        if (states.First(s => s.Part.Id == partId).Status == PartStatus.Locked)
+        var state = states.FirstOrDefault(s => s.Part.Id == partId)
+            ?? throw new ProgramException("Bagian tidak ditemukan.", 404); // deleted concurrently
+        if (state.Status == PartStatus.Locked)
             throw new ProgramException("Bagian ini masih terkunci.", 403);
         return part;
     }

@@ -316,7 +316,8 @@ public class ProgramAdminService(
             .Select(p => new { p.Session.Title, p.AssessmentId })
             .ToListAsync(ct);
         var empty = new List<string>();
-        foreach (var t in sessions.Where(s => s.AssessmentId != null)
+        // VIDEO sessions keep the pre-parts column only for rollback — their tests live on parts.
+        foreach (var t in sessions.Where(s => s.AssessmentId != null && s.Type != SessionType.Video)
                      .Select(s => new { s.Title, s.AssessmentId }).Concat(partTests))
             if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == t.AssessmentId, ct))
                 empty.Add(t.Title);

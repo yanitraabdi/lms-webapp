@@ -203,6 +203,7 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
       </ol>
       {active && (active.kind === "Test"
         ? <GatingTest key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged}
+            morePartsFollow={parts.indexOf(active) < parts.length - 1}
             onNext={nextOpen && parts.indexOf(nextOpen) > parts.indexOf(active) ? () => setActiveId(nextOpen.id) : undefined} />
         : <VideoPart key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged}
             onEnded={() => setAdvanceFrom(active.id)} />)}

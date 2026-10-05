@@ -44,7 +44,11 @@ public class SessionLearningService(
             st.Part.AssessmentId, st.AttemptsUsed, st.Facts.FailedAttempts,
             st.Part.Kind == SessionPartKind.Test && st.Facts.Done, st.Facts.DiscussionAfterFailures)).ToList();
 
-        var completed = await completion.IsCompleteAsync(userId, sessionId, ct);
+        // VIDEO: an admin edit (part removed, test emptied) can make every part Done without a
+        // completion event — re-evaluate through the completion service (GR-8); cheap once complete.
+        var completed = s.Type == SessionType.Video
+            ? await completion.TryCompleteAsync(userId, sessionId, ct)
+            : await completion.IsCompleteAsync(userId, sessionId, ct);
         var completedAt = completed
             ? await db.SessionCompletions
                 .Where(c => c.UserId == userId && c.SessionId == sessionId)
@@ -113,7 +117,10 @@ public class SessionLearningService(
         await db.SaveChangesAsync(ct);
 
         // Watching one part may finish the session — the completion service decides (GR-8).
-        var sessionDone = await completion.TryCompleteAsync(userId, sessionId, ct);
+        // Only a part at/over the threshold can finish it, so skip the full re-evaluation otherwise.
+        var sessionDone = CompletionPolicy.IsModuleComplete(row.PercentComplete)
+            ? await completion.TryCompleteAsync(userId, sessionId, ct)
+            : await completion.IsCompleteAsync(userId, sessionId, ct);
 
         // Built from the saved row, not GetPartProgressAsync: that would re-run the gate per tick.
         return new PartProgressDto(partId, row.ResumePositionSeconds, row.PercentComplete,
