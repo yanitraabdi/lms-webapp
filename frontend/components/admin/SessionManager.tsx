@@ -170,6 +170,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
           programId={program.id}
           nextOrder={sessions.length + 1}
           session={editing}
+          onSaved={() => qc.invalidateQueries({ queryKey: key })}
           onClose={async () => { setEditing(null); await qc.invalidateQueries({ queryKey: key }); }}
         />
       )}

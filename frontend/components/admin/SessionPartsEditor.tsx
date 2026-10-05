@@ -21,6 +21,8 @@ type Row = {
   assessmentId?: string;
   assessmentTitle?: string;
   hasLearnerData: boolean;
+  /** React key for a row not yet saved; never sent to the API. */
+  tempKey?: string;
 };
 
 const KIND_LABEL: Record<PartKind, string> = {
@@ -104,7 +106,7 @@ export function SessionPartsEditor({
   }
 
   const add = (kind: PartKind) =>
-    setRows((rs) => [...rs, { kind, title: KIND_LABEL[kind], hasLearnerData: false }]);
+    setRows((rs) => [...rs, { kind, title: KIND_LABEL[kind], hasLearnerData: false, tempKey: crypto.randomUUID() }]);
 
   const incomplete = rows.some((r) =>
     r.kind === "Test" ? !r.assessmentId : !r.providerAssetId);
@@ -157,7 +159,7 @@ export function SessionPartsEditor({
 
       <ol className="flex flex-col gap-2">
         {rows.map((r, i) => (
-          <li key={r.id ?? `new-${i}`} className="flex flex-col gap-2 rounded-base border border-border px-3 py-2.5">
+          <li key={r.id ?? r.tempKey} className="flex flex-col gap-2 rounded-base border border-border px-3 py-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 shrink-0 text-[12px] font-bold text-ink-subtle">{i + 1}</span>
               <span className="shrink-0 text-[12px] font-bold text-ink-muted">{KIND_LABEL[r.kind]}</span>

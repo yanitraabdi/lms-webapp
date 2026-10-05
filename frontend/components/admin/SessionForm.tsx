@@ -36,13 +36,15 @@ function toLocalInput(iso: string | null | undefined): string {
  * update replaces the session's content wholesale and would otherwise blank them.
  */
 export function SessionForm({
-  token, programId, nextOrder, session, onClose,
+  token, programId, nextOrder, session, onClose, onSaved,
 }: {
   token: string;
   programId: string;
   nextOrder: number;
   session?: AdminSession;
   onClose: () => void;
+  /** After a successful save, even if the admin then stays to keep unsaved parts. */
+  onSaved?: () => void;
 }) {
   const editing = session !== undefined;
   const [type, setType] = useState<SessionKind>((session?.type as SessionKind) ?? "Video");
@@ -82,6 +84,8 @@ export function SessionForm({
       };
       if (session) await updateSession(token, session.id, body);
       else await createSession(token, programId, body);
+      setBusy(false);
+      onSaved?.();
       close();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menyimpan sesi.");
