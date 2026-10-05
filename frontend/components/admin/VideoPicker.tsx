@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Upload } from "tus-js-client";
 import { Button, Spinner } from "@/components/ui";
@@ -112,7 +112,13 @@ export function VideoPicker({
         ) : (
           <ul>
             {q.data!.items.map((v) => (
-              <VideoRow key={v.id} video={v} selected={v.id === value} uploading={v.id === activeId} onPick={onPick} />
+              <VideoRow
+                key={v.id}
+                video={v}
+                selected={v.id === value}
+                uploading={v.id === activeId || pendingIds.includes(v.id)}
+                onPick={onPick}
+              />
             ))}
           </ul>
         )}
@@ -126,7 +132,7 @@ function VideoRow({
 }: {
   video: VideoLibraryItem;
   selected: boolean;
-  /** This row is the upload running in this tab right now. */
+  /** This row is being (or was just) uploaded in this tab, so "Created" is not an abandoned upload. */
   uploading: boolean;
   onPick: (video: { id: string; lengthSeconds: number }) => void;
 }) {
@@ -157,7 +163,20 @@ function VideoRow({
   );
 }
 
+// One endpoint for both the resume probe and the upload: tus's fingerprint includes it, so any
+// difference would silently stop resuming.
 const TUS_ENDPOINT = "https://video.bunnycdn.com/tusupload";
+type PreviousUpload = Awaited<ReturnType<Upload["findPreviousUploads"]>>[number];
+
+/** The unfinished upload of this file we can resume (tagged with our videoId), if any. */
+async function findResumable(file: File): Promise<PreviousUpload | null> {
+  try {
+    const all = await new Upload(file, { endpoint: TUS_ENDPOINT }).findPreviousUploads();
+    return all.find((p) => p.metadata?.videoId) ?? null;
+  } catch {
+    return null; // storage unavailable: nothing to resume
+  }
+}
 const mb = (n: number) => `${Math.round(n / 1048576)} MB`;
 
 const headersOf = (t: UploadTicket) => ({
@@ -182,6 +201,8 @@ function VideoUploader({
 }) {
   const [phase, setPhase] = useState<"idle" | "preparing" | "uploading">("idle");
   const [file, setFile] = useState<File | null>(null);
+  const [previous, setPrevious] = useState<PreviousUpload | null>(null);
+  const hintId = useId();
   const [title, setTitle] = useState("");
   const [starting, setStarting] = useState(false);
   const [progress, setProgress] = useState({ sent: 0, total: 0 });
@@ -216,10 +237,14 @@ function VideoUploader({
     setStatus(message);
   }
 
-  function choose(f: File | undefined) {
+  async function choose(f: File | undefined) {
     if (!f) return;
+    // A resume continues the SAME Bunny video, which keeps its original title; it cannot be renamed.
+    const prev = await findResumable(f);
+    if (!alive.current) return;
+    setPrevious(prev);
     setFile(f);
-    setTitle(f.name.replace(/\.[^.]+$/, ""));
+    setTitle(prev?.metadata.title ?? f.name.replace(/\.[^.]+$/, ""));
     setStatus(null);
     setError(null);
     setPhase("preparing");
@@ -234,15 +259,13 @@ function VideoUploader({
     try {
       // Resume first, create only when there is nothing to resume: a new video's signature does
       // not fit an old video's TUS URL, and every retry would leave an empty video in the library.
-      const probe = new Upload(file, { endpoint: TUS_ENDPOINT });
-      const previous = (await probe.findPreviousUploads()).find((p) => p.metadata?.videoId);
       const ticket = previous
         ? await renewVideoUpload(token, previous.metadata.videoId)
         : await startVideoUpload(token, name);
       if (!alive.current) return;
 
       const upload: Upload = new Upload(file, {
-        endpoint: ticket.endpoint,
+        endpoint: TUS_ENDPOINT,
         chunkSize: 50 * 1024 * 1024,
         retryDelays: [0, 3000, 10000, 30000],
         // A finished upload must not be "resumed" later: choosing the same file again is a new video.
@@ -304,7 +327,7 @@ function VideoUploader({
         type="file"
         accept="video/*"
         hidden
-        onChange={(e) => { choose(e.target.files?.[0]); e.target.value = ""; }}
+        onChange={(e) => { void choose(e.target.files?.[0]); e.target.value = ""; }}
       />
 
       {phase === "idle" && (
@@ -322,9 +345,16 @@ function VideoUploader({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={200}
+            readOnly={previous !== null}
             aria-label="Judul video"
+            aria-describedby={previous ? hintId : undefined}
             className={inputBlockCls}
           />
+          {previous && (
+            <span id={hintId} className="text-[11.5px] text-ink-subtle">
+              Melanjutkan unggahan sebelumnya.
+            </span>
+          )}
           <div className="flex gap-2">
             <Button size="sm" disabled={!titleOk} loading={starting} onClick={start}>Mulai unggah</Button>
             <Button variant="neutral" size="sm" disabled={starting} onClick={() => { setPhase("idle"); setFile(null); }}>
