@@ -81,6 +81,8 @@ export type AdminUserItem = components["schemas"]["AdminUserListItemDto"];
 export type AdminUserList = components["schemas"]["AdminUserListDto"];
 export type AdminUserDetail = components["schemas"]["AdminUserDetailDto"];
 export type Analytics = components["schemas"]["AdminAnalyticsDto"];
+export type EmailStatus = components["schemas"]["EmailStatusDto"];
+export type EmailTestResult = components["schemas"]["EmailTestResultDto"];
 
 async function api<T>(method: string, path: string, token: string, body?: unknown): Promise<T> {
   // Goes through apiFetch so an expired access token is refreshed and the call retried
@@ -148,6 +150,8 @@ export const revokePlan = (t: string, id: string) => api<void>("POST", `/api/adm
 
 // ---- analytics ----
 export const getAnalytics = (t: string) => api<Analytics>("GET", "/api/admin/analytics", t);
+export const getEmailStatus = (t: string) => api<EmailStatus>("GET", "/api/admin/email/status", t);
+export const sendTestEmail = (t: string) => api<EmailTestResult>("POST", "/api/admin/email/test", t);
 
 // ---- quiz authoring (M7) ----
 export type AdminQuiz = components["schemas"]["AdminQuizDto"];
