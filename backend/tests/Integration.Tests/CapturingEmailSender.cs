@@ -28,6 +28,14 @@ public class CapturingEmailSender : IEmailSender
         return Task.CompletedTask;
     }
 
+    public int TestEmailCount { get; private set; }
+
+    public Task SendTestAsync(string toEmail, string name, CancellationToken ct = default)
+    {
+        TestEmailCount++;
+        return Task.CompletedTask;
+    }
+
     // ---- Billing (M3) ----
     public int SubscriptionConfirmationCount { get; private set; }
     public int PaymentFailedCount { get; private set; }

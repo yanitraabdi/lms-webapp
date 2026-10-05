@@ -52,6 +52,9 @@ public interface IEmailSender
     Task SendPasswordResetAsync(string toEmail, string name, string resetUrl, CancellationToken ct = default);
     Task SendPasswordChangedAsync(string toEmail, string name, CancellationToken ct = default);
 
+    /// <summary>Admin "Kirim email uji" (spec 2026-10-06): proves the relay config works.</summary>
+    Task SendTestAsync(string toEmail, string name, CancellationToken ct = default);
+
     // ---- Billing (M3) ----
     Task SendSubscriptionConfirmationAsync(string toEmail, string name, string planName, decimal amountIdr, DateTimeOffset periodEnd, CancellationToken ct = default);
     Task SendPaymentFailedAsync(string toEmail, string name, string planName, CancellationToken ct = default);
