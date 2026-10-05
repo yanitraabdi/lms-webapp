@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Spinner, ErrorState, ChevronRightIcon } from "@/components/ui";
+import { Badge, Button, Spinner, ErrorState, ChevronRightIcon, LockIcon } from "@/components/ui";
 import { VideoPlayer } from "@/components/learn/VideoPlayer";
 import { GatingTest } from "@/components/learn/GatingTest";
 import {
-  getSessionContext, getPlayback, saveSessionProgress, num,
-  type SessionContext,
+  getSessionContext, getPartPlayback, savePartProgress, num,
+  type SessionContext, type SessionPart,
 } from "@/lib/sessions";
 import { fmtDateTime, minutesLabel } from "@/lib/programs";
 
@@ -86,24 +86,15 @@ export function SessionView({
           <h1 className="text-[23px] font-extrabold tracking-tight">{s.title}</h1>
           {s.description && <p className="text-[14px] text-ink-muted">{s.description}</p>}
         </div>
-        {s.progress.completed && <Badge status="completed" className="px-2.5 py-0.5" />}
+        {s.completed && <Badge status="completed" className="px-2.5 py-0.5" />}
       </div>
 
       {s.type === "Video" ? (
-        <VideoSection token={token} session={s} onProgressChanged={refresh} />
+        <PartsSection token={token} session={s} onChanged={refresh} />
       ) : s.type === "Live" ? (
         <LiveSection session={s} />
       ) : (
-        <FinalSection sessionId={sessionId} completed={s.progress.completed} />
-      )}
-
-      {s.type === "Video" && (
-        <GatingTest
-          token={token}
-          sessionId={sessionId}
-          watchThresholdMet={s.progress.watchThresholdMet}
-          onPassed={refresh}
-        />
+        <FinalSection sessionId={sessionId} completed={s.completed} />
       )}
 
       {/* Embedded, the list is right there — a "next session" button would be a second way to do
@@ -147,28 +138,101 @@ export function SessionView({
   );
 }
 
-function VideoSection({
-  token, session, onProgressChanged,
-}: { token: string; session: SessionContext; onProgressChanged: () => void }) {
+const PART_LABEL: Record<string, string> = { LessonVideo: "Video materi", Test: "Tes", Discussion: "Video pembahasan" };
+
+function PartsSection({ token, session, onChanged }: { token: string; session: SessionContext; onChanged: () => void }) {
+  const parts = session.parts;
+  const nextOpen = parts.find((p) => p.status === "Open");
+  const [activeId, setActiveId] = useState<string | undefined>(nextOpen?.id ?? parts.at(-1)?.id);
+
+  // Move forward on its own only after a VIDEO part plays to its end AND the data shows it Done
+  // (either can come first). Never at the ~90% save, which would cut the lesson off, and never
+  // from a test — its result stays on screen with a button to go on.
+  const [advanceFrom, setAdvanceFrom] = useState<string | null>(null);
+  useEffect(() => {
+    if (!advanceFrom || advanceFrom !== activeId) return;
+    const current = parts.find((p) => p.id === advanceFrom);
+    if (current?.status === "Done" && nextOpen) {
+      setAdvanceFrom(null);
+      setActiveId(nextOpen.id);
+    }
+  }, [advanceFrom, parts, activeId, nextOpen]);
+
+  const active = parts.find((p) => p.id === activeId && p.status !== "Locked") ?? nextOpen;
+
+  if (parts.length === 0) {
+    // Not an error: the admin has not added content yet.
+    return (
+      <div className="rounded-lg border border-border bg-surface p-5 text-[13.5px] text-ink-muted">
+        Materi sesi ini sedang disiapkan.
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ol className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+        {parts.map((p, i) => {
+          const label = `${i + 1}. ${PART_LABEL[p.kind] ?? p.kind} — ${p.title}`;
+          // Locked rows are plain text at full contrast with a lock and the Badge's locked style —
+          // never a faded control (WCAG AA). Open/Done rows are buttons.
+          return (
+            <li key={p.id}>
+              {p.status === "Locked" ? (
+                <div className="flex items-center justify-between gap-3 px-4 py-3 text-[13.5px] text-ink-muted">
+                  <span className="flex min-w-0 items-center gap-2"><LockIcon size={14} className="shrink-0" /><span className="truncate">{label}</span></span>
+                  <Badge status="locked" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveId(p.id)}
+                  aria-current={active?.id === p.id ? "step" : undefined}
+                  className={
+                    "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[13.5px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary " +
+                    (active?.id === p.id ? "bg-primary-soft/60 font-bold" : "hover:bg-surface-2")
+                  }
+                >
+                  <span className="min-w-0 truncate">{label}</span>
+                  {p.status === "Done" ? <Badge status="completed" /> : <span className="shrink-0 text-[11.5px] font-bold text-primary">Tersedia</span>}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {active && (active.kind === "Test"
+        ? <GatingTest key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged}
+            morePartsFollow={parts.indexOf(active) < parts.length - 1}
+            onNext={nextOpen && parts.indexOf(nextOpen) > parts.indexOf(active) ? () => setActiveId(nextOpen.id) : undefined} />
+        : <VideoPart key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged}
+            onEnded={() => setAdvanceFrom(active.id)} />)}
+    </div>
+  );
+}
+
+function VideoPart({
+  token, sessionId, part, onChanged, onEnded,
+}: { token: string; sessionId: string; part: SessionPart; onChanged: () => void; onEnded: () => void }) {
   const ticket = useQuery({
-    queryKey: ["session-playback", session.id],
-    queryFn: () => getPlayback(token, session.id),
+    queryKey: ["part-playback", part.id],
+    queryFn: () => getPartPlayback(token, sessionId, part.id),
   });
 
-  const [pct, setPct] = useState(num(session.progress.percentComplete));
+  const [pct, setPct] = useState(num(part.percentComplete));
   const saving = useRef(false);
-  const thresholdMet = useRef(session.progress.watchThresholdMet);
+  const done = useRef(part.status === "Done");
 
   async function onProgress(position: number, percent: number) {
     setPct((p) => Math.max(p, percent));
     if (saving.current) return;
     saving.current = true;
     try {
-      const saved = await saveSessionProgress(token, session.id, position, percent);
-      // Refresh once the threshold is first crossed so the gating test unlocks.
-      if (saved.watchThresholdMet && !thresholdMet.current) {
-        thresholdMet.current = true;
-        onProgressChanged();
+      const saved = await savePartProgress(token, sessionId, part.id, position, percent);
+      // Refresh once the part first turns done so the next part unlocks.
+      if (saved.done && !done.current) {
+        done.current = true;
+        onChanged();
       }
     } catch {
       /* transient — the next tick retries */
@@ -184,7 +248,8 @@ function VideoSection({
     return <ErrorState title="Video tidak dapat diputar" message="Coba muat ulang halaman." />;
   }
 
-  const display = Math.round(Math.max(pct, session.progress.completed ? 100 : 0));
+  const finished = part.status === "Done";
+  const display = Math.round(Math.max(pct, finished ? 100 : 0));
 
   return (
     <>
@@ -192,25 +257,26 @@ function VideoSection({
         <VideoPlayer
           src={ticket.data.url}
           captionsSrc={ticket.data.captionsUrl}
-          resumeSeconds={num(session.progress.resumePositionSeconds)}
+          resumeSeconds={num(part.resumePositionSeconds)}
           onProgress={onProgress}
+          onEnded={onEnded}
         />
       </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-[12.5px]">
           <span className="text-ink-muted">
-            {session.durationSeconds != null && minutesLabel(session.durationSeconds)}
+            {part.durationSeconds != null && minutesLabel(part.durationSeconds)}
           </span>
           <span className="font-bold text-primary">{display}%</span>
         </div>
         <div className="h-[7px] overflow-hidden rounded-full bg-surface-2">
           <div
-            className={"h-full rounded-full " + (session.progress.completed ? "bg-success" : "bg-primary")}
+            className={"h-full rounded-full " + (finished ? "bg-success" : "bg-primary")}
             style={{ width: `${display}%` }}
           />
         </div>
         <span className="text-[11.5px] text-ink-subtle">
-          Tes sesi terbuka setelah Anda menonton ~90% video.
+          Bagian berikutnya terbuka setelah Anda menonton ~90% video.
         </span>
       </div>
     </>

@@ -41,8 +41,11 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         var res = await Put(c, c.VideoId, Body("Video", "Judul baru", asset: "sample", duration: 600));
         Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
 
-        var stored = await Session(c.VideoId);
-        Assert.Equal(c.AssessmentId, stored.AssessmentId);
+        // A video's quiz lives on its Test part (2026-10-05).
+        using var scope = factory.Services.CreateScope();
+        Assert.Equal(c.AssessmentId, await scope.ServiceProvider.GetRequiredService<AppDbContext>().SessionParts
+            .Where(p => p.SessionId == c.VideoId && p.Kind == SessionPartKind.Test)
+            .Select(p => p.AssessmentId).SingleAsync());
     }
 
     // ---- order and type have their own rules ----
@@ -75,7 +78,7 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     // ---- the edit actually edits ----
 
     [Fact]
-    public async Task An_edit_changes_the_content_fields()
+    public async Task An_edit_changes_the_title_but_the_video_is_owned_by_the_parts_editor()
     {
         var c = await Seed();
         var videoId = Guid.NewGuid().ToString();
@@ -84,8 +87,21 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
 
         var stored = await Session(c.VideoId);
         Assert.Equal("Sesi 1: Format TOEFL", stored.Title);
-        Assert.Equal(videoId, stored.ProviderAssetId);
-        Assert.Equal(912, stored.DurationSeconds);
+        Assert.Equal("sample", stored.ProviderAssetId);   // kept as stored
+        Assert.Equal(900, stored.DurationSeconds);
+
+        // The video is changed through the parts API (dev provider accepts any id).
+        var lesson = await Part(c.VideoId, SessionPartKind.LessonVideo);
+        var res = await Authed(HttpMethod.Put, $"/api/admin/sessions/{c.VideoId}/parts", c.Admin, new
+        {
+            parts = new object[]
+            {
+                new { id = (Guid?)lesson.Id, kind = "LessonVideo", title = lesson.Title, providerAssetId = videoId, durationSeconds = 912, assessmentId = (Guid?)null },
+                new { id = (Guid?)null, kind = "Test", title = "Kuis", providerAssetId = (string?)null, durationSeconds = (int?)null, assessmentId = (Guid?)c.AssessmentId },
+            },
+        });
+        res.EnsureSuccessStatusCode();
+        Assert.Equal(videoId, (await Part(c.VideoId, SessionPartKind.LessonVideo)).ProviderAssetId);
     }
 
     // ---- a rescheduled live session is reminded again ----
@@ -181,6 +197,13 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
 
     private Task<HttpResponseMessage> Put(Ctx c, Guid sessionId, object body)
         => Authed(HttpMethod.Put, $"/api/admin/sessions/{sessionId}", c.Admin, body);
+
+    private async Task<Domain.Entities.SessionPart> Part(Guid sessionId, SessionPartKind kind)
+    {
+        using var scope = factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .SessionParts.AsNoTracking().SingleAsync(p => p.SessionId == sessionId && p.Kind == kind);
+    }
 
     private async Task<Domain.Entities.ProgramSession> Session(Guid id)
     {

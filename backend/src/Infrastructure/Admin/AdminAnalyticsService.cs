@@ -53,7 +53,7 @@ public class AdminAnalyticsService(AppDbContext db) : IAdminAnalyticsService
         var watch = await db.WatchProgress
             .Where(w => w.SessionId != null)
             .GroupBy(w => w.SessionId!.Value)
-            .Select(grp => new { SessionId = grp.Key, Viewers = grp.Count() })
+            .Select(grp => new { SessionId = grp.Key, Viewers = grp.Select(w => w.UserId).Distinct().Count() }) // a row per part
             .OrderByDescending(x => x.Viewers)
             .Take(TopWatched)
             .ToListAsync(ct);

@@ -18,6 +18,8 @@ public enum PaymentStatus { Pending, Paid, Failed }
 // ---- INVERTA: programs & enrollment (FSD §3–§5) ----
 public enum ProgramStatus { Draft, Published, Archived }
 public enum SessionType { Video, Live, FinalAssessment }
+/// <summary>One step inside a video session (spec 2026-10-05). Stored as text.</summary>
+public enum SessionPartKind { LessonVideo, Test, Discussion }
 public enum LiveMode { Zoom, Offline }
 public enum BatchStatus { Upcoming, Running, Finished }
 public enum EnrollmentStatus { PendingPayment, Active, Completed, Revoked }

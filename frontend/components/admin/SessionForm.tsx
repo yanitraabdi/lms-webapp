@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
 import { Field, inputBlockCls } from "@/components/admin/fields";
-import { VideoPicker } from "@/components/admin/VideoPicker";
+import { SessionPartsEditor } from "@/components/admin/SessionPartsEditor";
 import {
   createSession, updateSession, num,
   type AdminSession, type UpsertSession,
@@ -12,7 +12,7 @@ import {
 export type SessionKind = "Video" | "Live" | "FinalAssessment";
 
 const TYPE_LABEL: Record<SessionKind, string> = {
-  Video: "Video + tes",
+  Video: "Video & tes (beberapa bagian)",
   Live: "Sesi Live",
   FinalAssessment: "Tes Akhir",
 };
@@ -36,28 +36,29 @@ function toLocalInput(iso: string | null | undefined): string {
  * update replaces the session's content wholesale and would otherwise blank them.
  */
 export function SessionForm({
-  token, programId, nextOrder, session, onClose,
+  token, programId, nextOrder, session, onClose, onSaved,
 }: {
   token: string;
   programId: string;
   nextOrder: number;
   session?: AdminSession;
   onClose: () => void;
+  /** After a successful save, even if the admin then stays to keep unsaved parts. */
+  onSaved?: () => void;
 }) {
   const editing = session !== undefined;
   const [type, setType] = useState<SessionKind>((session?.type as SessionKind) ?? "Video");
   const [title, setTitle] = useState(session?.title ?? "");
-  const [seconds, setSeconds] = useState<number>(session?.durationSeconds != null ? num(session.durationSeconds) : 900);
-  // Typed minutes, kept as text so the field can be cleared and retyped; `seconds` is what is saved.
-  const [minutes, setMinutes] = useState(String(Math.max(1, Math.round(seconds / 60))));
-  // Empty, not "sample": under Bunny the server refuses anything that is not a real video id.
-  const [assetId, setAssetId] = useState(session?.providerAssetId ?? "");
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(session?.scheduledAt));
   const [joinUrl, setJoinUrl] = useState(session?.joinUrl ?? "");
-  const minutesOk = /^\d+$/.test(minutes) && Number(minutes) >= 1;
-  const durationBad = type === "Video" && !minutesOk;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [partsDirty, setPartsDirty] = useState(false);
+
+  function close() {
+    if (partsDirty && !confirm("Perubahan pada daftar bagian belum disimpan. Tutup tanpa menyimpan?")) return;
+    onClose();
+  }
 
   async function save() {
     setBusy(true); setError(null);
@@ -67,8 +68,9 @@ export function SessionForm({
         title: title.trim(),
         description: session?.description ?? null,
         orderIndex: session ? num(session.orderIndex) : nextOrder,
-        providerAssetId: type === "Video" ? assetId.trim() || null : null,
-        durationSeconds: type === "Video" ? seconds : null,
+        // A video session's videos and tests live in its parts (SessionPartsEditor).
+        providerAssetId: null,
+        durationSeconds: null,
         scheduledAt:
           type !== "Live" || !scheduledAt
             ? null
@@ -82,7 +84,9 @@ export function SessionForm({
       };
       if (session) await updateSession(token, session.id, body);
       else await createSession(token, programId, body);
-      onClose();
+      setBusy(false);
+      onSaved?.();
+      close();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menyimpan sesi.");
       setBusy(false);
@@ -92,13 +96,13 @@ export function SessionForm({
   return (
     <Modal
       open
-      onClose={onClose}
+      onClose={close}
       title={editing ? "Ubah sesi" : "Sesi baru"}
-      className="max-w-lg"
+      className={type === "Video" && editing ? "max-h-[92vh] max-w-2xl overflow-y-auto" : "max-w-lg"}
       footer={
         <div className="flex w-full justify-end gap-2">
-          <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-          <Button size="sm" onClick={save} loading={busy} disabled={!title.trim() || durationBad}>Simpan</Button>
+          <Button variant="neutral" size="sm" onClick={close}>Batal</Button>
+          <Button size="sm" onClick={save} loading={busy} disabled={!title.trim()}>Simpan</Button>
         </div>
       }
     >
@@ -123,40 +127,13 @@ export function SessionForm({
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputBlockCls} />
         </Field>
 
-        {type === "Video" && (
-          <>
-            <div className="flex flex-col gap-1" role="group" aria-labelledby="video-caption">
-              <span id="video-caption" className="text-[12px] font-bold text-ink-muted">Video</span>
-              <VideoPicker
-                token={token}
-                value={assetId}
-                onPick={(v) => { setAssetId(v.id); setSeconds(v.lengthSeconds); setMinutes(String(Math.max(1, Math.round(v.lengthSeconds / 60)))); }}
-              />
-            </div>
-            <Field label="ID video Bunny">
-              <input
-                value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
-                placeholder="Terisi otomatis saat memilih video, atau tempel manual"
-                className={inputBlockCls}
-              />
-            </Field>
-            <Field label="Durasi (menit)">
-              <input
-                type="number"
-                min={1}
-                value={minutes}
-                onChange={(e) => {
-                  const m = e.target.value;
-                  setMinutes(m);
-                  if (/^\d+$/.test(m) && Number(m) >= 1) setSeconds(Number(m) * 60);
-                }}
-                className={inputBlockCls}
-              />
-              {durationBad && <p className="mt-1 text-[12px] text-danger">Durasi minimal 1 menit.</p>}
-            </Field>
-          </>
-        )}
+        {type === "Video" && (editing ? (
+          <SessionPartsEditor token={token} sessionId={session.id} onDirtyChange={setPartsDirty} />
+        ) : (
+          <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
+            Simpan sesi terlebih dahulu, lalu tambahkan video dan tes pada daftar bagian.
+          </p>
+        ))}
 
         {type === "Live" && (
           <>

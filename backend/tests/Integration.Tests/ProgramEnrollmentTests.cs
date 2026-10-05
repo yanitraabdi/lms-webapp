@@ -449,12 +449,14 @@ public class ProgramEnrollmentTests(AuthApiFactory factory) : IClassFixture<Auth
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        // A video session with no gating test completes at the watch threshold.
-        db.WatchProgress.Add(new WatchProgress
-        {
-            Id = Guid.CreateVersion7(), UserId = userId, SessionId = sessionId,
-            PercentComplete = 100m, ResumePositionSeconds = 600, LastWatchedAt = DateTimeOffset.UtcNow,
-        });
+        // A video session with no gating test completes once its video parts are watched.
+        foreach (var partId in await db.SessionParts
+                     .Where(p => p.SessionId == sessionId && p.Kind != SessionPartKind.Test).Select(p => p.Id).ToListAsync())
+            db.WatchProgress.Add(new WatchProgress
+            {
+                Id = Guid.CreateVersion7(), UserId = userId, SessionId = sessionId, PartId = partId,
+                PercentComplete = 100m, ResumePositionSeconds = 600, LastWatchedAt = DateTimeOffset.UtcNow,
+            });
         await db.SaveChangesAsync();
 
         var completion = scope.ServiceProvider.GetRequiredService<ISessionCompletionService>();

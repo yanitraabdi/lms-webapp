@@ -32,20 +32,15 @@ public static class SessionAccess
 
     /// <summary>
     /// Whether a session counts as complete, per type (FSD §3 R2):
-    /// video → watched ≥ threshold AND gating test passed; live → admin-marked attended (or see
+    /// video → every part done (see SessionParts.IsComplete); live → admin-marked attended (or see
     /// <see cref="EnrolledAfterLiveSession"/>); final → an attempt was submitted.
     /// </summary>
     public static bool IsSessionComplete(
         SessionType type,
-        decimal watchPercent = 0m,
-        bool hasGatingTest = false,
-        bool gatingTestPassed = false,
         bool attended = false,
-        bool assessmentSubmitted = false,
-        decimal watchThreshold = CompletionPolicy.ModuleCompleteThresholdPercent) => type switch
+        bool assessmentSubmitted = false) => type switch
         {
-            // Watching alone is NOT enough when a gating test exists — the test truly gates.
-            SessionType.Video => watchPercent >= watchThreshold && (!hasGatingTest || gatingTestPassed),
+            SessionType.Video => false, // video sessions complete via SessionParts.IsComplete
             SessionType.Live => attended,
             SessionType.FinalAssessment => assessmentSubmitted,
             _ => false,

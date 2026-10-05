@@ -20,8 +20,15 @@ public class AssessmentConfig
     /// <summary>Soft proctoring (M4). Off for gating tests by default.</summary>
     public bool ProctoringEnabled { get; set; }
 
-    /// <summary>Per-question audio play limit (M4 listening). Null ⇒ unlimited.</summary>
+    /// <summary>Plays per attempt: per question (final listening) or of the shared test audio (session test, default 1). Null ⇒ unlimited for questions.</summary>
     public int? AudioPlayLimit { get; set; }
+
+    /// <summary>One recording for the whole SESSION test, played up to AudioPlayLimit ?? 1 times per
+    /// attempt (spec 2026-10-05 §4). An R2 key, signed on serve. Null ⇒ no shared audio.</summary>
+    public string? AudioRef { get; set; }
+
+    /// <summary>Failed attempts after which the discussion video opens early. Null ⇒ only a pass opens it.</summary>
+    public int? DiscussionAfterFailures { get; set; }
 
     /// <summary>Sectional layout for the final assessment (M4). Empty for a gating test.</summary>
     public List<AssessmentSectionConfig> Sections { get; set; } = [];
@@ -58,7 +65,12 @@ public record StudentAssessmentDto(
     int? RetakeCap, int AttemptsUsed, bool CanAttempt,
     bool Passed, int? BestScore,
     bool ProctoringEnabled, int? TimeLimitMinutes,
-    IReadOnlyList<StudentQuestionDto> Questions);
+    IReadOnlyList<StudentQuestionDto> Questions,
+    bool HasTestAudio, int? TestAudioPlayLimit);
+
+public record TestAudioDto(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow, int PlaysUsed, int PlayLimit);
+
+public record StartTestAudioRequest(bool Replay);
 
 public record AttemptDto(
     Guid Id, Guid AssessmentId, DateTimeOffset StartedAt, DateTimeOffset? SubmittedAt,
@@ -77,8 +89,13 @@ public record AttemptResultDto(
 
 public interface IAssessmentService
 {
-    /// <summary>The session's assessment, without answers. Null when the session has none.</summary>
+    /// <summary>The test of a Test part, without answers (GR-11).</summary>
+    /// <summary>The FINAL assessment of a final-assessment session, without answers (GR-11).
+    /// Null when the session is not a final session or has no assessment. Video-session tests
+    /// are served per part (GetForPartAsync).</summary>
     Task<StudentAssessmentDto?> GetForSessionAsync(Guid userId, Guid sessionId, CancellationToken ct = default);
+
+    Task<StudentAssessmentDto> GetForPartAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default);
 
     /// <summary>Starts an attempt. StartedAt is SERVER-stamped and the retake cap is enforced here (GR-12).</summary>
     Task<AttemptDto> StartAttemptAsync(Guid userId, Guid assessmentId, CancellationToken ct = default);
@@ -101,7 +118,11 @@ public interface IAssessmentService
     /// fail, retry, hear it again. So there is deliberately no limit here.
     /// </summary>
     Task<string> GetGatingAudioUrlAsync(
-        Guid userId, Guid sessionId, Guid questionId, CancellationToken ct = default);
+        Guid userId, Guid sessionId, Guid partId, Guid questionId, CancellationToken ct = default);
+
+    /// <summary>Starts or resumes the shared recording of a session test for the open attempt.
+    /// replay=true starts a NEW play if the per-attempt limit (audioPlayLimit ?? 1) allows.</summary>
+    Task<TestAudioDto> StartTestAudioAsync(Guid userId, Guid sessionId, Guid partId, bool replay, CancellationToken ct = default);
 }
 
 // ---------------------------------------------------------------- admin DTOs

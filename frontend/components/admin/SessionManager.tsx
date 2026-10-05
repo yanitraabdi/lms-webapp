@@ -21,7 +21,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
   const [editing, setEditing] = useState<AdminSession | null>(null);
   const [busy, setBusy] = useState(false);
   const [attendanceFor, setAttendanceFor] = useState<string | null>(null);
-  const [testFor, setTestFor] = useState<{ sessionId: string; assessmentId: string | null; kind: "Gating" | "Final" } | null>(null);
+  const [testFor, setTestFor] = useState<{ sessionId: string; assessmentId: string | null; kind: "Final" } | null>(null);
 
   const sessions = [...(q.data ?? [])].sort((a, b) => num(a.orderIndex) - num(b.orderIndex));
 
@@ -92,15 +92,6 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
                     className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
                   >
                     Kehadiran
-                  </button>
-                )}
-                {s.type === "Video" && (
-                  <button
-                    type="button"
-                    onClick={() => setTestFor({ sessionId: s.id, assessmentId: s.assessmentId ?? null, kind: "Gating" })}
-                    className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
-                  >
-                    {s.assessmentId ? "Tes ✓" : "Tes"}
                   </button>
                 )}
                 {s.type === "FinalAssessment" && (
@@ -179,6 +170,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
           programId={program.id}
           nextOrder={sessions.length + 1}
           session={editing}
+          onSaved={() => qc.invalidateQueries({ queryKey: key })}
           onClose={async () => { setEditing(null); await qc.invalidateQueries({ queryKey: key }); }}
         />
       )}

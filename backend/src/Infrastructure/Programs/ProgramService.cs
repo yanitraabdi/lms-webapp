@@ -58,8 +58,11 @@ public class ProgramService(AppDbContext db, ISessionCompletionService completio
             {
                 s.Id, s.OrderIndex, s.Type, s.Title, s.Description, s.DurationSeconds,
                 s.ScheduledAt, s.LiveMode, s.JoinUrl, s.Location, s.AssessmentId,
-                HasAssessment = s.AssessmentId != null
-                                && db.AssessmentQuestions.Any(q => q.AssessmentId == s.AssessmentId),
+                // Video tests hang off parts (2026-10-05); other types keep the session column.
+                HasAssessment = s.Type == SessionType.Video
+                    ? db.SessionParts.Any(p => p.SessionId == s.Id && p.Kind == SessionPartKind.Test)
+                    : s.AssessmentId != null
+                      && db.AssessmentQuestions.Any(q => q.AssessmentId == s.AssessmentId),
             })
             .ToListAsync(ct);
 
@@ -79,7 +82,10 @@ public class ProgramService(AppDbContext db, ISessionCompletionService completio
             .Where(w => w.UserId == userId && w.SessionId != null)
             .Select(w => new { SessionId = w.SessionId!.Value, w.PercentComplete })
             .ToListAsync(ct);
-        var percentBySession = progress.ToDictionary(x => x.SessionId, x => x.PercentComplete);
+        // A video session now has one row per part (2026-10-05), so several rows per session.
+        // ponytail: the session's percent is its furthest part; per-part percents are on the session page.
+        var percentBySession = progress.GroupBy(x => x.SessionId)
+            .ToDictionary(g => g.Key, g => g.Max(x => x.PercentComplete));
 
         // Linear lock: walk in order — a session is available only once its predecessor is complete.
         var sessions = new List<StudentSessionDto>(rows.Count);

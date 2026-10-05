@@ -30,10 +30,11 @@ public class SessionQuizSeederTests(AuthApiFactory factory) : IClassFixture<Auth
     private Task<List<VideoQuiz>> VideoSessions() => Seeded(db => db.ProgramSessions
         .Where(s => s.Program.Slug == ProgramSeeder.Slug && s.Type == SessionType.Video)
         .OrderBy(s => s.OrderIndex)
-        .Select(s => new VideoQuiz(
-            s.OrderIndex, s.AssessmentId,
-            db.AssessmentQuestions.Count(q => q.AssessmentId == s.AssessmentId),
-            s.Assessment == null ? null : s.Assessment.Config))
+        .Select(s => new { s.OrderIndex, Test = s.Parts.FirstOrDefault(p => p.Kind == SessionPartKind.Test) })
+        .Select(x => new VideoQuiz(
+            x.OrderIndex, x.Test == null ? null : x.Test.AssessmentId,
+            x.Test == null ? 0 : db.AssessmentQuestions.Count(q => q.AssessmentId == x.Test.AssessmentId),
+            x.Test == null || x.Test.Assessment == null ? null : x.Test.Assessment.Config))
         .ToListAsync());
 
     [Fact]

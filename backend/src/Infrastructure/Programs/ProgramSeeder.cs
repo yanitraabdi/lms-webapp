@@ -43,7 +43,7 @@ public class ProgramSeeder(AppDbContext db)
         var order = 1;
         foreach (var (title, minutes) in PlaceholderLessons)
         {
-            db.ProgramSessions.Add(new ProgramSession
+            var session = new ProgramSession
             {
                 Id = Guid.CreateVersion7(),
                 ProgramId = program.Id,
@@ -54,6 +54,13 @@ public class ProgramSeeder(AppDbContext db)
                 DurationSeconds = minutes * 60,
                 ProviderAssetId = "sample",             // dev video provider asset
                 AssessmentId = null,                    // gating test authored in admin (M3)
+            };
+            db.ProgramSessions.Add(session);
+            db.SessionParts.Add(new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id, OrderIndex = 1,
+                Kind = SessionPartKind.LessonVideo, Title = title,
+                ProviderAssetId = "sample", DurationSeconds = minutes * 60,
             });
         }
 

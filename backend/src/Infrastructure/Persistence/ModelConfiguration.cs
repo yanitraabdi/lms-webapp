@@ -214,7 +214,14 @@ public class WatchProgressConfig : IEntityTypeConfiguration<WatchProgress>
         // Targets exactly one of module_id (dormant catalog) or session_id (INVERTA) —
         // hence partial uniques + a CHECK. See docs/TSD_Delta_INVERTA_v0.1.md §3.1.
         e.HasIndex(x => new { x.UserId, x.ModuleId }).IsUnique().HasFilter("module_id IS NOT NULL");
-        e.HasIndex(x => new { x.UserId, x.SessionId }).IsUnique().HasFilter("session_id IS NOT NULL");
+        // A session's progress is per PART since 2026-10-05: one row per (user, part).
+        e.HasIndex(x => new { x.UserId, x.SessionId }).HasFilter("session_id IS NOT NULL");
+        e.HasIndex(x => new { x.UserId, x.PartId }).IsUnique().HasFilter("part_id IS NOT NULL");
+        // "Does this part have learner progress?" (admin removal guard) and the FK check on part
+        // delete both look up by part alone — the composite above starts with user_id.
+        e.HasIndex(x => x.PartId);
+        e.HasOne<SessionPart>().WithMany().HasForeignKey(x => x.PartId)
+            .OnDelete(DeleteBehavior.Restrict);   // retained learner record (GR-7)
         e.ToTable(t => t.HasCheckConstraint(
             "ck_watch_progress_one_target", "(module_id IS NULL) <> (session_id IS NULL)"));
         e.Property(x => x.PercentComplete).HasPrecision(5, 2);

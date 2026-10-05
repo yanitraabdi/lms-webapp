@@ -40,8 +40,11 @@ public class ProgramSession : Entity
     public string? Description { get; set; }
 
     // Type = Video
-    public string? ProviderAssetId { get; set; }               // Bunny asset — never sent to students
+    public string? ProviderAssetId { get; set; }               // legacy: video sessions read their parts instead (2026-10-05)
     public int? DurationSeconds { get; set; }
+
+    // Type = Video — INVERTA session parts (2026-10-05)
+    public ICollection<SessionPart> Parts { get; set; } = new List<SessionPart>();
 
     // Type = Live
     public DateTimeOffset? ScheduledAt { get; set; }
@@ -94,4 +97,26 @@ public class LiveAttendance : Entity
     public Guid UserId { get; set; }
     public bool Attended { get; set; }
     public Guid? MarkedByUserId { get; set; }
+}
+
+/// <summary>
+/// One ordered step of a VIDEO session: a lesson video, a test, or the discussion video of the
+/// test directly before it. Whether a learner has done it is derived from watch_progress and
+/// attempts (both retained forever), never stored here.
+/// </summary>
+public class SessionPart : Entity
+{
+    public Guid SessionId { get; set; }
+    public ProgramSession Session { get; set; } = default!;
+    public int OrderIndex { get; set; }
+    public SessionPartKind Kind { get; set; }
+    public string Title { get; set; } = default!;
+
+    // Kind = LessonVideo | Discussion
+    public string? ProviderAssetId { get; set; }               // Bunny asset — never sent to students
+    public int? DurationSeconds { get; set; }
+
+    // Kind = Test
+    public Guid? AssessmentId { get; set; }
+    public Assessment? Assessment { get; set; }
 }

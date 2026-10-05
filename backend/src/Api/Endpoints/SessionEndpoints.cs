@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace Academy.Api.Endpoints;
 
 /// <summary>
-/// INVERTA M3 — learner session surface: playback, progress, and the gating test.
+/// INVERTA M3 — learner session surface: the session context, then per PART (2026-10-05)
+/// playback, progress, and the test.
 /// Every route is gated by ISessionAccessService inside the services (GR-1).
 /// </summary>
 public static class SessionEndpoints
@@ -19,33 +20,47 @@ public static class SessionEndpoints
                 Guid id, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
             TypedResults.Ok(await s.GetContextAsync(u.UserId(), id, ct)));
 
-        // Listening audio for the session test. Rate-limited with playback: it mints a signed URL
-        // per call, and a gating test has no play cap, so the limiter is what bounds it.
-        g.MapGet("/{id:guid}/assessment/audio/{questionId:guid}", async Task<Ok<GatingAudioResponse>> (
-                Guid id, Guid questionId, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
-            TypedResults.Ok(new GatingAudioResponse(await s.GetGatingAudioUrlAsync(u.UserId(), id, questionId, ct))))
-            .RequireRateLimiting("playback");
-
-        g.MapPost("/{id:guid}/playback", async Task<Ok<SessionPlaybackDto>> (
-                Guid id, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
-            TypedResults.Ok(await s.GetPlaybackAsync(u.UserId(), id, ct)))
-            .RequireRateLimiting("playback");
-
-        g.MapGet("/{id:guid}/progress", async Task<Ok<SessionProgressDto>> (
-                Guid id, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
-            TypedResults.Ok(await s.GetProgressAsync(u.UserId(), id, ct)));
-
-        g.MapPut("/{id:guid}/progress", async Task<Ok<SessionProgressDto>> (
-                Guid id, SaveProgressRequest r, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
-            TypedResults.Ok(await s.SaveProgressAsync(u.UserId(), id, r.PositionSeconds, r.Percent, ct)));
-
-        // The gating test for this session — WITHOUT the answer key (GR-11).
+        // The final assessment of a FINAL session — WITHOUT the answer key (GR-11). Video-session
+        // tests are served per part: /parts/{partId}/assessment.
         g.MapGet("/{id:guid}/assessment", async Task<Results<Ok<StudentAssessmentDto>, NoContent>> (
             Guid id, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
         {
             var a = await s.GetForSessionAsync(u.UserId(), id, ct);
             return a is null ? TypedResults.NoContent() : TypedResults.Ok(a);
         });
+
+        var p = g.MapGroup("/{id:guid}/parts/{partId:guid}");
+
+        p.MapPost("/playback", async Task<Ok<PartPlaybackDto>> (
+                Guid id, Guid partId, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.GetPartPlaybackAsync(u.UserId(), id, partId, ct)))
+            .RequireRateLimiting("playback");
+
+        p.MapGet("/progress", async Task<Ok<PartProgressDto>> (
+                Guid id, Guid partId, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.GetPartProgressAsync(u.UserId(), id, partId, ct)));
+
+        p.MapPut("/progress", async Task<Ok<PartProgressDto>> (
+                Guid id, Guid partId, SaveProgressRequest r, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.SavePartProgressAsync(u.UserId(), id, partId, r.PositionSeconds, r.Percent, ct)));
+
+        // The test of a Test part — WITHOUT the answer key (GR-11).
+        p.MapGet("/assessment", async Task<Ok<StudentAssessmentDto>> (
+                Guid id, Guid partId, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.GetForPartAsync(u.UserId(), id, partId, ct)));
+
+        // A question's own clip. Rate-limited with playback: it mints a signed URL per call.
+        p.MapGet("/audio/{questionId:guid}", async Task<Ok<GatingAudioResponse>> (
+                Guid id, Guid partId, Guid questionId, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(new GatingAudioResponse(await s.GetGatingAudioUrlAsync(u.UserId(), id, partId, questionId, ct))))
+            .RequireRateLimiting("playback");
+
+        // One recording for the whole test: stamped by the server, resumed on reload, replayed only
+        // within the per-attempt limit.
+        p.MapPost("/audio", async Task<Ok<TestAudioDto>> (
+                Guid id, Guid partId, StartTestAudioRequest r, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.StartTestAudioAsync(u.UserId(), id, partId, r.Replay, ct)))
+            .RequireRateLimiting("playback");
 
         // ---- attempts ----
         var a = app.MapGroup("/api").RequireAuthorization().WithTags("Assessments");

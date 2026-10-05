@@ -137,6 +137,27 @@ public class ProgramAdminService(
                    .MaxAsync(s => (int?)s.OrderIndex, ct) ?? 0) + 1;
 
         db.ProgramSessions.Add(session);
+        // A video created with a video becomes a one-part session (lesson). Without one it starts
+        // empty and the parts editor fills it (spec §3: learners see "Belum tersedia").
+        if (session.Type == SessionType.Video && !string.IsNullOrWhiteSpace(session.ProviderAssetId))
+            db.SessionParts.Add(new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id, OrderIndex = 1,
+                Kind = SessionPartKind.LessonVideo, Title = session.Title,
+                ProviderAssetId = session.ProviderAssetId, DurationSeconds = session.DurationSeconds,
+            });
+        // A test sent on create becomes the Test part after the lesson; tests live on parts.
+        if (session.Type == SessionType.Video && session.AssessmentId is Guid createTest)
+        {
+            db.SessionParts.Add(new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id,
+                OrderIndex = string.IsNullOrWhiteSpace(session.ProviderAssetId) ? 1 : 2,
+                Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = createTest,
+            });
+        }
+        // A video's test lives on its Test part; only live/final sessions keep the session column.
+        if (session.Type == SessionType.Video) session.AssessmentId = null;
         Audit(actor, "session_created", session.Id, new { programId, session.Title, Type = session.Type.ToString() });
         await SaveSessionsAsync(programId, ct);
         return MapSession(session);
@@ -154,15 +175,21 @@ public class ProgramAdminService(
         //   OrderIndex   — a stale index collided with UNIQUE(program_id, order_index) or quietly
         //                  moved the session. Reorder: POST …/sessions/reorder.
         //   Type         — a Video could become Live after learners had watched it. Immutable.
-        var (type, order, assessmentId, scheduledAt) =
-            (session.Type, session.OrderIndex, session.AssessmentId, session.ScheduledAt);
+        //   ProviderAssetId/DurationSeconds (Video) — owned by the parts editor: PUT …/sessions/{id}/parts.
+        var (type, order, assessmentId, scheduledAt, assetId, duration) =
+            (session.Type, session.OrderIndex, session.AssessmentId, session.ScheduledAt,
+             session.ProviderAssetId, session.DurationSeconds);
 
         ApplySession(session, req);
 
         session.Type = type;
         session.OrderIndex = order;
         session.AssessmentId = assessmentId;
-        ValidateVideoAsset(session.Type, session.ProviderAssetId, video);
+        if (type == SessionType.Video)
+        {
+            session.ProviderAssetId = assetId;
+            session.DurationSeconds = duration;
+        }
 
         // The H-1 sweep claims a session by stamping ReminderSentAt and never revisits it, so a
         // rescheduled session would get no reminder for its new slot. Re-arm it. Compared at minute
@@ -276,11 +303,24 @@ public class ProgramAdminService(
                 sessions.Count == 0 ? "Belum ada sesi pada program ini." : null),
         };
 
-        // Every attached assessment must actually have questions.
+        var emptyVideo = await db.ProgramSessions
+            .Where(s => s.ProgramId == programId && s.Type == SessionType.Video && !s.Parts.Any())
+            .Select(s => s.Title).ToListAsync(ct);
+        checks.Add(new("video_sessions_have_parts", "Setiap sesi video memiliki bagian", emptyVideo.Count == 0, true,
+            emptyVideo.Count > 0 ? $"Sesi tanpa bagian: {string.Join(", ", emptyVideo)}." : null));
+
+        // Every attached assessment must actually have questions — on the session (live/final) or on
+        // a Test part (video, since 2026-10-05).
+        var partTests = await db.SessionParts
+            .Where(p => p.Session.ProgramId == programId && p.AssessmentId != null)
+            .Select(p => new { p.Session.Title, p.AssessmentId })
+            .ToListAsync(ct);
         var empty = new List<string>();
-        foreach (var s in sessions.Where(s => s.AssessmentId != null))
-            if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == s.AssessmentId, ct))
-                empty.Add(s.Title);
+        // VIDEO sessions keep the pre-parts column only for rollback — their tests live on parts.
+        foreach (var t in sessions.Where(s => s.AssessmentId != null && s.Type != SessionType.Video)
+                     .Select(s => new { s.Title, s.AssessmentId }).Concat(partTests))
+            if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == t.AssessmentId, ct))
+                empty.Add(t.Title);
         checks.Add(new("gating_tests_populated", "Semua tes memiliki soal", empty.Count == 0, true,
             empty.Count > 0 ? $"Tes tanpa soal: {string.Join(", ", empty)}." : null));
 
@@ -579,6 +619,10 @@ public class ProgramAdminService(
         try
         {
             await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
+        {
+            throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
         }
         catch (DbUpdateException)
         {

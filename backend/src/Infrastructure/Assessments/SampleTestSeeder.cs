@@ -84,7 +84,13 @@ public class SampleTestSeeder(AppDbContext db, IObjectStorage storage)
             });
         }
 
-        session.AssessmentId = assessment.Id;
+        var lastOrder = await db.SessionParts.Where(p => p.SessionId == session.Id)
+            .MaxAsync(p => (int?)p.OrderIndex, ct) ?? 0;
+        db.SessionParts.Add(new SessionPart
+        {
+            Id = Guid.CreateVersion7(), SessionId = session.Id, OrderIndex = lastOrder + 1,
+            Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = assessment.Id,
+        });
         await db.SaveChangesAsync(ct);
     }
 

@@ -1813,3 +1813,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **Spec §5 says a locked part uses the "existing locked problem".** Parts get their own 403 message, `Bagian ini masih terkunci.`, while a locked session keeps its message. Both are 403.
 - **Spec §4 doesn't mention `assessment_id` uniqueness on parts.** It's added as a filtered unique index, because attempts are per assessment, so two parts sharing one test would share progress. This enforces the spec's own "same assessment not used twice" rule.
 - **The legacy shortcut `PUT /api/admin/sessions/{id}/assessment` is kept** (Task 2), so seeders, the final-session UI and existing tests keep working. For a video session it manages the single Test part.
+
+## Deferred follow-ups (from per-task and final reviews, 2026-10-05)
+
+Not blocking merge, but worth a later pass:
+
+- Task 1: minor (deferred): DiscussionAfterFailures<=0 opens discussion immediately — rejected at admin save in Task 5 Validate
+- Task 1: minor (deferred): redundant `using Academy.Domain;` in SessionPartsTests; no test for discussion at index 0 / after non-test
+- Task 2: minor (deferred): attach writes session.AssessmentId before guards (no save on throw); missing branch tests (detach blocked by attempts/discussion, replace test, multiple-tests 409); long AnyAsync line in SessionQuizSeeder; backfill test non-hermetic; "Tes sesi" literal x5
+- Task 2: minor (deferred): SampleTestSeeder attaches to first session by order — if that is Live, a Test part would land on a Live session (fresh-DB only)
+- Task 3: minor (deferred): Test part w/ null AssessmentId falls into video branch (DB CHECK prevents); states.First race → 500; 404-before-enrolment leaks part existence (plan-mandated, v7 ids); Can/Ensure duplicate logic; missing AsNoTracking on projections; unused copied test helpers
+- Task 4: minor (deferred): HasAssessment for video ignores empty tests (plan-mandated); readiness may list a title twice + N+1; playback `ProviderAssetId!` no fallback; GetPartProgress accepts Test part (Save refuses 400); no tests for 400 "bukan tes"/"bukan video"; stale comments (AdminAnalyticsService ~46, SubmitAsync, FSD §5 "gating test unlocks same page"); stale program_sessions.assessment_id on old video sessions (OwnerOfAsync fallback)
+- Task 5: minor (deferred): no test for per-question audio 400 "diputar sekali untuk seluruh soal"; no test audioPlayLimit<1; dead helpers + Task.Delay(20) in TestAudioTests; ponytail comment placement
+- Task 6: minor (deferred): e2e doesn't assert session2 locked before pass / discussion closed before failures; AttachedSessionId via parts untested; GET parts for unknown session → 200 []; no DurationSeconds/title-length validation; HasLearnerData N+1 (admin scale)
+- Task 4b: minor (deferred): misplaced XML summary on GetForPartAsync/GetForSessionAsync in AssessmentContracts; 204+403 in one test
+- Task 7: minor (deferred): stale advanceFrom edge; dev StrictMode double autoBegin + gone ref never reset; no resume copy after reload (startedAt null); stale doc comments (LiveAudioPlayer "never replayed", QuestionAudio, SessionView "gating test"); "~90%" hint hard-coded (plan copy); Badge locked contrast ~4.3:1 (pre-existing shared component); passed-test copy says "Sesi berikutnya sudah terbuka." even when more parts follow; "Coba lagi" audio waits for tap
+- Task 8: minor (deferred): stale test title after inline save; orphaned assessment if parts discarded; discussion-after-test rule only enforced on add (server refuses); unsaved inline test edits lost silently; Modal stack assumes separate commits; disabled Hapus reason mouse-only (plan); inline editor has no heading; stale `session` prop on stay path; double invalidation
+- TryCompleteAsync: on a concurrent-insert DbUpdateException the Added entity stays tracked (latent; detach it in the catch).

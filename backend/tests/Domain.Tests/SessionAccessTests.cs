@@ -21,23 +21,8 @@ public class SessionAccessTests
     // ---- completion per session type (FSD §3 R2) ----
 
     [Fact]
-    public void Video_with_gating_test_is_NOT_complete_on_watching_alone()
-        => Assert.False(SessionAccess.IsSessionComplete(
-            SessionType.Video, watchPercent: 100m, hasGatingTest: true, gatingTestPassed: false));
-
-    [Fact]
-    public void Video_with_gating_test_completes_only_when_test_passed()
-        => Assert.True(SessionAccess.IsSessionComplete(
-            SessionType.Video, watchPercent: 100m, hasGatingTest: true, gatingTestPassed: true));
-
-    [Fact]
-    public void Video_without_gating_test_completes_at_threshold()
-        => Assert.True(SessionAccess.IsSessionComplete(SessionType.Video, watchPercent: 90m, hasGatingTest: false));
-
-    [Fact]
-    public void Video_below_threshold_is_incomplete_even_with_passed_test()
-        => Assert.False(SessionAccess.IsSessionComplete(
-            SessionType.Video, watchPercent: 89.9m, hasGatingTest: true, gatingTestPassed: true));
+    public void Video_never_completes_through_this_rule()   // parts decide: SessionParts.IsComplete
+        => Assert.False(SessionAccess.IsSessionComplete(SessionType.Video));
 
     [Theory]
     [InlineData(true, true)]

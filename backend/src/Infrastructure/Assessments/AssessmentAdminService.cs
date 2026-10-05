@@ -21,8 +21,8 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             {
                 a.Id, a.Kind, a.Title, a.Config,
                 QuestionCount = db.AssessmentQuestions.Count(q => q.AssessmentId == a.Id),
-                AttachedSessionId = db.ProgramSessions
-                    .Where(s => s.AssessmentId == a.Id).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                AttachedSessionId = db.SessionParts.Where(p => p.AssessmentId == a.Id).Select(p => (Guid?)p.SessionId).FirstOrDefault()
+                    ?? db.ProgramSessions.Where(s => s.AssessmentId == a.Id && s.Type != SessionType.Video).Select(s => (Guid?)s.Id).FirstOrDefault(),
                 AttemptCount = db.Attempts.Count(x => x.AssessmentId == a.Id),
             })
             .ToListAsync(ct);
@@ -48,8 +48,8 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             })
             .ToListAsync(ct);
 
-        var attachedSessionId = await db.ProgramSessions
-            .Where(s => s.AssessmentId == id).Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+        var attachedSessionId = await db.SessionParts.Where(p => p.AssessmentId == id).Select(p => (Guid?)p.SessionId).FirstOrDefaultAsync(ct)
+            ?? await db.ProgramSessions.Where(s => s.AssessmentId == id && s.Type != SessionType.Video).Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
         var attemptCount = await db.Attempts.CountAsync(x => x.AssessmentId == id, ct);
 
         // Admin DOES see the answer key — that's the whole point of authoring (contrast GR-11,
@@ -81,6 +81,13 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (config.PassThreshold is int mark && mark < 1)
             throw new AssessmentException(
                 "Skor lulus minimal 1. Kosongkan jika tes ini tidak memiliki batas lulus.");
+
+        if (config.DiscussionAfterFailures is int n && n < 1)
+            throw new AssessmentException(
+                "Video pembahasan terbuka minimal setelah 1 kali gagal. Kosongkan jika hanya terbuka setelah lulus.");
+
+        if (config.AudioPlayLimit is int plays && plays < 1)
+            throw new AssessmentException("Batas pemutaran audio minimal 1.");
     }
 
     /// <summary>
@@ -150,6 +157,9 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (await db.Attempts.AnyAsync(x => x.AssessmentId == id, ct))
             throw new AssessmentException("Tes tidak bisa dihapus karena sudah dikerjakan peserta.", 409);
 
+        if (await db.SessionParts.AnyAsync(p => p.AssessmentId == id, ct))
+            throw new AssessmentException("Tes masih dipakai di sebuah sesi. Hapus bagiannya terlebih dahulu.", 409);
+
         // Detach from any session first so the FK (SetNull) intent is explicit.
         var sessions = await db.ProgramSessions.Where(s => s.AssessmentId == id).ToListAsync(ct);
         foreach (var s in sessions) s.AssessmentId = null;
@@ -205,10 +215,55 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         if (assessmentId is Guid aid && !await db.Assessments.AnyAsync(a => a.Id == aid, ct))
             throw new AssessmentException("Tes tidak ditemukan.", 404);
 
-        session.AssessmentId = assessmentId;
+        // A video's test lives on its Test part; only other types keep the session column.
+        if (session.Type != SessionType.Video) session.AssessmentId = assessmentId;
+        if (session.Type == SessionType.Video)
+        {
+            var tests = await db.SessionParts
+                .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.Test).ToListAsync(ct);
+            if (tests.Count > 1)
+                throw new AssessmentException("Sesi ini memiliki beberapa tes. Atur lewat daftar bagian.", 409);
+
+            var current = tests.SingleOrDefault();
+            if (current is not null && current.AssessmentId != assessmentId
+                && await db.Attempts.AnyAsync(a => a.AssessmentId == current.AssessmentId, ct))
+                throw new AssessmentException("Tes ini sudah dikerjakan peserta dan tidak bisa diganti.", 409);
+
+            if (assessmentId is null)
+            {
+                if (current is not null)
+                {
+                    var discussion = await db.SessionParts.FirstOrDefaultAsync(p =>
+                        p.SessionId == sessionId && p.Kind == SessionPartKind.Discussion
+                        && p.OrderIndex == current.OrderIndex + 1, ct);
+                    if (discussion is not null)
+                        throw new AssessmentException("Hapus video pembahasan tes ini terlebih dahulu.", 409);
+                    db.SessionParts.Remove(current);
+                }
+            }
+            else if (current is not null)
+            {
+                current.AssessmentId = assessmentId;
+            }
+            else
+            {
+                var lastOrder = await db.SessionParts.Where(p => p.SessionId == sessionId)
+                    .MaxAsync(p => (int?)p.OrderIndex, ct) ?? 0;
+                db.SessionParts.Add(new SessionPart
+                {
+                    Id = Guid.CreateVersion7(), SessionId = sessionId, OrderIndex = lastOrder + 1,
+                    Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = assessmentId,
+                });
+            }
+        }
+
         Audit(actor, assessmentId is null ? "assessment_detached" : "assessment_attached",
               sessionId, new { assessmentId });
-        await db.SaveChangesAsync(ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
+        {
+            throw new AssessmentException("Tes ini sudah dipakai di sesi lain.", 409);
+        }
     }
 
     private void Audit(Guid actor, string action, Guid target, object metadata)

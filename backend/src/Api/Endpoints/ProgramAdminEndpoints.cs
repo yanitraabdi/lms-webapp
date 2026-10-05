@@ -53,6 +53,14 @@ public static class ProgramAdminEndpoints
             Guid id, UpsertSessionRequest r, ClaimsPrincipal u, IProgramAdminService s, CancellationToken ct) =>
         { await s.UpdateSessionAsync(u.UserId(), id, r, ct); return TypedResults.NoContent(); });
 
+        g.MapGet("/sessions/{id:guid}/parts", async Task<Ok<IReadOnlyList<AdminSessionPartDto>>> (
+                Guid id, ISessionPartAdminService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.ListAsync(id, ct)));
+
+        g.MapPut("/sessions/{id:guid}/parts", async Task<Ok<IReadOnlyList<AdminSessionPartDto>>> (
+                Guid id, SaveSessionPartsRequest r, ClaimsPrincipal u, ISessionPartAdminService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.SaveAsync(u.UserId(), id, r, ct)));
+
         g.MapDelete("/sessions/{id:guid}", async Task<NoContent> (
             Guid id, ClaimsPrincipal u, IProgramAdminService s, CancellationToken ct) =>
         { await s.DeleteSessionAsync(u.UserId(), id, ct); return TypedResults.NoContent(); });

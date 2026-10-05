@@ -49,6 +49,7 @@ public class AppDbContext : DbContext
     public DbSet<Domain.Entities.Program> Programs => Set<Domain.Entities.Program>();
     public DbSet<ProgramBatch> ProgramBatches => Set<ProgramBatch>();
     public DbSet<ProgramSession> ProgramSessions => Set<ProgramSession>();
+    public DbSet<SessionPart> SessionParts => Set<SessionPart>();
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<SessionCompletion> SessionCompletions => Set<SessionCompletion>();
     public DbSet<LiveAttendance> LiveAttendances => Set<LiveAttendance>();

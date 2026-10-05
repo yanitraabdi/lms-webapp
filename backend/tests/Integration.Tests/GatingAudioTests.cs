@@ -53,7 +53,7 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
     /// A programme with one video session carrying a gating test whose single question is a
     /// Listening item with its own clip, and a learner enrolled and unlocked on that session.
     /// </summary>
-    private async Task<(string Token, Guid SessionId, Guid QuestionId)> SeedListeningTest(string suffix)
+    private async Task<(string Token, Guid SessionId, Guid PartId, Guid QuestionId)> SeedListeningTest(string suffix)
     {
         var email = $"gating-{suffix}-{Guid.NewGuid():N}@test.local";
         (await _client.PostAsJsonAsync("/api/auth/register", new { name = "Siswa", email, password = Pw }))
@@ -61,7 +61,7 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
         var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = Pw });
         var tokens = (await login.Content.ReadFromJsonAsync<AuthTokens>())!;
 
-        var (sessionId, questionId) = await WithDb(async db =>
+        var (sessionId, partId, questionId) = await WithDb(async db =>
         {
             var program = new Academy.Domain.Entities.Program
             {
@@ -106,9 +106,15 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
                 OrderIndex = 0,
                 Type = SessionType.Video,
                 Title = "Sesi 1",
-                AssessmentId = assessment.Id,
             };
             db.ProgramSessions.Add(session);
+            // The test hangs off a Test part (2026-10-05); as the only part it is open.
+            var part = new SessionPart
+            {
+                Id = Guid.CreateVersion7(), SessionId = session.Id, OrderIndex = 1,
+                Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = assessment.Id,
+            };
+            db.SessionParts.Add(part);
 
             db.Enrollments.Add(new Enrollment
             {
@@ -120,7 +126,7 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
             });
 
             await db.SaveChangesAsync();
-            return (session.Id, question.Id);
+            return (session.Id, part.Id, question.Id);
         });
 
         // The object must exist in storage, or a signed URL would resolve to nothing.
@@ -131,15 +137,15 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
             await storage.PutAsync(AudioKey, new MemoryStream("listening-clip"u8.ToArray()), "audio/mp4");
         }
 
-        return (tokens.AccessToken, sessionId, questionId);
+        return (tokens.AccessToken, sessionId, partId, questionId);
     }
 
     [Fact]
     public async Task An_enrolled_learner_gets_a_signed_url_that_actually_plays()
     {
-        var (token, sessionId, questionId) = await SeedListeningTest("play");
+        var (token, sessionId, partId, questionId) = await SeedListeningTest("play");
 
-        var res = await Get($"/api/sessions/{sessionId}/assessment/audio/{questionId}", token);
+        var res = await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{questionId}", token);
         res.EnsureSuccessStatusCode();
 
         var url = (await res.Content.ReadFromJsonAsync<AudioUrl>(Json))!.Url;
@@ -155,9 +161,9 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
     public async Task The_url_is_signed_rather_than_a_bare_storage_path()
     {
         // GR-3: no public or persisted media URLs. Stripping the signature must break it.
-        var (token, sessionId, questionId) = await SeedListeningTest("signed");
+        var (token, sessionId, partId, questionId) = await SeedListeningTest("signed");
 
-        var url = (await (await Get($"/api/sessions/{sessionId}/assessment/audio/{questionId}", token))
+        var url = (await (await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{questionId}", token))
             .Content.ReadFromJsonAsync<AudioUrl>(Json))!.Url;
 
         Assert.Contains("sig=", url);
@@ -169,7 +175,7 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
     public async Task A_learner_who_is_not_enrolled_is_refused()
     {
         // THE GATE (GR-1). Audio is session content; reaching it must require session access.
-        var (_, sessionId, questionId) = await SeedListeningTest("outsider");
+        var (_, sessionId, partId, questionId) = await SeedListeningTest("outsider");
 
         var email = $"outsider-{Guid.NewGuid():N}@test.local";
         (await _client.PostAsJsonAsync("/api/auth/register", new { name = "Lain", email, password = Pw }))
@@ -177,7 +183,7 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
         var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = Pw });
         var outsider = (await login.Content.ReadFromJsonAsync<AuthTokens>())!.AccessToken;
 
-        var res = await Get($"/api/sessions/{sessionId}/assessment/audio/{questionId}", outsider);
+        var res = await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{questionId}", outsider);
 
         Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
@@ -185,10 +191,10 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
     [Fact]
     public async Task An_anonymous_request_is_refused()
     {
-        var (_, sessionId, questionId) = await SeedListeningTest("anon");
+        var (_, sessionId, partId, questionId) = await SeedListeningTest("anon");
 
         Assert.Equal(HttpStatusCode.Unauthorized,
-            (await Get($"/api/sessions/{sessionId}/assessment/audio/{questionId}", null)).StatusCode);
+            (await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{questionId}", null)).StatusCode);
     }
 
     [Fact]
@@ -196,10 +202,10 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
     {
         // Without this the route is a way to read ANY audio key by guessing question ids — the
         // learner has access to THIS session, not to every clip in the bank.
-        var (token, sessionId, _) = await SeedListeningTest("scope");
-        var (_, _, foreignQuestionId) = await SeedListeningTest("elsewhere");
+        var (token, sessionId, partId, _) = await SeedListeningTest("scope");
+        var (_, _, _, foreignQuestionId) = await SeedListeningTest("elsewhere");
 
-        var res = await Get($"/api/sessions/{sessionId}/assessment/audio/{foreignQuestionId}", token);
+        var res = await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{foreignQuestionId}", token);
 
         Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
@@ -207,12 +213,12 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
     [Fact]
     public async Task A_question_with_no_audio_is_a_clear_refusal_not_a_broken_url()
     {
-        var (token, sessionId, _) = await SeedListeningTest("silent");
+        var (token, sessionId, partId, _) = await SeedListeningTest("silent");
 
         var silentId = await WithDb(async db =>
         {
-            var assessmentId = await db.ProgramSessions
-                .Where(s => s.Id == sessionId).Select(s => s.AssessmentId!.Value).FirstAsync();
+            var assessmentId = await db.SessionParts
+                .Where(p => p.Id == partId).Select(p => p.AssessmentId!.Value).FirstAsync();
             var q = new Question
             {
                 Id = Guid.CreateVersion7(),
@@ -232,7 +238,7 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
             return q.Id;
         });
 
-        var res = await Get($"/api/sessions/{sessionId}/assessment/audio/{silentId}", token);
+        var res = await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{silentId}", token);
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Contains("tidak memiliki audio", await res.Content.ReadAsStringAsync());
@@ -244,11 +250,11 @@ public class GatingAudioTests(AuthApiFactory factory) : IClassFixture<AuthApiFac
         // Deliberate difference from the final assessment. The attempt is created at SUBMIT, so
         // while answering there is nothing to charge a play against — and with unlimited retakes a
         // cap would only cost a learner a click.
-        var (token, sessionId, questionId) = await SeedListeningTest("twice");
+        var (token, sessionId, partId, questionId) = await SeedListeningTest("twice");
 
         for (var i = 0; i < 3; i++)
         {
-            var res = await Get($"/api/sessions/{sessionId}/assessment/audio/{questionId}", token);
+            var res = await Get($"/api/sessions/{sessionId}/parts/{partId}/audio/{questionId}", token);
             Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         }
     }

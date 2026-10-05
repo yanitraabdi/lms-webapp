@@ -90,6 +90,16 @@ export const deleteSession = (t: string, id: string) => api<void>("DELETE", `/ap
 export const reorderSessions = (t: string, programId: string, sessionIdsInOrder: string[]) =>
   api<void>("POST", `/api/admin/programs/${programId}/sessions/reorder`, t, { sessionIdsInOrder });
 
+export type AdminSessionPart = components["schemas"]["AdminSessionPartDto"];
+export type SessionPartInput = components["schemas"]["SessionPartInput"];
+
+export const listSessionParts = (t: string, sessionId: string) =>
+  api<AdminSessionPart[]>("GET", `/api/admin/sessions/${sessionId}/parts`, t);
+
+/** Replaces the session's ordered parts; returns the saved list. */
+export const saveSessionParts = (t: string, sessionId: string, parts: SessionPartInput[]) =>
+  api<AdminSessionPart[]>("PUT", `/api/admin/sessions/${sessionId}/parts`, t, { parts });
+
 /** The Bunny library, for the session form's picker. Admin-only; the API key never leaves the
  *  server. `unavailable` is set — and `items` empty — when there is no list to show. */
 export const listVideoLibrary = (t: string, search: string, page = 1) =>

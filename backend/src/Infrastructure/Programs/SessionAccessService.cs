@@ -1,5 +1,6 @@
 using Academy.Application.Programs;
 using Academy.Domain;
+using Academy.Domain.Entities;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ namespace Academy.Infrastructure.Programs;
 /// THE GATE (GR-1, KAK §9.3). Server-side only; every protected resource calls it.
 /// <c>canAccess = isEnrolled(program) AND (first session OR previous session complete)</c>.
 /// </summary>
-public class SessionAccessService(AppDbContext db, ISessionCompletionService completion) : ISessionAccessService
+public class SessionAccessService(AppDbContext db, ISessionCompletionService completion, SessionPartStates partStates) : ISessionAccessService
 {
     public async Task<bool> CanAccessAsync(Guid userId, Guid sessionId, CancellationToken ct = default)
     {
@@ -57,5 +58,27 @@ public class SessionAccessService(AppDbContext db, ISessionCompletionService com
     {
         if (!await CanAccessAsync(userId, sessionId, ct))
             throw new ProgramException("Anda belum memiliki akses ke sesi ini.", 403);
+    }
+
+    public async Task<bool> CanAccessPartAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default)
+    {
+        if (!await db.SessionParts.AnyAsync(p => p.Id == partId && p.SessionId == sessionId, ct)) return false;
+        if (!await CanAccessAsync(userId, sessionId, ct)) return false;
+        var states = await partStates.LoadAsync(userId, sessionId, ct);
+        return states.Any(s => s.Part.Id == partId && s.Status != PartStatus.Locked);
+    }
+
+    public async Task<SessionPart> EnsurePartAccessAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default)
+    {
+        var part = await db.SessionParts.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == partId && p.SessionId == sessionId, ct)
+            ?? throw new ProgramException("Bagian tidak ditemukan.", 404);
+        await EnsureAccessAsync(userId, sessionId, ct);
+        var states = await partStates.LoadAsync(userId, sessionId, ct);
+        var state = states.FirstOrDefault(s => s.Part.Id == partId)
+            ?? throw new ProgramException("Bagian tidak ditemukan.", 404); // deleted concurrently
+        if (state.Status == PartStatus.Locked)
+            throw new ProgramException("Bagian ini masih terkunci.", 403);
+        return part;
     }
 }
