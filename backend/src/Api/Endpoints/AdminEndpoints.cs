@@ -32,6 +32,15 @@ public static class AdminEndpoints
             return TypedResults.NoContent();
         });
 
+        // ---- email relay (spec 2026-10-06) ----
+        g.MapGet("/email/status", Ok<EmailStatusDto> (IEmailDiagnosticsService s) => TypedResults.Ok(s.GetStatus()));
+
+        // Only ever mails the caller themself; rate-limited like auth so it cannot be used to hammer the relay.
+        g.MapPost("/email/test", async Task<Ok<EmailTestResultDto>> (
+                ClaimsPrincipal u, IEmailDiagnosticsService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.SendTestAsync(u.UserId(), ct)))
+            .RequireRateLimiting("auth");
+
         return app;
     }
 }
