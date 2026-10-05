@@ -98,9 +98,65 @@ public class SessionPartAccessTests(AuthApiFactory factory) : IClassFixture<Auth
         Assert.False(await CanAccessPart(stranger, c.Session1, p.Lesson));
     }
 
+    [Fact]
+    public async Task A_test_without_questions_counts_as_done()
+    {
+        var c = await EnrolledLearner();
+        var p = await AddParts(c.Session1, withQuestions: false);
+        await Watch(c.UserId, c.Session1, p.Lesson);
+
+        Assert.Equal([PartStatus.Done, PartStatus.Done, PartStatus.Open],
+            (await States(c.UserId, c.Session1)).Select(s => s.Status));
+    }
+
+    [Fact]
+    public async Task Passing_after_failures_counts_attempts_and_failures()
+    {
+        var c = await EnrolledLearner();
+        var p = await AddParts(c.Session1);
+        await Watch(c.UserId, c.Session1, p.Lesson);
+        await Attempt(c.UserId, p.Assessment, passed: false);
+        await Attempt(c.UserId, p.Assessment, passed: false);
+        await Attempt(c.UserId, p.Assessment, passed: true);
+
+        var states = await States(c.UserId, c.Session1);
+        var test = states[1];
+        Assert.Equal(PartStatus.Done, test.Status);
+        Assert.Equal(3, test.AttemptsUsed);
+        Assert.Equal(2, test.Facts.FailedAttempts);
+        Assert.Equal(PartStatus.Open, states[2].Status);
+    }
+
+    [Fact]
+    public async Task EnsurePartAccess_throws_403_on_a_locked_part()
+    {
+        var c = await EnrolledLearner();
+        var p = await AddParts(c.Session1);
+
+        using var scope = factory.Services.CreateScope();
+        var gate = scope.ServiceProvider.GetRequiredService<ISessionAccessService>();
+        var ex = await Assert.ThrowsAsync<ProgramException>(
+            () => gate.EnsurePartAccessAsync(c.UserId, c.Session1, p.Test));
+        Assert.Equal(403, ex.StatusCode);
+        Assert.Equal("Bagian ini masih terkunci.", ex.Message);
+    }
+
+    [Fact]
+    public async Task EnsurePartAccess_returns_the_part_when_open()
+    {
+        var c = await EnrolledLearner();
+        var p = await AddParts(c.Session1);
+
+        using var scope = factory.Services.CreateScope();
+        var part = await scope.ServiceProvider.GetRequiredService<ISessionAccessService>()
+            .EnsurePartAccessAsync(c.UserId, c.Session1, p.Lesson);
+        Assert.Equal(p.Lesson, part.Id);
+        Assert.Equal(SessionPartKind.LessonVideo, part.Kind);
+    }
+
     // ---- facts ----
 
-    private async Task<Parts> AddParts(Guid sessionId)
+    private async Task<Parts> AddParts(Guid sessionId, bool withQuestions = true)
     {
         var lesson = await WithDbResult(db => db.SessionParts
             .Where(x => x.SessionId == sessionId).Select(x => x.Id).SingleAsync());
@@ -114,7 +170,7 @@ public class SessionPartAccessTests(AuthApiFactory factory) : IClassFixture<Auth
         await WithDb(async db =>
         {
             db.Assessments.Add(a);
-            for (var i = 0; i < 2; i++)
+            for (var i = 0; i < (withQuestions ? 2 : 0); i++)
             {
                 var q = new Question
                 {
