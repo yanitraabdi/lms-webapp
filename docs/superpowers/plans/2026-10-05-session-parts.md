@@ -10,6 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-05-session-parts-design.md`
 
+**Deploy as one unit.** Task 4 removes the session-level learner routes and Task 7 moves the frontend over, so the branch is merged and deployed whole, API and frontend together. Before deploying, run this against production. It must return 0, or the unique index in Task 2 fails the migration:
+`SELECT count(*) FROM (SELECT assessment_id FROM program_sessions WHERE assessment_id IS NOT NULL GROUP BY 1 HAVING count(*) > 1) x;`
+
 ## Global Constraints
 
 - **Golden rules hold.**
@@ -372,6 +375,9 @@ In `WatchProgressConfig` (`ModelConfiguration.cs`), replace the session unique i
         // A session's progress is per PART since 2026-10-05: one row per (user, part).
         e.HasIndex(x => new { x.UserId, x.SessionId }).HasFilter("session_id IS NOT NULL");
         e.HasIndex(x => new { x.UserId, x.PartId }).IsUnique().HasFilter("part_id IS NOT NULL");
+        // "Does this part have learner progress?" (admin removal guard) and the FK check on part
+        // delete both look up by part alone — the composite above starts with user_id.
+        e.HasIndex(x => x.PartId);
         e.HasOne<SessionPart>().WithMany().HasForeignKey(x => x.PartId)
             .OnDelete(DeleteBehavior.Restrict);   // retained learner record (GR-7)
 ```
@@ -398,14 +404,18 @@ public static class SessionPartBackfill
         INSERT INTO session_parts (id, session_id, order_index, kind, title, provider_asset_id,
                                    duration_seconds, assessment_id, created_at, updated_at)
         SELECT gen_random_uuid(), s.id, 1, 'LessonVideo', s.title,
-               COALESCE(NULLIF(s.provider_asset_id, ''), 'sample'), s.duration_seconds, NULL, now(), now()
+               s.provider_asset_id, s.duration_seconds, NULL, now(), now()
         FROM program_sessions s
-        WHERE s.type = 'Video'
+        WHERE s.type = 'Video' AND COALESCE(s.provider_asset_id, '') <> ''
           AND NOT EXISTS (SELECT 1 FROM session_parts p WHERE p.session_id = s.id);
 
+        -- A session with no video gets no invented lesson; its test becomes part 1, and the
+        -- readiness check flags the session for an admin to complete.
         INSERT INTO session_parts (id, session_id, order_index, kind, title, provider_asset_id,
                                    duration_seconds, assessment_id, created_at, updated_at)
-        SELECT gen_random_uuid(), s.id, 2, 'Test', 'Tes sesi', NULL, NULL, s.assessment_id, now(), now()
+        SELECT gen_random_uuid(), s.id,
+               CASE WHEN COALESCE(s.provider_asset_id, '') <> '' THEN 2 ELSE 1 END,
+               'Test', 'Tes sesi', NULL, NULL, s.assessment_id, now(), now()
         FROM program_sessions s
         WHERE s.type = 'Video' AND s.assessment_id IS NOT NULL
           AND NOT EXISTS (SELECT 1 FROM session_parts p WHERE p.session_id = s.id AND p.kind = 'Test');
@@ -443,7 +453,7 @@ At the END of the generated `Up` method, add `migrationBuilder.Sql(SessionPartBa
 
 **`SessionQuizSeeder` and `SampleTestSeeder`.**
 - Replace the "already has a test" check (`session.AssessmentId is not null`) with `await db.SessionParts.AnyAsync(p => p.SessionId == session.Id && p.Kind == SessionPartKind.Test, ct)`.
-- Replace `session.AssessmentId = assessment.Id;` with:
+- Keep `session.AssessmentId = assessment.Id;` (a dual-write until Task 4), and add after it:
 
 ```csharp
             var lastOrder = await db.SessionParts.Where(p => p.SessionId == session.Id)
@@ -477,17 +487,17 @@ At the END of the generated `Up` method, add `migrationBuilder.Sql(SessionPartBa
                 Kind = SessionPartKind.Test, Title = "Tes sesi", AssessmentId = createTest,
             });
         }
-        if (session.Type == SessionType.Video) session.AssessmentId = null;
+        // session.AssessmentId is still WRITTEN here (dual-write): until Task 4 switches the
+        // readers to parts, completion and the session test route read this column. Task 4 stops
+        // writing it for video sessions.
 ```
 
 **`AssessmentAdminService.AttachToSessionAsync`.** It stays as the "one test per session" shortcut. Final sessions are unchanged. For video sessions, replace the body after the existence check with:
 
 ```csharp
-        if (session.Type != SessionType.Video)
-        {
-            session.AssessmentId = assessmentId;
-        }
-        else
+        // Dual-write until Task 4: readers still use session.AssessmentId for video sessions.
+        session.AssessmentId = assessmentId;
+        if (session.Type == SessionType.Video)
         {
             var tests = await db.SessionParts
                 .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.Test).ToListAsync(ct);
@@ -528,7 +538,36 @@ At the END of the generated `Up` method, add `migrationBuilder.Sql(SessionPartBa
         }
 ```
 
-Then keep the existing `Audit` and `SaveChangesAsync` lines. If the same assessment is already used by another part, the unique index makes `SaveChangesAsync` throw `DbUpdateException`. Catch it and throw `new AssessmentException("Tes ini sudah dipakai di sesi lain.", 409)`.
+Then keep the existing `Audit` and `SaveChangesAsync` lines. If the same assessment is already used by another part, the unique index makes `SaveChangesAsync` throw `DbUpdateException`. Catch ONLY that violation and translate it. Any other DB error must propagate, because a blanket catch would report an unrelated failure, such as a CHECK violation, as "already used". Add this shared helper to `backend/src/Infrastructure/Persistence/DbErrors.cs`:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+
+namespace Academy.Infrastructure.Persistence;
+
+public static class DbErrors
+{
+    /// <summary>True only for a unique violation of the named index/constraint.</summary>
+    public static bool IsUniqueViolation(DbUpdateException ex, string constraintName)
+        => ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
+           && pg.ConstraintName == constraintName;
+
+    /// <summary>The filtered unique index on session_parts.assessment_id. Verify against the
+    /// generated migration's index name (EFCore.NamingConventions) and keep in sync.</summary>
+    public const string SessionPartAssessmentIndex = "ix_session_parts_assessment_id";
+}
+```
+
+Use it like this:
+
+```csharp
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
+        {
+            throw new AssessmentException("Tes ini sudah dipakai di sesi lain.", 409);
+        }
+```
 
 **`AssessmentAdminService.DeleteAsync`.** Before the detach loop, add:
 
@@ -543,7 +582,7 @@ Create `backend/tests/Integration.Tests/SessionPartWriteTests.cs`. Copy the admi
 
 1. `Creating_a_video_session_with_a_video_creates_a_lesson_part`: POST a Video session with `providerAssetId = "sample"` and `durationSeconds = 600`. Read `db.SessionParts` for that session: there is exactly one, its Kind is `LessonVideo`, OrderIndex is 1, ProviderAssetId is `"sample"` and DurationSeconds is 600.
 2. `Creating_a_video_session_without_a_video_creates_no_parts`: `providerAssetId = null` gives zero parts.
-3. `Attaching_a_test_to_a_video_session_appends_a_test_part`: create a Gating assessment via `/api/admin/assessments` and PUT `/api/admin/sessions/{id}/assessment`. The parts are then `[LessonVideo, Test]` with the Test's `AssessmentId` set, and `program_sessions.assessment_id` is still null.
+3. `Attaching_a_test_to_a_video_session_appends_a_test_part`: create a Gating assessment via `/api/admin/assessments` and PUT `/api/admin/sessions/{id}/assessment`. The parts are then `[LessonVideo, Test]` with the Test's `AssessmentId` set, and `program_sessions.assessment_id` is also set (the dual-write until Task 4).
 4. `Detaching_removes_the_test_part`: PUT with `assessmentId = null` leaves only `[LessonVideo]`.
 5. `Backfill_converts_a_legacy_video_session_and_points_progress_at_the_lesson`:
    - Insert directly via `db` a Video `ProgramSession` with ProviderAssetId `"sample"`, AssessmentId set to a new Gating assessment, and no parts.
@@ -555,7 +594,7 @@ Create `backend/tests/Integration.Tests/SessionPartWriteTests.cs`. Copy the admi
 - [ ] **Step 7: Run the whole backend suite**
 
 Run: `dotnet test backend/Academy.slnx`
-Expected: everything passes, including the new tests. Nothing reads parts yet, so the existing behaviour is unchanged. `SessionQuizSeederTests` asserts on `s.AssessmentId`. If it fails, change its query to count the questions of the session's Test part (`db.SessionParts.Where(p => p.SessionId == s.Id && p.Kind == SessionPartKind.Test).Select(p => p.AssessmentId)`); the asserted values stay the same.
+Expected: everything passes, including the new tests. Nothing reads parts yet, so the existing behaviour is unchanged. Because of the dual-write, `SessionGatingTests` and `SessionQuizSeederTests` must pass unchanged.
 
 - [ ] **Step 8: Commit**
 
@@ -892,8 +931,8 @@ new SessionPartDto(
 `SavePartProgressAsync`:
 - call `EnsurePartAccessAsync`, and refuse a Test part with the same 400;
 - find the row by `w.UserId == userId && w.PartId == partId`. If it's missing, create `new WatchProgress { Id = Guid.CreateVersion7(), UserId = userId, SessionId = sessionId, PartId = partId }`;
-- apply the same monotonic update and `SaveChangesAsync`, then `await completion.TryCompleteAsync(userId, sessionId, ct);`;
-- return `GetPartProgressAsync`.
+- apply the same monotonic update and `SaveChangesAsync`, then `var sessionDone = await completion.TryCompleteAsync(userId, sessionId, ct);`;
+- return `new PartProgressDto(partId, row.ResumePositionSeconds, row.PercentComplete, CompletionPolicy.IsModuleComplete(row.PercentComplete), sessionDone)` built from the row just saved. Do NOT call `GetPartProgressAsync`: it would run the gate, and with it the part statuses, a third time on every progress tick.
 
 `GetPartProgressAsync`:
 - call `EnsurePartAccessAsync`;
@@ -986,7 +1025,15 @@ In `GatingAudioTests.cs`, the audio URL becomes `/api/sessions/{s}/parts/{testPa
 
 Keep each test's intent and assertions. Only the addressing changes.
 
-- [ ] **Step 8: Docs**
+- [ ] **Step 8: Stop the legacy writes**
+
+Readers now use parts, so for VIDEO sessions stop writing `program_sessions.assessment_id`:
+- in `ProgramAdminService.CreateSessionAsync`, after the parts are added, add `if (session.Type == SessionType.Video) session.AssessmentId = null;`;
+- in `AssessmentAdminService.AttachToSessionAsync`, change the unconditional `session.AssessmentId = assessmentId;` to `if (session.Type != SessionType.Video) session.AssessmentId = assessmentId;`;
+- in `SessionQuizSeeder` and `SampleTestSeeder`, delete the kept `session.AssessmentId = assessment.Id;` line;
+- update `SessionPartWriteTests.Attaching_a_test_to_a_video_session_appends_a_test_part` to assert that `program_sessions.assessment_id` stays null.
+
+- [ ] **Step 9: Docs**
 
 - **`CLAUDE.md` GR-8.** Replace `video: watch ≥ threshold **AND** gating test passed` with `video: every part of the session done — lesson/discussion video watched ≥ threshold, test passed; a discussion opens after a pass or N failed attempts`.
 - **FSD §5, "Video sessions".** Add a paragraph saying a video session is an admin-ordered list of parts (lesson video, test, discussion video), unlocked in order. Cite the spec `docs/superpowers/specs/2026-10-05-session-parts-design.md` and the decision date 2026-10-05.
@@ -995,12 +1042,12 @@ Keep each test's intent and assertions. Only the addressing changes.
   - a test can name N, the number of failed attempts after which its discussion video opens. Retakes stay unlimited.
 - **FSD §9.** Add a `session_parts` line, plus `watch_progress.part_id`.
 
-- [ ] **Step 9: Run everything**
+- [ ] **Step 10: Run everything**
 
 Run: `dotnet test backend/Academy.slnx`
 Expected: all pass, including `SessionPartLearnerTests`.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add backend docs/FSD_INVERTA_TOEFL_v0.1.md CLAUDE.md
@@ -1110,6 +1157,9 @@ Implement it in `AssessmentService`:
             await db.SaveChangesAsync(ct);
         }
 
+        // ponytail: read-modify-write on attempts.state with no concurrency token — two replay
+        // requests racing can both pass the limit check (one extra play). Same as the final's
+        // section audio; acceptable for deterrence. Add an xmin concurrency token if it matters.
         // Signed, short-TTL, minted per request (GR-3). Deterrence, not a guarantee (GR-14).
         return new TestAudioDto(signer.Sign(config.AudioRef), state.TestAudioStartedAt!.Value, now, used, limit);
     }
@@ -1334,9 +1384,10 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video) : ISes
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
         {
-            // UNIQUE(assessment_id) — another session took this test between check and save.
+            // Another session took this test between the check and the save. Any OTHER db error
+            // propagates — it must not be reported as "already used".
             throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
         }
         return await ListAsync(sessionId, ct);
@@ -1528,38 +1579,65 @@ Add, in the same file:
 
 ```tsx
 const PART_LABEL: Record<string, string> = { LessonVideo: "Video materi", Test: "Tes", Discussion: "Video pembahasan" };
-const STATUS_LABEL: Record<string, string> = { Locked: "Terkunci", Open: "Tersedia", Done: "Selesai" };
 
 function PartsSection({ token, session, onChanged }: { token: string; session: SessionContext; onChanged: () => void }) {
   const parts = session.parts;
-  const firstOpen = parts.find((p) => p.status === "Open") ?? parts.find((p) => p.status === "Done");
-  const [activeId, setActiveId] = useState<string | undefined>(firstOpen?.id);
-  const active = parts.find((p) => p.id === activeId && p.status !== "Locked") ?? firstOpen;
+  const nextOpen = parts.find((p) => p.status === "Open");
+  const [activeId, setActiveId] = useState<string | undefined>(nextOpen?.id ?? parts.at(-1)?.id);
+
+  // Move forward on its own: when fresh data shows the part on screen is now Done and a later
+  // part has opened, show that part. Otherwise a learner who finishes the lesson stays on it.
+  const doneKey = parts.map((p) => p.status).join();
+  const prevDoneKey = useRef(doneKey);
+  useEffect(() => {
+    if (prevDoneKey.current === doneKey) return;
+    prevDoneKey.current = doneKey;
+    const current = parts.find((p) => p.id === activeId);
+    if (current?.status === "Done" && nextOpen) setActiveId(nextOpen.id);
+  }, [doneKey, parts, activeId, nextOpen]);
+
+  const active = parts.find((p) => p.id === activeId && p.status !== "Locked") ?? nextOpen;
 
   if (parts.length === 0) {
-    return <ErrorState title="Belum tersedia" message="Materi sesi ini sedang disiapkan." />;
+    // Not an error: the admin has not added content yet.
+    return (
+      <div className="rounded-lg border border-border bg-surface p-5 text-[13.5px] text-ink-muted">
+        Materi sesi ini sedang disiapkan.
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <ol className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
-        {parts.map((p, i) => (
-          <li key={p.id}>
-            <button
-              type="button"
-              disabled={p.status === "Locked"}
-              onClick={() => setActiveId(p.id)}
-              aria-current={active?.id === p.id ? "step" : undefined}
-              className={
-                "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[13.5px] " +
-                (active?.id === p.id ? "bg-primary-soft/60 font-bold" : p.status === "Locked" ? "opacity-50" : "hover:bg-surface-2")
-              }
-            >
-              <span className="min-w-0 truncate">{i + 1}. {PART_LABEL[p.kind] ?? p.kind} — {p.title}</span>
-              <span className="shrink-0 text-[11.5px] text-ink-subtle">{STATUS_LABEL[p.status] ?? p.status}</span>
-            </button>
-          </li>
-        ))}
+        {parts.map((p, i) => {
+          const label = `${i + 1}. ${PART_LABEL[p.kind] ?? p.kind} — ${p.title}`;
+          // Locked rows are plain text at full contrast with a lock and the Badge's locked style —
+          // never a faded control (WCAG AA). Open/Done rows are buttons.
+          return (
+            <li key={p.id}>
+              {p.status === "Locked" ? (
+                <div className="flex items-center justify-between gap-3 px-4 py-3 text-[13.5px] text-ink-muted">
+                  <span className="flex min-w-0 items-center gap-2"><LockIcon size={14} className="shrink-0" /><span className="truncate">{label}</span></span>
+                  <Badge status="locked" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveId(p.id)}
+                  aria-current={active?.id === p.id ? "step" : undefined}
+                  className={
+                    "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[13.5px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary " +
+                    (active?.id === p.id ? "bg-primary-soft/60 font-bold" : "hover:bg-surface-2")
+                  }
+                >
+                  <span className="min-w-0 truncate">{label}</span>
+                  {p.status === "Done" ? <Badge status="completed" /> : <span className="shrink-0 text-[11.5px] font-bold text-primary">Tersedia</span>}
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ol>
       {active && (active.kind === "Test"
         ? <GatingTest key={active.id} token={token} sessionId={session.id} part={active} onChanged={onChanged} />
@@ -1568,6 +1646,8 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
   );
 }
 ```
+
+Add `useEffect` to the React import and `LockIcon` to the `@/components/ui` import; `Badge` is already imported. Use whatever `Badge` actually supports: check `components/ui/Badge.tsx` for the `locked` and `completed` statuses.
 
 `VideoPart({ token, sessionId, part, onChanged })` is the old `VideoSection` body, with these changes:
 - the query key is `["part-playback", part.id]`, calling `getPartPlayback(token, sessionId, part.id)`;
@@ -1586,19 +1666,29 @@ Change `GatingTest`'s props to `{ token, sessionId, part, onChanged }`, where `p
 When `test.hasTestAudio` is true:
 - before anything else, show a "Mulai tes" button. It calls `startAttempt(token, test.id)` and keeps the attempt in state; `startAttempt` returns the open attempt on a reload.
 - once started, render `<LiveAudioPlayer start={() => startTestAudio(token, sessionId, part.id, false)} startedAt={null} intro="Satu rekaman untuk semua soal tes ini. Audio diputar tanpa jeda dan tanpa mundur — pastikan suara perangkat Anda aktif." endedLabel="Audio tes sudah selesai diputar." />` above the questions;
-- when `num(test.testAudioPlayLimit ?? 1) > 1`, show a secondary button `Putar ulang` under the player. It calls `startTestAudio(token, sessionId, part.id, true)` and remounts the player with a key bump. Show any error the API returns, for example the limit message, in the existing error line;
+- when `num(test.testAudioPlayLimit ?? 1) > 1`, show a secondary button `Putar ulang (sisa {limit - playsUsed}×)` under the player, using `playsUsed` and `playLimit` from the latest `TestAudioDto`. Hide it at zero remaining. It calls `startTestAudio(token, sessionId, part.id, true)` and remounts the player with a key bump. Show any error the API returns, for example the limit message, in the existing error line;
 - submit with the kept attempt: `submitAttempt(token, attempt.id, answers)`.
 
 Without shared audio, keep the existing start-then-submit flow.
 
-After a failed result, under the existing result line, show `Percobaan ke-{num(part.failedAttempts) + 1}` (the part prop is from before this submit). If `part.discussionAfterFailures != null && num(part.failedAttempts) + 1 >= num(part.discussionAfterFailures)`, also show `Video pembahasan sudah terbuka. Tonton, lalu ulangi tes sampai lulus.` Call `onChanged()` after every submit, so the parts list refetches whether the result was a pass or a failure.
+Call `onChanged()` after every submit, so the context refetches whether the result was a pass or a failure. The `part` prop then arrives fresh; read everything from it, never from the stale pre-submit value plus one. While the test is not passed and `num(part.failedAttempts) > 0`, show `Gagal {num(part.failedAttempts)} kali.` under the result line. If `part.discussionAfterFailures != null && num(part.failedAttempts) >= num(part.discussionAfterFailures)`, also show `Video pembahasan sudah terbuka. Tonton, lalu ulangi tes sampai lulus.`
 
 - [ ] **Step 6: Lint and build**
 
 Run: `cd frontend && npm run lint && npm run build`
 Expected: both pass, with no type errors and no references to the removed functions. Check with `grep -rn "getPlayback\|saveSessionProgress\|getSessionAssessment\|progress.completed" frontend/components frontend/app`, which should find nothing.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Check it in the browser**
+
+Rebuild and start the stack with `docker compose up -d --build api frontend`. Sign in as a seeded test learner, using credentials from the project's seed or test config; never a real account. Then:
+1. Open a video session. The parts list shows lesson 1 as Tersedia and the rest locked, with lock icons in full-contrast text.
+2. Play the lesson to the end. The view moves on to the test by itself.
+3. Fail the test. "Gagal 1 kali." appears.
+4. Check the final simulation's Listening audio still plays as before.
+
+Take screenshots of each step and report anything off.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add frontend
@@ -1654,7 +1744,7 @@ If `programs.ts`'s helper has a different name or signature, follow it.
 Each row renders:
 - the kind label (`Video materi` / `Tes` / `Video pembahasan`) and a title input;
 - for video kinds, `<VideoPicker token value={row.providerAssetId ?? ""} onPick={(v) => update(i, { providerAssetId: v.id, durationSeconds: v.lengthSeconds })} />`. There is no ID field. Show `minutesLabel(durationSeconds)` when set;
-- for a Test, the attached test's title or `Belum ada tes`, and a button `Atur tes` that opens `<GatingTestEditor token assessmentId={row.assessmentId ?? null} kind="Gating" onSaved={(id) => update(i, { assessmentId: id })} onClose={…} />`;
+- for a Test, the attached test's title or `Belum ada tes`, and a button `Atur tes`. It does NOT open a second modal on top of the session form: `Modal` closes on a document-level Escape listener, so stacked modals would both close on one Escape and drop the unsaved list. Instead the editor keeps `editingTestRow: number | null`. While it's set, the editor renders `GatingTestEditor`'s form INLINE in place of the list, with a `← Kembali ke daftar bagian` button. Give `GatingTestEditor` an `inline?: boolean` prop that renders its body without the `Modal` wrapper; when inline, `onSaved` sets the row's assessmentId and `onClose` returns to the list. The rows' state lives in `SessionPartsEditor`, so it survives the swap.
 - `↑`, `↓` and `Hapus` buttons with `aria-label`s `Naikkan`, `Turunkan` and `Hapus`. `Hapus` is disabled with the title `Sudah ada progres peserta` when `hasLearnerData`. The server refuses it anyway.
 
 Under the list are three add buttons: `+ Video materi`, `+ Tes` and `+ Video pembahasan`. Each appends a row whose default title is the kind label. `+ Video pembahasan` is disabled unless the last row is a `Test`.
@@ -1662,6 +1752,8 @@ Under the list are three add buttons: `+ Video materi`, `+ Tes` and `+ Video pem
 `Simpan bagian` calls `saveSessionParts(token, sessionId, rows.map(({ id, kind, title, providerAssetId, durationSeconds, assessmentId }) => ({ id: id ?? null, kind, title, providerAssetId: providerAssetId ?? null, durationSeconds: durationSeconds ?? null, assessmentId: assessmentId ?? null })))`. It re-seeds the rows from the response and shows the API's error title verbatim on failure.
 
 It's disabled while any video row has no `providerAssetId`, or any test row has no `assessmentId`. In that state it shows `Lengkapi video dan tes setiap bagian.`
+
+**Unsaved changes.** Track `dirty`, meaning the rows differ from the last loaded or saved list. Expose it to `SessionForm` through an `onDirtyChange(dirty: boolean)` prop. `SessionForm`'s close handler (the Modal's `onClose`) then calls `confirm("Perubahan pada daftar bagian belum disimpan. Tutup tanpa menyimpan?")` when the list is dirty, and stays open if the admin cancels.
 
 - [ ] **Step 4: SessionForm and SessionManager**
 
@@ -1679,7 +1771,19 @@ It's disabled while any video row has no `providerAssetId`, or any test row has 
 Run: `cd frontend && npm run lint && npm run build`
 Expected: both pass. Running `grep -n "ID video Bunny" -r frontend/components` finds nothing.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Check it in the browser**
+
+Rebuild the stack with `docker compose up -d --build api frontend`, then sign in as the seeded admin, using credentials from the project's seed or test config:
+1. Create a video session. It shows the "simpan dulu" note.
+2. Edit it. Add Video materi, Tes and Video pembahasan.
+3. Use "Atur tes": it opens inline, and "Kembali" keeps the list.
+4. Reorder the parts and save.
+5. Make a change and press Escape. The confirmation appears.
+6. Try removing a part that has progress. The 409 message shows.
+
+Take screenshots of each step.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add frontend
@@ -1691,6 +1795,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ---
 
 ## Self-review notes (resolved)
+
+- **Task 4 is deliberately not split.** Completion, the access gate and the learner routes switch to parts together. Splitting them would leave the suite red between tasks (old session-level progress writes rows with no part, so nothing completes). Dispatch it on the most capable model.
+- **Dual-write in Tasks 2–4.** Task 2 creates parts AND still writes `program_sessions.assessment_id`, because the readers only switch in Task 4. Task 4 Step 8 stops the legacy write.
+- **Review fixes applied (2026-10-05):**
+  - an index on `watch_progress(part_id)`;
+  - the backfill never invents a `sample` video;
+  - a pre-deploy duplicate check;
+  - only the unique violation maps to "already used" (`DbErrors`);
+  - a progress save computes part statuses once;
+  - the learner view auto-advances, locked rows show at full contrast using `Badge`, failure counts read fresh data, and replays show what's left;
+  - the test editor opens inline, not as a stacked modal;
+  - an unsaved-changes confirmation;
+  - manual browser checks in Tasks 7 and 8.
 
 - **Spec §6 says the shared-audio settings go in the test editor at `/admin/assessments/[id]`.** Session tests are actually edited in the `GatingTestEditor` modal; that page handles the final assessment's sections. The fields therefore go in `GatingTestEditor` (Task 8). The intent is unchanged.
 - **Spec §5 says a locked part uses the "existing locked problem".** Parts get their own 403 message, `Bagian ini masih terkunci.`, while a locked session keeps its message. Both are 403.
