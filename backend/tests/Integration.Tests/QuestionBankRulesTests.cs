@@ -36,6 +36,23 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     [Fact]
+    public async Task An_undefined_bank_value_is_refused_on_create_and_move()
+    {
+        var admin = await AdminToken();
+        var create = await Authed(HttpMethod.Post, "/api/admin/questions", admin, new
+        {
+            bank = "99", section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = new[] { 0 },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, create.StatusCode);
+        Assert.Contains("Pilih bank soal.", await create.Content.ReadAsStringAsync());
+
+        var q = await NewQuestion(admin, "SessionTest");
+        var move = await Move(admin, q.Id, "99");
+        Assert.Equal(HttpStatusCode.BadRequest, move.StatusCode);
+        Assert.Contains("Pilih bank soal.", await move.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task List_filters_by_bank()
     {
         var admin = await AdminToken();
@@ -138,6 +155,8 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
 
         Assert.Equal(QuestionBank.SessionTest, await WithDbResult(db =>
             db.Questions.Where(x => x.Id == q.Id).Select(x => x.Bank).SingleAsync()));
+        Assert.False(await WithDbResult(db => db.AuditLogs.AnyAsync(
+            l => l.Action == "question_moved" && l.Target == q.Id.ToString())));
     }
 
     [Fact]

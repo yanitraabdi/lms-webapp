@@ -15,7 +15,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     {
         var q = db.Questions.AsQueryable();
 
-        if (Enum.TryParse<QuestionBank>(bank, true, out var b))
+        if (TryBank(bank, out var b))
             q = q.Where(x => x.Bank == b);
         if (Enum.TryParse<QuestionSection>(section, true, out var parsed))
             q = q.Where(x => x.Section == parsed);
@@ -43,7 +43,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     public async Task<AdminQuestionDto> CreateAsync(
         Guid actor, UpsertQuestionRequest req, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<QuestionBank>(req.Bank, true, out var bank))
+        if (!TryBank(req.Bank, out var bank))
             throw new AssessmentException("Pilih bank soal.");
         Validate(req);
         var question = new Question { Id = Guid.CreateVersion7() };
@@ -67,7 +67,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
 
     public async Task MoveAsync(Guid actor, Guid id, string bank, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<QuestionBank>(bank, true, out var target))
+        if (!TryBank(bank, out var target))
             throw new AssessmentException("Pilih bank soal.");
         var question = await db.Questions.FirstOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
@@ -114,6 +114,10 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     }
 
     // ---------------------------------------------------------------- helpers
+
+    // Enum.TryParse accepts numeric strings ("99"); IsDefined keeps undefined values out.
+    private static bool TryBank(string? s, out QuestionBank bank) =>
+        Enum.TryParse(s, true, out bank) && Enum.IsDefined(bank);
 
     private static void Validate(UpsertQuestionRequest req)
     {
