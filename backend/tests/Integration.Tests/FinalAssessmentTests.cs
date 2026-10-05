@@ -518,6 +518,47 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.False(perfect.Passed);                       // … is still not a "pass"
     }
 
+    // ---- the final's student route (FINAL sessions only) ----
+
+    [Fact]
+    public async Task The_final_assessment_is_served_without_the_answer_key()
+    {
+        var c = await SetUp();
+
+        var res = await Authed(HttpMethod.Get, $"/api/sessions/{c.SessionId}/assessment", c.Token);
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var raw = await res.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("correct", raw, StringComparison.OrdinalIgnoreCase);     // GR-11
+        Assert.Equal(c.AssessmentId, JsonSerializer.Deserialize<StudentAssessmentDto>(raw, Json)!.Id);
+    }
+
+    [Fact]
+    public async Task The_final_route_is_empty_for_a_video_session_and_gated_while_locked()
+    {
+        var c = await SetUp();
+        // A video session ahead of the final: it is open (first), and the final is now locked behind it.
+        // The admin API turns orderIndex 0 into "append", so move it to the front directly.
+        var video = await PostJson<AdminSessionDto>($"/api/admin/programs/{c.ProgramId}/sessions", c.Admin, new
+        {
+            type = "Video", title = "Sesi video", description = (string?)null, orderIndex = 0,
+            providerAssetId = "sample", durationSeconds = 900,
+            scheduledAt = (DateTimeOffset?)null, liveMode = (string?)null,
+            joinUrl = (string?)null, location = (string?)null, assessmentId = (Guid?)null,
+        });
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.ProgramSessions.FirstAsync(x => x.Id == video.Id)).OrderIndex = 0;
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await Authed(HttpMethod.Get, $"/api/sessions/{video.Id}/assessment", c.Token)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Authed(HttpMethod.Get, $"/api/sessions/{c.SessionId}/assessment", c.Token)).StatusCode);
+    }
+
     // ================================================================ helpers
 
     private record Ctx(string Token, Guid UserId, string Admin, Guid ProgramId, Guid SessionId,

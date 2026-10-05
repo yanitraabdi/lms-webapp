@@ -90,6 +90,11 @@ public record AttemptResultDto(
 public interface IAssessmentService
 {
     /// <summary>The test of a Test part, without answers (GR-11).</summary>
+    /// <summary>The FINAL assessment of a final-assessment session, without answers (GR-11).
+    /// Null when the session is not a final session or has no assessment. Video-session tests
+    /// are served per part (GetForPartAsync).</summary>
+    Task<StudentAssessmentDto?> GetForSessionAsync(Guid userId, Guid sessionId, CancellationToken ct = default);
+
     Task<StudentAssessmentDto> GetForPartAsync(Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default);
 
     /// <summary>Starts an attempt. StartedAt is SERVER-stamped and the retake cap is enforced here (GR-12).</summary>

@@ -20,6 +20,15 @@ public static class SessionEndpoints
                 Guid id, ClaimsPrincipal u, ISessionLearningService s, CancellationToken ct) =>
             TypedResults.Ok(await s.GetContextAsync(u.UserId(), id, ct)));
 
+        // The final assessment of a FINAL session — WITHOUT the answer key (GR-11). Video-session
+        // tests are served per part: /parts/{partId}/assessment.
+        g.MapGet("/{id:guid}/assessment", async Task<Results<Ok<StudentAssessmentDto>, NoContent>> (
+            Guid id, ClaimsPrincipal u, IAssessmentService s, CancellationToken ct) =>
+        {
+            var a = await s.GetForSessionAsync(u.UserId(), id, ct);
+            return a is null ? TypedResults.NoContent() : TypedResults.Ok(a);
+        });
+
         var p = g.MapGroup("/{id:guid}/parts/{partId:guid}");
 
         p.MapPost("/playback", async Task<Ok<PartPlaybackDto>> (

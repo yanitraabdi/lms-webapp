@@ -95,6 +95,16 @@ public class AssessmentService(
         return new TestAudioDto(signer.Sign(config.AudioRef), state.TestAudioStartedAt!.Value, now, used, limit);
     }
 
+    public async Task<StudentAssessmentDto?> GetForSessionAsync(
+        Guid userId, Guid sessionId, CancellationToken ct = default)
+    {
+        await access.EnsureAccessAsync(userId, sessionId, ct);   // the session gate (GR-1)
+        var s = await db.ProgramSessions.Where(x => x.Id == sessionId)
+            .Select(x => new { x.Type, x.AssessmentId }).FirstAsync(ct);
+        if (s.Type != SessionType.FinalAssessment || s.AssessmentId is not Guid assessmentId) return null;
+        return await BuildStudentViewAsync(userId, assessmentId, sessionId, ct);
+    }
+
     public async Task<StudentAssessmentDto> GetForPartAsync(
         Guid userId, Guid sessionId, Guid partId, CancellationToken ct = default)
     {
