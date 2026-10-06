@@ -4,7 +4,7 @@ import { useCssVar, usePrefersReducedMotion } from "@/lib/useCssVar";
 
 const SECTIONS = ["Listening", "Structure", "Reading"] as const;
 
-/** Per-section predicted scores on the ITP section scale (31–68). Loaded via next/dynamic. */
+/** Per-section scaled predicted scores on the ITP section scale (31–68). Loaded via next/dynamic. */
 export default function FinalResultChart({ scores }: { scores: Record<string, number> }) {
   const primary = useCssVar("--color-primary", "#7F00FF");
   const muted = useCssVar("--color-ink-muted", "#51607a");

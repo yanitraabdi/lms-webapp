@@ -6846,6 +6846,9 @@ export interface components {
             sectionScores: {
                 [key: string]: number | string;
             };
+            scaledScores: {
+                [key: string]: number | string;
+            };
         };
         ProgramReadinessDto: {
             ready: boolean;

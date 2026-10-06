@@ -179,6 +179,8 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var cert = Assert.Single(certs);
         Assert.Equal(result.TotalScaledScore, cert.TotalScore);
         Assert.StartsWith("INV-", cert.VerificationCode);
+        foreach (var section in new[] { "Listening", "Structure", "Reading" })
+            Assert.InRange(cert.ScaledScores[section], 31, 68);
         Assert.True(factory.Email.CertificateEmailCount >= 1);
     }
 

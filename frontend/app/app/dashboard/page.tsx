@@ -117,7 +117,7 @@ function ProgramDashboard({ token, enrollment, firstName }: { token: string; enr
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div className="md:col-span-2"><ProgressHeader program={data} firstName={firstName} /></div>
-      <FinalResultCard certificate={cert} sessionsRemaining={total - completed} />
+      <FinalResultCard certificate={cert} sessionsRemaining={total - completed} status={certs.status} />
       {/* Task 4: <SessionTestHistory … /> */}
       {/* Task 4: <div className="md:col-span-2"><CertificateCards … /></div> */}
     </div>

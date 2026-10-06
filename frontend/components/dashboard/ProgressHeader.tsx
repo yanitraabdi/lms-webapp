@@ -26,7 +26,7 @@ export function ProgressHeader({ program, firstName }: { program: StudentProgram
       >
         <circle cx="50" cy="50" r={R} fill="none" strokeWidth="9" className="stroke-surface-2" />
         <circle
-          cx="50" cy="50" r={R} fill="none" strokeWidth="9" strokeLinecap="round"
+          cx="50" cy="50" r={R} fill="none" strokeWidth="9" strokeLinecap={ratio > 0 ? "round" : "butt"}
           className="stroke-primary"
           strokeDasharray={`${C * ratio} ${C}`}
           transform="rotate(-90 50 50)"

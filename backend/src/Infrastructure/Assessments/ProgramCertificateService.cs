@@ -125,13 +125,13 @@ public class ProgramCertificateService(
             .Select(c => new
             {
                 c.Id, c.ProgramId, ProgramName = c.ProgramId == null ? null : c.Program!.Name,
-                c.IssuedAt, c.VerificationCode, c.TotalScaledScore, c.PredictedBand, c.SectionScores,
+                c.IssuedAt, c.VerificationCode, c.TotalScaledScore, c.PredictedBand, c.SectionScores, c.ScaledScores,
             })
             .ToListAsync(ct);
 
         return rows.Select(c => new ProgramCertificateDto(
             c.Id, c.ProgramId, c.ProgramName ?? "Program", c.IssuedAt, c.VerificationCode,
-            c.TotalScaledScore, c.PredictedBand, ParseInts(c.SectionScores))).ToList();
+            c.TotalScaledScore, c.PredictedBand, ParseInts(c.SectionScores), ParseInts(c.ScaledScores))).ToList();
     }
 
     public async Task<CertificateVerificationDto> VerifyAsync(string code, CancellationToken ct = default)
@@ -188,7 +188,7 @@ public class ProgramCertificateService(
             : await db.Programs.Where(p => p.Id == c.ProgramId).Select(p => p.Name).FirstAsync(ct);
         return new ProgramCertificateDto(
             c.Id, c.ProgramId, programName, c.IssuedAt, c.VerificationCode,
-            c.TotalScaledScore, c.PredictedBand, ParseInts(c.SectionScores ?? "{}"));
+            c.TotalScaledScore, c.PredictedBand, ParseInts(c.SectionScores), ParseInts(c.ScaledScores));
     }
 
     /// <summary>INV-XXXXXXXX from an unambiguous alphabet (no 0/O, 1/I) — KAK §9.10 R5.</summary>

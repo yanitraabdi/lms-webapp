@@ -13,8 +13,18 @@ const SECTIONS = ["Listening", "Structure", "Reading"];
 
 /** Block 2: the final exam's predicted score, or what the final exam is when it is not done yet. */
 export function FinalResultCard({
-  certificate, sessionsRemaining,
-}: { certificate?: ProgramCertificate; sessionsRemaining: number }) {
+  certificate, sessionsRemaining, status = "success",
+}: { certificate?: ProgramCertificate; sessionsRemaining: number; status?: "pending" | "error" | "success" }) {
+  if (status === "pending") {
+    return <section className="min-h-[200px] rounded-lg border border-border bg-surface shadow-sm" aria-busy="true" />;
+  }
+  if (status === "error") {
+    return (
+      <section className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+        <p className="text-[13px] text-ink-muted">Hasil tes akhir tidak dapat dimuat.</p>
+      </section>
+    );
+  }
   if (!certificate) {
     return (
       <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-5 shadow-sm">
@@ -30,7 +40,7 @@ export function FinalResultCard({
   }
 
   const scores: Record<string, number> = {};
-  for (const [k, v] of Object.entries(certificate.sectionScores ?? {})) scores[k] = num(v);
+  for (const [k, v] of Object.entries(certificate.scaledScores ?? {})) scores[k] = num(v);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm">
