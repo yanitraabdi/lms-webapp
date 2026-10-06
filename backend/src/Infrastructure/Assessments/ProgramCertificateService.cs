@@ -141,14 +141,14 @@ public class ProgramCertificateService(
             .Select(c => new
             {
                 c.Id, c.UserId, c.IssuedAt, c.VerificationCode, c.TotalScaledScore,
-                c.PredictedBand, c.SectionScores, c.ProgramId,
+                c.PredictedBand, c.SectionScores, c.ScaledScores, c.ProgramId,
                 ProgramName = c.ProgramId == null ? null : c.Program!.Name,
             })
             .FirstOrDefaultAsync(ct);
 
         // An unknown code is a valid-false answer, never an error page (KAK §9.10 R6).
         if (cert is null)
-            return new CertificateVerificationDto(false, null, null, null, null, null, null, null, Disclaimer);
+            return new CertificateVerificationDto(false, null, null, null, null, null, null, null, null, Disclaimer);
 
         var name = await db.Users.IgnoreQueryFilters()
             .Where(u => u.Id == cert.UserId).Select(u => u.Name).FirstOrDefaultAsync(ct);
@@ -156,7 +156,7 @@ public class ProgramCertificateService(
         return new CertificateVerificationDto(
             true, cert.VerificationCode, name ?? "Peserta", cert.ProgramName ?? "Program",
             cert.IssuedAt, cert.TotalScaledScore, cert.PredictedBand,
-            ParseInts(cert.SectionScores), Disclaimer);
+            ParseInts(cert.SectionScores), ParseInts(cert.ScaledScores), Disclaimer);
     }
 
     public async Task<(byte[] Pdf, string FileName)?> GetPdfAsync(

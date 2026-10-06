@@ -6393,6 +6393,9 @@ export interface components {
             sectionScores: null | {
                 [key: string]: number | string;
             };
+            scaledScores: null | {
+                [key: string]: number | string;
+            };
             disclaimer: string;
         };
         CertificateVerifyDto: {

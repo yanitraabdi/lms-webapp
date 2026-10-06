@@ -50,8 +50,8 @@ export function ProgressHeader({ program, firstName }: { program: StudentProgram
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-[13.5px] font-bold text-ink">{next.title}</span>
               <span className="text-[12px] text-ink-muted">
-                {partsDone != null && partCount != null
-                  ? `Sesi ${num(next.orderIndex)} · bagian ${partsDone + 1} dari ${partCount}`
+                {partsDone != null && partCount != null && partCount > 0
+                  ? `Sesi ${num(next.orderIndex)} · bagian ${Math.min(partsDone + 1, partCount)} dari ${partCount}`
                   : `Sesi ${num(next.orderIndex)}`}
               </span>
             </div>

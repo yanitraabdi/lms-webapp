@@ -7,8 +7,11 @@ export function CertificateCards({ certificates }: { certificates: ProgramCertif
   if (certificates.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-sm" data-tour="nav-certificates">
-      <h2 className="text-lg font-extrabold">Sertifikat</h2>
+    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-sm">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-extrabold">Sertifikat</h2>
+        <p className="text-[12px] text-ink-muted">Skor prediksi INVERTA, bukan skor resmi TOEFL dari ETS.</p>
+      </div>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {certificates.map((c) => (
           <li key={c.id} className="flex flex-col gap-2 rounded-base border border-border p-4">

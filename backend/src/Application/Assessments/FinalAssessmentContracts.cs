@@ -115,6 +115,8 @@ public record CertificateVerificationDto(
     bool Valid, string? Code, string? RecipientName, string? ProgramName,
     DateTimeOffset? IssuedAt, int? TotalScore, string? PredictedBand,
     IReadOnlyDictionary<string, int>? SectionScores,
+    /// <summary>Scaled ITP section scores (31–68); SectionScores holds the raw counts.</summary>
+    IReadOnlyDictionary<string, int>? ScaledScores,
     /// <summary>Always present, always shown: this is a prediction, not an official ETS score.</summary>
     string Disclaimer);
 

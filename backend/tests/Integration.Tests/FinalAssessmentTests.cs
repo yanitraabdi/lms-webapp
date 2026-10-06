@@ -198,6 +198,9 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.True(verify!.Valid);
         Assert.Equal(cert.TotalScore, verify.TotalScore);
         Assert.NotNull(verify.SectionScores);
+        Assert.NotNull(verify.ScaledScores);
+        foreach (var k in new[] { "Listening", "Structure", "Reading" })
+            Assert.InRange(verify.ScaledScores![k], 31, 68);
         Assert.Contains("BUKAN skor TOEFL resmi", verify.Disclaimer);
 
         // An unknown code is valid:false with the disclaimer — never an error page.

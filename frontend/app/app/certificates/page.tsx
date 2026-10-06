@@ -69,7 +69,7 @@ export default function CertificatesPage() {
 
 function CertificateCard({ cert, token }: { cert: ProgramCertificate; token: string }) {
   const [busy, setBusy] = useState(false);
-  const sections = Object.entries(cert.sectionScores ?? {});
+  const sections = Object.entries(cert.scaledScores ?? {});
 
   async function download() {
     setBusy(true);

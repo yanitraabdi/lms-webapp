@@ -32,9 +32,17 @@ export function FinalResultCard({
         <p className="text-[13px] leading-relaxed text-ink-muted">
           Simulasi TOEFL ITP (Listening, Structure, Reading) dengan durasi 115 menit. Terbuka setelah semua sesi selesai.
         </p>
-        <p className="text-[13px] font-bold text-ink">
-          {sessionsRemaining > 1 ? `Sisa ${sessionsRemaining} sesi lagi.` : "Tinggal tes akhir."}
-        </p>
+        {sessionsRemaining > 0 && (
+          <p className="text-[13px] font-bold text-ink">
+            {sessionsRemaining > 1 ? `Sisa ${sessionsRemaining} sesi lagi.` : "Tinggal tes akhir."}
+          </p>
+        )}
+        {sessionsRemaining === 0 && (
+          <p className="text-[13px] font-bold text-ink">
+            Tes akhir sudah dikerjakan. Sertifikat sedang diproses — jika belum muncul, hubungi kami lewat{" "}
+            <Link href="/contact" className="text-primary hover:underline">halaman kontak</Link>.
+          </p>
+        )}
       </section>
     );
   }
