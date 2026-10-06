@@ -1,7 +1,7 @@
 # Learner dashboard — design
 
 **Date:** 2026-09-03
-**Status:** approved, ready for planning
+**Status:** revised 2026-10-06 after the PO review (session parts, GR-14 note, part progress; Recharts kept). Ready for planning.
 **Sub-project 2 of 6** — see §8.
 
 ---
@@ -37,7 +37,7 @@ Checked rather than assumed. Three of the four blocks need **no backend work**:
 
 | Block | Data source | Exists? |
 |---|---|---|
-| 1. Progress | `GET /api/me/enrollments`, `GET /api/me/programs/{id}` | yes |
+| 1. Progress | `GET /api/me/enrollments`, `GET /api/me/programs/{id}` | yes; gains two fields (§4.2) |
 | 2. Final exam result | `GET /api/me/program-certificates` | yes |
 | 3. Session-test history | — | **no** |
 | 4. Certificates | `GET /api/me/program-certificates` | yes |
@@ -57,7 +57,9 @@ block 2's empty state rather than a result. That path is already an admin-visibl
 score bands are currently complete (51 Listening / 41 Structure / 51 Reading, no gaps), so this is
 a rare state that should be fixed at its source, not papered over on the dashboard.
 
-## 4. The one new endpoint
+## 4. Backend changes
+
+### 4.1 The one new endpoint
 
 ```
 GET /api/me/session-results  →  IReadOnlyList<SessionAttemptDto>
@@ -66,17 +68,25 @@ GET /api/me/session-results  →  IReadOnlyList<SessionAttemptDto>
 ```csharp
 public record SessionAttemptDto(
     Guid AttemptId,
+    Guid ProgramId,
     Guid SessionId,
     string SessionTitle,
-    int OrderIndex,
+    int SessionOrderIndex,
+    Guid PartId,
+    string PartTitle,
+    int PartOrderIndex,
     DateTimeOffset SubmittedAt,
     int Score,
     int MaxScore,
     bool Passed);
 ```
 
-Submitted gating attempts for the calling learner, ordered by `SubmittedAt`. Nothing else needed —
-the chart plots score against attempt, grouped by session.
+**Changed since session parts (2026-10-05).**
+- Since then, a session is an ordered list of parts, and **one session can hold several tests**. So the endpoint returns one row per submitted attempt of a **Test part**, identified by `PartId` and `PartTitle` as well as the session.
+- The chart groups by test part, not by session. A label reads e.g. "Sesi 3 · Tes Listening".
+- Each attempt is resolved to its owner through `session_parts.assessment_id`. An attempt on a test that has since been replaced or detached has no owning part, and it is **omitted**: it is history of content the learner can no longer see.
+- `ProgramId` lets the dashboard show only the programme it is displaying.
+- Rows are ordered by `SubmittedAt`.
 
 **Three constraints, each load-bearing:**
 
@@ -87,9 +97,17 @@ the chart plots score against attempt, grouped by session.
 2. **Scores only — no answers, no question text, no `Correct`.** Golden rule 11 applies even to a
    learner's own attempt, because gating tests allow unlimited retakes: handing back the key would
    let a learner pass the next attempt without learning anything, which defeats the gate.
-3. **Gating attempts only.** The final attempt is served through the certificate (§3). Mixing kinds
-   in one list would invite a client to render a 140-question exam beside a 15-question test as if
-   they were comparable.
+3. **Session-test (gating) attempts only.** The final attempt is served through the certificate (§3).
+   Mixing kinds in one list would invite a client to render a 140-question exam beside a 15-question
+   test as if they were comparable.
+
+### 4.2 Part progress for the progress header
+
+`StudentProgramDto` (`GET /api/me/programs/{id}`) gains `int? NextSessionPartsDone` and
+`int? NextSessionPartCount`.
+- **What they hold:** the learner's done/total parts in the session `NextSessionId` points at, computed by the existing `SessionPartStates` reader.
+- **When they are null:** when there is no next session, or when it is not a video session.
+- **Why it's cheap:** this is one extra reader call per request, for one session.
 
 ## 5. The four blocks
 
@@ -97,17 +115,23 @@ Replacing the current `max-w-3xl` single column with a wider two-column grid on 
 **block 1 full width across the top, blocks 2 and 3 side by side beneath it, block 4 full width
 below** — stacking to a single column in blocks 1-2-3-4 order under 768px.
 
-**1. Progress header.** Greeting, a ring showing sessions complete out of the programme's total,
-and the continue-CTA pointing at the next unlocked session. Absorbs what the current programme card
-does, in less vertical space.
+**1. Progress header.** It holds:
+- a greeting;
+- a ring showing sessions complete out of the programme's total;
+- under the ring, the position inside the current session: `Sesi {n} · bagian {done+1} dari {count}`, from §4.2. When the fields are null, only the session line shows;
+- the continue-CTA, which opens that session.
 
-**2. Final exam result.** Three horizontal bars — Listening, Structure, Reading — from the
-certificate's scaled `SectionScores`, with the predicted total and band beside them, and a link to
-the certificate.
+It absorbs what the current programme card does, in less vertical space.
 
-**3. Session-test history.** Score per session test across attempts, from §4. This is the only
-block with a genuine series, because gating tests are unlimited (`retakeCap: null` on the seeded
-test) while the final allows one.
+**2. Final exam result.** It holds:
+- three horizontal bars (Listening, Structure, Reading) from the certificate's scaled `SectionScores`;
+- the predicted total and band beside them;
+- a link to the certificate;
+- always, directly under the total: **`Skor prediksi INVERTA, bukan skor resmi TOEFL dari ETS.`** This is required by golden rule 14 on every surface that shows a predicted score.
+
+**3. Session-test history.** Score per **test part** across attempts, from §4.1, labelled
+`Sesi {n} · {part title}`. This is the only block with a genuine series, because session tests are
+retaken without limit, while the final allows one.
 
 **4. Certificates.** Cards from `/api/me/program-certificates`: programme, predicted score, issue
 date, verification code, and a link to the public verify page.
@@ -145,10 +169,9 @@ likelier to be on a phone than a desktop.
 
 ## 8. Sub-projects
 
-1. **Logo, favicon and brand colour** — spec written, `2026-09-03-logo-favicon-brand-colour-design.md`.
+1. **Logo, favicon and brand colour** — **done** (merged; `--color-primary` is `#7F00FF`).
 2. **Learner dashboard** — this document.
-3. **Learner programme page as 30/70 master-detail.** Sessions left, the whole session inline
-   right. `SessionView({token, sessionId})` is already self-contained, which makes it contained.
+3. **Learner programme page as 30/70 master-detail** — **done** (merged).
 4. **Landing page density.** `/` redirects to `/program/toefl-preparation`, so the "homepage" is
    the programme page. Rebuilt from real content only — hero with price above the fold, the
    8-session syllabus, what is included, the ITP format, the 12 seeded FAQs.
@@ -164,6 +187,9 @@ likelier to be on a phone than a desktop.
 
 - Another learner's attempts never appear in your results. Two learners each with a submitted
   gating attempt; each sees exactly their own.
+- Rows carry the test part: two tests in one session produce rows with different `PartId`, both with the same `SessionId`.
+- An attempt on a test no longer attached to any part is omitted.
+- `GET /api/me/programs/{id}` returns `NextSessionPartsDone` and `NextSessionPartCount` for a video next session, and null for a live one.
 - No answer key reaches the client. Assert the serialised response contains no `correct`,
   `answerKey` or `isCorrect` — the same shape as the existing
   `Student_assessment_never_exposes_the_answer_key`.
