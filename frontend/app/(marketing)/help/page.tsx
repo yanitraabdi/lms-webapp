@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { getFaq } from "@/lib/content";
-import { FaqAccordion } from "./FaqAccordion";
+import { FaqAccordion } from "@/components/FaqAccordion";
 
 // ISR — FAQ is admin-editable later; revalidate keeps it fresh.
 export const revalidate = 3600;

@@ -7,6 +7,10 @@ import { EnrollCta } from "@/components/program/EnrollCta";
 import { HowItWorks } from "@/components/program/HowItWorks";
 import { SyllabusParts } from "@/components/program/SyllabusParts";
 import { ItpFormat } from "@/components/program/ItpFormat";
+import { ProgramFaq } from "@/components/program/ProgramFaq";
+import { ClosingCta } from "@/components/program/ClosingCta";
+import { ProgramJsonLd } from "@/components/program/ProgramJsonLd";
+import { getFaq } from "@/lib/content";
 import {
   getPublicProgram, formatIdr, minutesLabel, totalDurationLabel, fmtDateTime,
   SESSION_TYPE_LABEL, num, type PublicSession,
@@ -33,6 +37,8 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
   const program = await getPublicProgram(slug).catch(() => null);
   if (!program) notFound();
 
+  const faq = await getFaq({ revalidate: 300 }).catch(() => []);
+  const faqShown = faq.slice(0, 6); // API already orders by OrderIndex;
   const sessions = [...program.sessions].sort((a, b) => num(a.orderIndex) - num(b.orderIndex));
   const videoCount = sessions.filter((s) => s.type === "Video").length;
   const liveCount = sessions.filter((s) => s.type === "Live").length;
@@ -41,6 +47,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
     <>
       <PublicNav />
       <main>
+        <ProgramJsonLd program={program} faq={faqShown} />
         {/* Hero */}
         <section className="border-b border-border bg-surface px-6 py-14">
           <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_340px] lg:items-start">
@@ -117,6 +124,10 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
 
         <ItpFormat />
 
+        <ProgramFaq items={faq} />
+
+        <ClosingCta programId={program.id} priceIdr={program.priceIdr} />
+
         {/* Prediction disclaimer — KAK §9.9.6, non-negotiable */}
         <section className="px-6 pb-16">
           <div className="mx-auto max-w-3xl rounded-base border border-border bg-surface-2 px-5 py-4">
@@ -163,7 +174,7 @@ function SyllabusRow({ session, index }: { session: PublicSession; index: number
         <span className="mt-1 block text-[11.5px] text-ink-subtle">
           {session.durationSeconds != null && minutesLabel(session.durationSeconds)}
           {session.scheduledAt && `Dijadwalkan ${fmtDateTime(session.scheduledAt)}`}
-          {session.durationSeconds == null && !session.scheduledAt && "Tes berwaktu"}
+          {session.durationSeconds == null && !session.scheduledAt && !isFinal && "Tes berwaktu"}
         </span>
       </span>
       {index > 0 && <LockIcon size={15} className="mt-1 shrink-0 text-ink-subtle" />}
