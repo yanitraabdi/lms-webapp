@@ -146,6 +146,39 @@ public class StudentResultsTests(AuthApiFactory factory) : IClassFixture<AuthApi
 
     // ---- facts ----
 
+    [Fact]
+    public async Task Program_view_reports_part_progress_for_the_next_video_session()
+    {
+        var x = await EnrolledLearner();
+        var t = await AddTests(x.Session1);
+        await Watch(x.Token, x.Session1, t.LessonPart);
+
+        var view = await AuthedGet<StudentProgramDto>($"/api/me/programs/{x.ProgramId}", x.Token);
+
+        Assert.Equal(x.Session1, view.NextSessionId);
+        Assert.Equal(1, view.NextSessionPartsDone);
+        Assert.Equal(3, view.NextSessionPartCount);
+    }
+
+    [Fact]
+    public async Task Part_progress_is_null_when_the_next_session_is_not_video()
+    {
+        var x = await EnrolledLearner();
+        await WithDb(async db =>
+        {
+            var s = await db.ProgramSessions.SingleAsync(z => z.Id == x.Session1);
+            s.Type = SessionType.Live;
+            s.ScheduledAt = DateTimeOffset.UtcNow.AddDays(7);
+            await db.SaveChangesAsync();
+        });
+
+        var view = await AuthedGet<StudentProgramDto>($"/api/me/programs/{x.ProgramId}", x.Token);
+
+        Assert.Equal(x.Session1, view.NextSessionId);
+        Assert.Null(view.NextSessionPartsDone);
+        Assert.Null(view.NextSessionPartCount);
+    }
+
     /// <summary>Session's own lesson part + Test A + Test B (2 questions each, pass 2).</summary>
     private async Task<Tests> AddTests(Guid sessionId)
     {

@@ -34,7 +34,8 @@ public record StudentProgramDto(
     Guid? BatchId, string? BatchName, DateTimeOffset? BatchStartDate,
     int CompletedCount, int SessionCount,
     Guid? NextSessionId,
-    IReadOnlyList<StudentSessionDto> Sessions);
+    IReadOnlyList<StudentSessionDto> Sessions,
+    int? NextSessionPartsDone, int? NextSessionPartCount);
 
 public record EnrollmentDto(
     Guid Id, Guid ProgramId, string ProgramName, string ProgramSlug,

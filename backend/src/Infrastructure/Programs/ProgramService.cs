@@ -1,11 +1,12 @@
 using Academy.Application.Programs;
+using Academy.Domain;
 using Academy.Domain.Enums;
 using Academy.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Academy.Infrastructure.Programs;
 
-public class ProgramService(AppDbContext db, ISessionCompletionService completion) : IProgramService
+public class ProgramService(AppDbContext db, ISessionCompletionService completion, SessionPartStates partStates) : IProgramService
 {
     public async Task<PublicProgramDto?> GetPublicAsync(string slug, CancellationToken ct = default)
     {
@@ -114,10 +115,19 @@ public class ProgramService(AppDbContext db, ISessionCompletionService completio
             previousComplete = isComplete;
         }
 
+        // Where the learner is inside the session they will continue (spec §4.2). One reader call.
+        int? partsDone = null, partCount = null;
+        if (nextSessionId is Guid nextId && rows.First(r => r.Id == nextId).Type == SessionType.Video)
+        {
+            var states = await partStates.LoadAsync(userId, nextId, ct);
+            partsDone = states.Count(st => st.Status == PartStatus.Done);
+            partCount = states.Count;
+        }
+
         return new StudentProgramDto(
             program.Id, program.Name, program.Slug, enrollment.Status.ToString(),
             batch?.Id, batch?.Name, batch?.StartDate,
             sessions.Count(s => s.State == SessionState.Completed), sessions.Count,
-            nextSessionId, sessions);
+            nextSessionId, sessions, partsDone, partCount);
     }
 }
