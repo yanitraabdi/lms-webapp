@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
+import { HOW_IT_WORKS_STEPS } from "@/components/program/howItWorksSteps";
 
 export const dynamic = "force-static";
 
@@ -9,12 +10,6 @@ export const metadata: Metadata = {
   description: "Empat langkah: daftar akun, bayar sekali, belajar berurutan, lalu ikuti tes akhir dan terima prediksi skor TOEFL.",
 };
 
-const steps = [
-  { n: 1, title: "Daftar & verifikasi email", body: "Buat akun dalam satu menit dan verifikasi email Anda. Verifikasi diperlukan sebelum mendaftar program." },
-  { n: 2, title: "Bayar sekali", body: "Satu kali pembayaran untuk keseluruhan program — bukan langganan bulanan. Akses terbuka otomatis setelah pembayaran terkonfirmasi." },
-  { n: 3, title: "Belajar berurutan", body: "Tonton video, lulus tes singkat di setiap sesi, dan hadiri sesi live. Sesi berikutnya terbuka setelah sesi sebelumnya selesai." },
-  { n: 4, title: "Tes akhir & prediksi skor", body: "Kerjakan simulasi TOEFL ITP berwaktu, terima skor prediksi seketika, dan dapatkan sertifikat yang dapat diverifikasi publik." },
-];
 
 export default function HowItWorksPage() {
   return (
@@ -31,7 +26,7 @@ export default function HowItWorksPage() {
 
       <section className="px-6 pb-14">
         <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
-          {steps.map((s) => (
+          {HOW_IT_WORKS_STEPS.map((s) => (
             <div key={s.n} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-6 shadow-sm">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-base font-extrabold text-primary">
                 {s.n}

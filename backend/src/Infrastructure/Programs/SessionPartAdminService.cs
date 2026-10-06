@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Academy.Application.Abstractions;
 using Academy.Application.Programs;
 using Academy.Domain.Entities;
 using Academy.Domain.Enums;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Academy.Infrastructure.Programs;
 
-public class SessionPartAdminService(AppDbContext db, VideoOptions video) : ISessionPartAdminService
+public class SessionPartAdminService(AppDbContext db, VideoOptions video, IContentRevalidator revalidator) : ISessionPartAdminService
 {
     public async Task<IReadOnlyList<AdminSessionPartDto>> ListAsync(Guid sessionId, CancellationToken ct = default)
     {
@@ -96,6 +97,11 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video) : ISes
             // propagates — it must not be reported as "already used".
             throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
         }
+        // The public syllabus shows each session's parts (landing spec §3) — refresh it now rather
+        // than up to 5 minutes later. Best-effort, as in ProgramAdminService.
+        var slug = await db.ProgramSessions.Where(s => s.Id == sessionId)
+            .Select(s => s.Program.Slug).FirstOrDefaultAsync(ct);
+        if (slug is not null) await revalidator.RevalidateAsync(["/", $"/program/{slug}"], ct);
         return await ListAsync(sessionId, ct);
     }
 

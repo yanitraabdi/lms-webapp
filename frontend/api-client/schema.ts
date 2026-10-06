@@ -6885,6 +6885,11 @@ export interface components {
             /** Format: date-time */
             scheduledAt: null | string;
             liveMode: null | string;
+            parts: components["schemas"]["PublicSessionPartDto"][];
+        };
+        PublicSessionPartDto: {
+            kind: string;
+            title: string;
         };
         QuestionBankCountsDto: {
             /** Format: int32 */
