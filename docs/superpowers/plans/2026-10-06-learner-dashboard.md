@@ -449,3 +449,11 @@ Load `/app/dashboard` at 375px and at desktop width:
 - **Spec §5's block 1 ring** is plain SVG rather than Recharts. A two-circle ring doesn't need a charting library; the two real charts (blocks 2 and 3) use Recharts, as the PO chose.
 - **Multiple enrollments.** The page shows only the first active enrollment. Only one programme exists, and this is noted with a `ponytail:` comment.
 - **Detached tests.** Task 1 test 6 removes the part directly in the db, because the admin API refuses to remove a part whose test has attempts (GR-7).
+
+## Deferred follow-ups (from per-task and final reviews, 2026-10-06)
+
+- Task 1: minor (deferred): final-excluded test doesn't isolate the Gating filter (join already excludes); PartOrderIndex unasserted; no ThenBy(Id) tie-break; stray helper param/comment
+- Task 2: minor (deferred): no test with a discussion part in the count
+- Task 3: minor (deferred): no <h1> during loading/error/no-enrollment states; onboarding overall-progress anchor appears after a second fetch (tour race wider); "Tinggal tes akhir" when 0 sessions remain without a certificate; CertificateVerificationDto still raw only
+- Task 4: minor (deferred): certificate card lacks "bukan skor resmi" line (GR-14 polish — consider in final wave); default Recharts tooltip styling; text-success small text contrast borderline; O(n²) grouping copy (tiny)
+- Final review: chart axis starts at 31 (bar lengths exaggerate differences); earlier attempts' pass/fail is colour-only for sighted users (tooltip lacks status); scaled scores on certificates/verify pages have no '31–68' label; check whether the assessment result page and admin attempts (still reading raw sectionScores) label them as raw counts.

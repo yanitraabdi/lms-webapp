@@ -25,7 +25,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
     result = null;
   }
   const valid = result?.valid ?? false;
-  const sections = Object.entries(result?.sectionScores ?? {});
+  const sections = Object.entries(result?.scaledScores ?? {});
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
