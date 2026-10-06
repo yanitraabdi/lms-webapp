@@ -359,3 +359,11 @@ Rebuild the stack with `docker compose up -d --build api frontend`. At `http://l
 
 - **Spec §5's revalidation test** is service-level with a fake `IContentRevalidator`. The integration factory has no revalidator seam, so this is the smallest test that proves the call.
 - **The FAQ list is filtered once.** `ProgramFaq` receives every item and slices to 6 itself, while the JSON-LD receives the same first 6 (`faqShown`) the page computes. Both use `orderIndex`, so the structured data matches what's visible.
+
+## Deferred minors (after final review)
+
+Fixed in the final wave (a2a7f5c): ISR (`generateStaticParams`), single FAQ-limit source, stray `;`, accordion `aria-controls`, answers always in HTML, Offer `category`, test scope disposal.
+
+Still open (non-blocking):
+- Tests: final session's empty `parts` not asserted; `totalMin`/`totalMax` regex in `ItpFormatConstantsTests` unscoped; no negative test that revalidation is skipped on a failed parts save; seeding helpers copied rather than shared.
+- UI polish: HowItWorks `border-b` vs `border-y`; ITP cards and ClosingCta card `bg-surface` on a `bg-surface` section (low contrast); stray blank lines in `/how-it-works`; `/how-it-works` jumps h1→h3 (pre-existing).
