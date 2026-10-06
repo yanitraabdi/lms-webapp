@@ -76,7 +76,7 @@ export function ProgressHeader({ program, firstName }: { program: StudentProgram
  * The final assessment has its own runner. Everything else opens the programme page with the
  * session preselected, so "Lanjutkan" lands on the same master-detail view the session list uses.
  */
-function nextHref(session: StudentSession, programId: string): string {
+export function nextHref(session: StudentSession, programId: string): string {
   return session.type === "FinalAssessment"
     ? `/app/assessment/${session.id}`
     : `/app/program/${programId}?session=${session.id}`;

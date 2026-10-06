@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -8,10 +9,16 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { Button, Spinner, ErrorState, EmptyState } from "@/components/ui";
-import { ProgressHeader } from "@/components/dashboard/ProgressHeader";
+import { ProgressHeader, nextHref } from "@/components/dashboard/ProgressHeader";
 import { FinalResultCard } from "@/components/dashboard/FinalResultCard";
+import { CertificateCards } from "@/components/dashboard/CertificateCards";
 import { listMyEnrollments, getStudentProgram, num, type Enrollment } from "@/lib/programs";
 import { listMyCertificates } from "@/lib/sessions";
+
+const SessionTestHistory = dynamic(() => import("@/components/dashboard/SessionTestHistory"), {
+  ssr: false,
+  loading: () => <div className="h-[200px] rounded-lg border border-border bg-surface" />,
+});
 
 export default function DashboardPage() {
   const { status, accessToken, user } = useAuth();
@@ -65,8 +72,6 @@ export default function DashboardPage() {
           <ProgramDashboard token={accessToken} enrollment={active[0]} firstName={firstName} />
         )}
 
-        <CertificatesTeaser token={accessToken} />
-
         {/* Pending payments surface here so a learner is never left wondering. */}
         {(enrollments.data ?? []).some((e) => e.status === "PendingPayment") && (
           <div className="mt-6 rounded-base border border-[#F5D9A8] bg-warning-soft px-5 py-4">
@@ -82,7 +87,7 @@ export default function DashboardPage() {
   );
 }
 
-/** Blocks 1–2 for one programme. ponytail: one programme exists; per-programme sections when a second one ships. */
+/** Blocks 1–4 for one programme. ponytail: one programme exists; per-programme sections when a second one ships. */
 function ProgramDashboard({ token, enrollment, firstName }: { token: string; enrollment: Enrollment; firstName: string }) {
   const program = useQuery({
     queryKey: ["student-program", enrollment.programId],
@@ -109,42 +114,18 @@ function ProgramDashboard({ token, enrollment, firstName }: { token: string; enr
   const data = program.data;
   const completed = num(data.completedCount);
   const total = num(data.sessionCount);
-  // Newest certificate for this programme (ISO timestamps sort lexically).
-  const cert = (certs.data ?? [])
+  // Newest first (ISO timestamps sort lexically).
+  const programCerts = (certs.data ?? [])
     .filter((c) => c.programId === data.programId)
-    .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))[0];
+    .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt));
+  const next = data.sessions.find((s) => s.id === data.nextSessionId);
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div className="md:col-span-2"><ProgressHeader program={data} firstName={firstName} /></div>
-      <FinalResultCard certificate={cert} sessionsRemaining={total - completed} status={certs.status} />
-      {/* Task 4: <SessionTestHistory … /> */}
-      {/* Task 4: <div className="md:col-span-2"><CertificateCards … /></div> */}
-    </div>
-  );
-}
-
-function CertificatesTeaser({ token }: { token: string }) {
-  const q = useQuery({
-    queryKey: ["my-certificates"],
-    queryFn: () => listMyCertificates(token),
-  });
-
-  if (!q.data || q.data.length === 0) return null;
-
-  return (
-    <div className="mt-6 rounded-lg border border-border bg-surface p-5 shadow-sm" data-tour="nav-certificates">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">Sertifikat</span>
-          <span className="text-[14px] font-bold text-ink">
-            {q.data.length} sertifikat prediksi tersedia
-          </span>
-        </div>
-        <Link href="/app/certificates" className="text-[13px] font-bold text-primary hover:underline">
-          Lihat & unduh →
-        </Link>
-      </div>
+      <FinalResultCard certificate={programCerts[0]} sessionsRemaining={total - completed} status={certs.status} />
+      <SessionTestHistory token={token} programId={data.programId} continueHref={next ? nextHref(next, data.programId) : null} />
+      {programCerts.length > 0 && <div className="md:col-span-2"><CertificateCards certificates={programCerts} /></div>}
     </div>
   );
 }
