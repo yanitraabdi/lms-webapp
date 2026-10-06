@@ -4,6 +4,9 @@ import { PublicNav } from "@/components/PublicNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CheckIcon, LockIcon, PlayIcon } from "@/components/ui";
 import { EnrollCta } from "@/components/program/EnrollCta";
+import { HowItWorks } from "@/components/program/HowItWorks";
+import { SyllabusParts } from "@/components/program/SyllabusParts";
+import { ItpFormat } from "@/components/program/ItpFormat";
 import {
   getPublicProgram, formatIdr, minutesLabel, totalDurationLabel, fmtDateTime,
   SESSION_TYPE_LABEL, num, type PublicSession,
@@ -88,6 +91,8 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
 
+        <HowItWorks />
+
         {/* About */}
         <section className="px-6 py-12">
           <div className="mx-auto max-w-3xl">
@@ -109,6 +114,8 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
             </ol>
           </div>
         </section>
+
+        <ItpFormat />
 
         {/* Prediction disclaimer — KAK §9.9.6, non-negotiable */}
         <section className="px-6 pb-16">
@@ -152,6 +159,7 @@ function SyllabusRow({ session, index }: { session: PublicSession; index: number
         {session.description && (
           <span className="mt-0.5 block text-[13px] leading-snug text-ink-muted">{session.description}</span>
         )}
+        <SyllabusParts session={session} />
         <span className="mt-1 block text-[11.5px] text-ink-subtle">
           {session.durationSeconds != null && minutesLabel(session.durationSeconds)}
           {session.scheduledAt && `Dijadwalkan ${fmtDateTime(session.scheduledAt)}`}
