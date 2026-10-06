@@ -139,6 +139,7 @@ public static class DependencyInjection
 
         // INVERTA (M2): programs, enrollment, the access gate, completion
         services.AddScoped<IProgramService, ProgramService>();
+        services.AddScoped<IStudentResultsService, StudentResultsService>();
         services.AddScoped<IEnrollmentService, EnrollmentService>();
         services.AddScoped<SessionPartStates>();
         services.AddScoped<ISessionAccessService, SessionAccessService>();

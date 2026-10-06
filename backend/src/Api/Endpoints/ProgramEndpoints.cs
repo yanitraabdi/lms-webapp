@@ -33,6 +33,13 @@ public static class ProgramEndpoints
             .RequireAuthorization()
             .WithTags("Programs");
 
+        // The caller's own session-test scores for the dashboard (GR-11: scores only).
+        app.MapGet("/api/me/session-results", async Task<Ok<IReadOnlyList<SessionAttemptDto>>> (
+                ClaimsPrincipal u, IStudentResultsService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.ListSessionAttemptsAsync(u.UserId(), ct)))
+            .RequireAuthorization()
+            .WithTags("Programs");
+
         // ---- student program view (enrollment enforced inside the service) ----
         app.MapGet("/api/me/programs/{id:guid}", async Task<Ok<StudentProgramDto>> (
                 Guid id, ClaimsPrincipal u, IProgramService s, CancellationToken ct) =>
