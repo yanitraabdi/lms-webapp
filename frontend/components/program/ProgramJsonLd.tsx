@@ -6,7 +6,7 @@ export function ProgramJsonLd({ program, faq }: { program: PublicProgram; faq: F
     "@context": "https://schema.org", "@type": "Course",
     name: program.name, description: program.summary ?? program.description,
     provider: { "@type": "Organization", name: "INVERTA" },
-    offers: { "@type": "Offer", price: num(program.priceIdr), priceCurrency: "IDR" },
+    offers: { "@type": "Offer", price: num(program.priceIdr), priceCurrency: "IDR", category: "Paid" },
   }];
   if (faq.length > 0) data.push({
     "@context": "https://schema.org", "@type": "FAQPage",

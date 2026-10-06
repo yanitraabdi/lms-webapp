@@ -71,8 +71,11 @@ public class LandingContentTests(AuthApiFactory factory) : IClassFixture<AuthApi
         Assert.Equal(["/", $"/program/{s.Slug}"], fake.Paths);
     }
 
-    private async Task<Guid> AnyUser() => await factory.Services.CreateScope().ServiceProvider
-        .GetRequiredService<AppDbContext>().Users.Select(u => u.Id).FirstAsync();
+    private async Task<Guid> AnyUser()
+    {
+        using var scope = factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.Select(u => u.Id).FirstAsync();
+    }
 
     private async Task<Seeded> Seed()
     {

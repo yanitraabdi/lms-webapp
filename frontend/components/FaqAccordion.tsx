@@ -38,13 +38,14 @@ export function FaqAccordion({ items, searchable = true }: { items: FaqItem[]; s
                 <button
                   type="button"
                   aria-expanded={open}
+                  aria-controls={`faq-${item.id}`}
                   onClick={() => setOpenId(open ? null : item.id)}
                   className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-[14.5px] font-bold text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
                 >
                   {item.question}
                   <span className={"shrink-0 text-ink-subtle transition-transform " + (open ? "rotate-90" : "")}>›</span>
                 </button>
-                {open && <p className="whitespace-pre-line px-5 pb-4 text-[14px] leading-relaxed text-ink-muted">{item.answer}</p>}
+                <p id={`faq-${item.id}`} hidden={!open} className="whitespace-pre-line px-5 pb-4 text-[14px] leading-relaxed text-ink-muted">{item.answer}</p>
               </div>
             );
           })}

@@ -18,6 +18,9 @@ import {
 
 export const revalidate = 300;
 
+// No build-time fetch (API may be unreachable in the Docker build); pages are generated on first visit and ISR-cached.
+export function generateStaticParams() { return []; }
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const program = await getPublicProgram(slug).catch(() => null);
@@ -34,11 +37,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ProgramPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const program = await getPublicProgram(slug).catch(() => null);
+  // No catch: an API outage throws so ISR keeps serving the stale page; only a real 404 → null.
+  const program = await getPublicProgram(slug);
   if (!program) notFound();
 
   const faq = await getFaq({ revalidate: 300 }).catch(() => []);
-  const faqShown = faq.slice(0, 6); // API already orders by OrderIndex;
+  const faqShown = faq.slice(0, 6); // API already orders by OrderIndex
+  const faqHasMore = faq.length > faqShown.length;
   const sessions = [...program.sessions].sort((a, b) => num(a.orderIndex) - num(b.orderIndex));
   const videoCount = sessions.filter((s) => s.type === "Video").length;
   const liveCount = sessions.filter((s) => s.type === "Live").length;
@@ -124,7 +129,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
 
         <ItpFormat />
 
-        <ProgramFaq items={faq} />
+        <ProgramFaq items={faqShown} hasMore={faqHasMore} />
 
         <ClosingCta programId={program.id} priceIdr={program.priceIdr} />
 
