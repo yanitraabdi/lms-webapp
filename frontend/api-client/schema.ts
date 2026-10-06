@@ -571,6 +571,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/session-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SessionAttemptDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/programs/{id}": {
         parameters: {
             query?: never;
@@ -6966,6 +7001,29 @@ export interface components {
             /** Format: date-time */
             serverNow: string;
         };
+        SessionAttemptDto: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: uuid */
+            programId: string;
+            /** Format: uuid */
+            sessionId: string;
+            sessionTitle: string;
+            /** Format: int32 */
+            sessionOrderIndex: number | string;
+            /** Format: uuid */
+            partId: string;
+            partTitle: string;
+            /** Format: int32 */
+            partOrderIndex: number | string;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: int32 */
+            score: number | string;
+            /** Format: int32 */
+            maxScore: number | string;
+            passed: boolean;
+        };
         SessionContextDto: {
             /** Format: uuid */
             id: string;
@@ -7087,6 +7145,10 @@ export interface components {
             /** Format: uuid */
             nextSessionId: null | string;
             sessions: components["schemas"]["StudentSessionDto"][];
+            /** Format: int32 */
+            nextSessionPartsDone: null | number | string;
+            /** Format: int32 */
+            nextSessionPartCount: null | number | string;
         };
         StudentQuestionDto: {
             /** Format: uuid */

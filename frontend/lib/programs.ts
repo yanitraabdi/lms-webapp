@@ -72,6 +72,10 @@ export const listMyEnrollments = (t: string) =>
 export const getStudentProgram = (t: string, programId: string) =>
   api<StudentProgram>("GET", `/api/me/programs/${programId}`, t);
 
+export type SessionAttempt = components["schemas"]["SessionAttemptDto"];
+export const listMySessionResults = (t: string) =>
+  api<SessionAttempt[]>("GET", "/api/me/session-results", t);
+
 // ---- admin ----
 
 export const listPrograms = (t: string) => api<AdminProgram[]>("GET", "/api/admin/programs", t);
