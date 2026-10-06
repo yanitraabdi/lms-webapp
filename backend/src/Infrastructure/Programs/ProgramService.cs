@@ -16,14 +16,32 @@ public class ProgramService(AppDbContext db, ISessionCompletionService completio
             .FirstOrDefaultAsync(ct);
         if (p is null) return null;
 
-        // Public syllabus: titles, order and schedule only. No asset ids, no join URLs (KAK §9.5).
-        var sessions = await db.ProgramSessions
+        // Public syllabus: titles, order, schedule and each video session's parts (kind and title
+        // only). No asset ids, no assessment ids, no join URLs (KAK §9.5, GR-3, GR-11).
+        var rows = await db.ProgramSessions
             .Where(s => s.ProgramId == p.Id)
             .OrderBy(s => s.OrderIndex)
-            .Select(s => new PublicSessionDto(
-                s.Id, s.OrderIndex, s.Type.ToString(), s.Title, s.Description,
-                s.DurationSeconds, s.ScheduledAt, s.LiveMode == null ? null : s.LiveMode.ToString()))
+            .Select(s => new
+            {
+                s.Id, s.OrderIndex, s.Type, s.Title, s.Description, s.DurationSeconds, s.ScheduledAt,
+                LiveMode = s.LiveMode == null ? null : s.LiveMode.ToString(),
+            })
             .ToListAsync(ct);
+
+        var sessionIds = rows.Select(s => s.Id).ToList();
+        var parts = (await db.SessionParts
+                .Where(pt => sessionIds.Contains(pt.SessionId))
+                .OrderBy(pt => pt.OrderIndex)
+                .Select(pt => new { pt.SessionId, pt.Kind, pt.Title })
+                .ToListAsync(ct))
+            .GroupBy(pt => pt.SessionId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<PublicSessionPartDto>)
+                g.Select(pt => new PublicSessionPartDto(pt.Kind.ToString(), pt.Title)).ToList());
+
+        var sessions = rows.Select(s => new PublicSessionDto(
+            s.Id, s.OrderIndex, s.Type.ToString(), s.Title, s.Description,
+            s.DurationSeconds, s.ScheduledAt, s.LiveMode,
+            s.Type == SessionType.Video ? parts.GetValueOrDefault(s.Id, []) : [])).ToList();
 
         return new PublicProgramDto(
             p.Id, p.Name, p.Slug, p.Description, p.Summary, p.PriceIdr,

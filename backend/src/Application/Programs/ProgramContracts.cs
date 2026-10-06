@@ -7,9 +7,14 @@ namespace Academy.Application.Programs;
 
 // ---------------------------------------------------------------- public (landing)
 
+/// <summary>One step inside a public video session: its kind and title only — never the asset or
+/// the test behind it (GR-3, GR-11).</summary>
+public record PublicSessionPartDto(string Kind, string Title);
+
 public record PublicSessionDto(
     Guid Id, int OrderIndex, string Type, string Title, string? Description,
-    int? DurationSeconds, DateTimeOffset? ScheduledAt, string? LiveMode);
+    int? DurationSeconds, DateTimeOffset? ScheduledAt, string? LiveMode,
+    IReadOnlyList<PublicSessionPartDto> Parts);
 
 public record PublicProgramDto(
     Guid Id, string Name, string Slug, string Description, string? Summary,
