@@ -9,8 +9,8 @@ namespace Academy.Infrastructure.Email;
 public record EmailBody(string Subject, string Html, string Text);
 
 /// <summary>
-/// The five transactional emails INVERTA actually sends, in Bahasa Indonesia: three for
-/// authentication, plus the enrolment receipt and the certificate.
+/// The transactional emails INVERTA actually sends, in Bahasa Indonesia: three for
+/// authentication, the enrolment receipt, the certificate, the live reminder and the admin test.
 ///
 /// Pure functions with no SMTP dependency, so what a learner actually receives can be asserted in
 /// a test — which is the only way to catch the failures that matter here: a link that did not make
@@ -108,6 +108,16 @@ public static class EmailTemplates
         url: null,
         footer: "Jika ini BUKAN Anda, segera atur ulang kata sandi Anda dan hubungi kami. " +
                 "Seseorang mungkin memiliki akses ke akun Anda.");
+
+    /// <summary>The admin test email: nothing to do, it only proves sending works.</summary>
+    public static EmailBody Test(string name) => Build(
+        subject: "Email uji INVERTA",
+        name: name,
+        lead: "Ini email uji dari INVERTA. Jika Anda menerimanya, pengiriman email sudah berfungsi. " +
+              "Tidak ada yang perlu dilakukan.",
+        buttonLabel: null,
+        url: null,
+        footer: "Email ini dikirim dari tombol uji di panel admin.");
 
     // ---------------------------------------------------------------- transactional
 

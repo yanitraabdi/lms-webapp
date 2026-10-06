@@ -57,7 +57,7 @@ services:
       # is required before purchase. Set SMTP_* in .env to actually send (see DEPLOY.md).
       # An incomplete smtp config fails at startup rather than silently reverting to the log.
       Email__Provider: "${EMAIL_PROVIDER:-dev}"
-      Email__Host: "${SMTP_HOST:-smtp.gmail.com}"
+      Email__Host: "${SMTP_HOST:-smtp.resend.com}"
       Email__Port: "${SMTP_PORT:-587}"
       Email__Username: "${SMTP_USERNAME:-}"
       Email__Password: "${SMTP_PASSWORD:-}"

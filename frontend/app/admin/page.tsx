@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Spinner, ErrorState, Button } from "@/components/ui";
-import { getAnalytics, num } from "@/lib/admin";
+import { Spinner, ErrorState, Button, Badge } from "@/components/ui";
+import { getAnalytics, getEmailStatus, sendTestEmail, num } from "@/lib/admin";
 
 // Enrollment status is the INVERTA lifecycle. Replaces a plan-tier map that named the archived
 // subscription product's levels.
@@ -74,6 +74,54 @@ export default function AdminAnalyticsPage() {
           )}
         </div>
       </div>
+
+      <EmailCard />
+    </div>
+  );
+}
+
+function EmailCard() {
+  const { accessToken: token, user } = useAuth();
+  const status = useQuery({ queryKey: ["admin-email-status"], queryFn: () => getEmailStatus(token!), enabled: !!token });
+  const test = useMutation({ mutationFn: () => sendTestEmail(token!) });
+  const isSmtp = status.data?.provider === "smtp";
+  const rows = status.data
+    ? [
+        ["Server", status.data.host ? `${status.data.host}:${status.data.port}` : ""],
+        ["Pengirim", status.data.fromAddress ? `${status.data.fromName ?? ""} <${status.data.fromAddress}>`.trim() : ""],
+        ["Balasan ke", status.data.replyTo ?? ""],
+      ].filter(([, v]) => v)
+    : [];
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-extrabold">Email</h2>
+        {status.data && <Badge tone={isSmtp ? "neutral" : "warning"}>{isSmtp ? "SMTP" : "Dev — hanya log"}</Badge>}
+      </div>
+      {status.isPending && <Spinner size={18} />}
+      {status.isError && <p className="text-sm text-danger">Gagal memuat status email.</p>}
+      {status.data && (
+        <>
+          {!isSmtp && <p className="text-sm text-ink-muted">Email belum benar-benar dikirim. Atur EMAIL_PROVIDER=smtp untuk mengirim.</p>}
+          <dl className="flex flex-col gap-1 text-sm">
+            {rows.map(([k, v]) => (
+              <div key={k} className="flex gap-3">
+                <dt className="w-24 shrink-0 text-ink-muted">{k}</dt>
+                <dd className="break-all font-semibold text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-ink-muted">Dikirim ke {user?.email}</p>
+          <div>
+            <Button size="sm" loading={test.isPending} onClick={() => test.mutate()}>Kirim email uji</Button>
+          </div>
+        </>
+      )}
+      <p aria-live="polite" className={test.isError ? "text-sm text-danger" : test.data && !test.data.sent ? "text-sm text-ink-muted" : "text-sm text-ink"}>
+        {test.isError ? test.error.message : test.data?.message}
+      </p>
+      <p className="text-xs text-ink-muted">Pengaturan email ada di .env server (EMAIL_PROVIDER, SMTP_*). Setelah mengubahnya, restart API.</p>
     </div>
   );
 }

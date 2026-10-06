@@ -58,6 +58,12 @@ public class DevEmailSender(ILogger<DevEmailSender> logger) : IEmailSender
         return Task.CompletedTask;
     }
 
+    public virtual Task SendTestAsync(string toEmail, string name, CancellationToken ct = default)
+    {
+        logger.LogInformation("[DEV EMAIL] Email uji → {Email}", toEmail);
+        return Task.CompletedTask;
+    }
+
     public virtual Task SendEnrollmentReceiptAsync(string toEmail, string name, string programName, decimal amountIdr, CancellationToken ct = default)
     {
         logger.LogInformation("[DEV EMAIL] Pendaftaran {Program} berhasil → {Email}: Rp{Amount}", programName, toEmail, amountIdr);

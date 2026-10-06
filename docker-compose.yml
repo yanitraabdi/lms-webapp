@@ -33,6 +33,15 @@ services:
       Revalidate__FrontendUrl: "http://frontend:3000"
       Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"
       Media__SigningKey: "${MEDIA_SIGNING_KEY:-dev-media-signing-key-change-me}"
+      # dev = log only. Set SMTP_* in .env to actually send (see DEPLOY.md).
+      Email__Provider: "${EMAIL_PROVIDER:-dev}"
+      Email__Host: "${SMTP_HOST:-smtp.resend.com}"
+      Email__Port: "${SMTP_PORT:-587}"
+      Email__Username: "${SMTP_USERNAME:-}"
+      Email__Password: "${SMTP_PASSWORD:-}"
+      Email__FromAddress: "${SMTP_FROM_ADDRESS:-}"
+      Email__FromName: "${SMTP_FROM_NAME:-INVERTA}"
+      Email__ReplyTo: "${SMTP_REPLY_TO:-}"
     ports:
       - "${API_PORT:-8080}:8080"
     volumes:

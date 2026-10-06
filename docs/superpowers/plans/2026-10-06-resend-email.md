@@ -519,3 +519,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **Rate limit.** Spec §2.2 says the route is rate-limited with the `"auth"` policy, and the plan follows that.
 - **The 502 path is tested at service level,** with a fake sender. There is no live relay in tests (spec §3).
 - **No database changes,** so no `/postgresql-table-design` review is needed.
+
+## Deferred follow-ups (from per-task and final reviews, 2026-10-06)
+
+- Task 1: minor (deferred): Test template hostile-name encoding not pinned; IOException branch untested; SmtpEmailSender summary still mentions Google Workspace (Task 3 may fix); "domain" text check broad
+- Task 2: minor (deferred): status test only dev-mode (DTO shape is the guard); recipient not asserted in fake; request-abort path untested; non-SMTP sender exceptions → 500 (as specified)
+- Task 3: minor (deferred): DEPLOY "must be resend" not Gmail-qualified; DEPLOY restart command only mentions tunnel compose
+- Task 3: DEPLOY NOTE: local docker-compose now forwards Email__* — a local .env with EMAIL_PROVIDER=smtp but incomplete SMTP_* will now fail API startup (intended fail-fast)
+- Task 4: minor (deferred): button hidden if status query fails; redundant ?? "" on non-null fields; empty aria-live gap; recipient line blank if user null
+- Final review: broad "domain" text check; test button shares the per-IP "auth" limit (behind the tunnel); SMTP failure path not tested over HTTP.

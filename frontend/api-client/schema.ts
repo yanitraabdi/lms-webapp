@@ -1957,6 +1957,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/email/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EmailStatusDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/email/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EmailTestResultDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/levels": {
         parameters: {
             query?: never;
@@ -6346,6 +6416,19 @@ export interface components {
             recommendedNext: components["schemas"]["ContinueModuleDto"][];
             levels: components["schemas"]["LevelProgressDto"][];
             overall: components["schemas"]["OverallProgressDto"];
+        };
+        EmailStatusDto: {
+            provider: string;
+            host: string;
+            /** Format: int32 */
+            port: number | string;
+            fromAddress: string;
+            fromName: string;
+            replyTo: string;
+        };
+        EmailTestResultDto: {
+            sent: boolean;
+            message: string;
         };
         EnrollmentDto: {
             /** Format: uuid */

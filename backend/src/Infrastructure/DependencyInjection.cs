@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddSingleton(email);
         if (email.IsSmtp) services.AddScoped<IEmailSender, SmtpEmailSender>();
         else services.AddScoped<IEmailSender, DevEmailSender>();
+        services.AddScoped<IEmailDiagnosticsService, EmailDiagnosticsService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddHostedService<AccountAnonymizationService>();
 

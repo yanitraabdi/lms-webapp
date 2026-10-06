@@ -8,11 +8,11 @@ using Microsoft.Extensions.Logging;
 namespace Academy.Infrastructure.Email;
 
 /// <summary>
-/// Sends the six real emails over SMTP: the three authentication ones, the enrolment receipt, the
-/// certificate and the live-session reminder. The rest still log to the console, inherited from
+/// Sends the seven real emails over SMTP: the three authentication ones, the enrolment receipt, the
+/// certificate, the live-session reminder and the admin test. The rest still log to the console, inherited from
 /// <see cref="DevEmailSender"/> — the five archived subscription messages, which nothing sends.
 ///
-/// Configured for Google Workspace with an app password; any SMTP relay is the same settings.
+/// Works with any SMTP relay (Resend recommended, Gmail also fine); only the SMTP_* settings differ.
 /// </summary>
 public class SmtpEmailSender(
     EmailOptions options, IOptions<AuthOptions> authOptions, ILogger<DevEmailSender> logger)
@@ -29,6 +29,9 @@ public class SmtpEmailSender(
     public override Task SendPasswordResetAsync(
         string toEmail, string name, string resetUrl, CancellationToken ct = default)
         => SendAsync(toEmail, name, EmailTemplates.PasswordReset(name, resetUrl), ct);
+
+    public override Task SendTestAsync(string toEmail, string name, CancellationToken ct = default)
+        => SendAsync(toEmail, name, EmailTemplates.Test(name), ct);
 
     public override Task SendPasswordChangedAsync(
         string toEmail, string name, CancellationToken ct = default)
