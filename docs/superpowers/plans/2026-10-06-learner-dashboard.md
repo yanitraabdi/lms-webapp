@@ -32,6 +32,9 @@
 - **Chart shape.** A test part with exactly one attempt renders as a single bar, never a one-point line.
 - **Chart colours** come from CSS custom properties (`--color-primary`, `--color-success`, `--color-danger`, `--color-border`, `--color-ink-muted`), read at runtime. No hard-coded hex.
 - **Phone width.** Both charts are readable at 375px, and each has a text alternative for screen readers.
+- **Chart loading.** The chart components (`FinalResultChart`, `SessionTestHistory`) are loaded with `next/dynamic` (`ssr: false`, with a fixed-height placeholder), so Recharts is not in the dashboard's first-load bundle.
+- **Colour fallbacks.** Every `useCssVar` call passes its own fallback hex, matching the token in `globals.css` (primary `#7F00FF`, success `#0e8a4f`, danger `#c62828`, border `#dce5ef`, ink-muted `#51607a`), so the first paint never shows the wrong colour.
+- **Reduced motion.** Chart animation is off when the user prefers reduced motion: `isAnimationActive={!reduced}`, using `usePrefersReducedMotion()` in `lib/useCssVar.ts`.
 - **Onboarding.** The `data-tour="overall-progress"` and `data-tour="nav-certificates"` anchors are kept, because the onboarding tour targets them.
 - **Commits** end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Backend checks:** `dotnet build backend/Academy.slnx` with 0 warnings and `dotnet test backend/Academy.slnx` green.
@@ -49,7 +52,7 @@
 | `backend/src/Application/Programs/ProgramContracts.cs`, `backend/src/Infrastructure/Programs/ProgramService.cs` | 2 | Part progress |
 | `backend/tests/Integration.Tests/StudentResultsTests.cs` | 2 | Tests |
 | `frontend/package.json`, `api-client/schema.ts`, `lib/programs.ts`, `lib/useCssVar.ts` (new) | 3 | Dependency, client, colour hook |
-| `frontend/components/dashboard/ProgressHeader.tsx`, `FinalResultCard.tsx` (new), `app/app/dashboard/page.tsx` | 3 | Layout + blocks 1–2 |
+| `frontend/components/dashboard/ProgressHeader.tsx`, `FinalResultCard.tsx`, `FinalResultChart.tsx` (new), `app/app/dashboard/page.tsx` | 3 | Layout + blocks 1–2 |
 | `frontend/components/dashboard/SessionTestHistory.tsx`, `CertificateCards.tsx` (new), `app/app/dashboard/page.tsx` | 4 | Blocks 3–4 |
 
 ---
@@ -291,6 +294,23 @@ export function useCssVar(name: string, fallback = "#7F00FF"): string {
 }
 ```
 
+Also add, in the same file:
+
+```ts
+/** True when the user asked the OS for reduced motion; charts then skip their entry animation. */
+export function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const on = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return reduced;
+}
+```
+
 - [ ] **Step 2: ProgressHeader (block 1)**
 
 `components/dashboard/ProgressHeader.tsx` takes `{ program: StudentProgram; firstName: string }` and has `data-tour="overall-progress"` on its root. It contains:
@@ -309,11 +329,11 @@ export function useCssVar(name: string, fallback = "#7F00FF"): string {
 - a title `Hasil tes akhir`;
 - the large predicted total `{totalScore}` and the band `{predictedBand}` when set;
 - directly beneath them, always: `Skor prediksi INVERTA, bukan skor resmi TOEFL dari ETS.` (muted, small);
-- a Recharts horizontal bar chart:
+- a Recharts horizontal bar chart, in its own file `components/dashboard/FinalResultChart.tsx` (props `{ scores: Record<string, number> }`). `FinalResultCard` imports it with `const FinalResultChart = dynamic(() => import("./FinalResultChart"), { ssr: false, loading: () => <div className="h-[160px]" /> });` and the chart is set up as follows:
   - `ResponsiveContainer` width 100%, height 160, `BarChart layout="vertical"`;
   - data `[{section:"Listening"…},{section:"Structure"…},{section:"Reading"…}]` from `certificate.sectionScores`;
   - `XAxis type="number" domain={[31, 68]}`, `YAxis type="category" dataKey="section" width={80}`;
-  - a `Bar` with `fill={useCssVar("--color-primary")}` and a value `LabelList`;
+  - a `Bar` with `fill={useCssVar("--color-primary", "#7F00FF")}`, `isAnimationActive={!usePrefersReducedMotion()}` and a value `LabelList`;
   - axis tick colour from `useCssVar("--color-ink-muted", "#51607a")`;
 - a visually hidden list (`sr-only`) giving each section's score as text;
 - a link `Lihat sertifikat →` to `/app/certificates`.
@@ -392,6 +412,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - the links `Verifikasi →` (`/verify/{verificationCode}`) and `Unduh →` (`/app/certificates`).
 
 - [ ] **Step 3: Wire into the page**
+
+Import `SessionTestHistory` in the page with `next/dynamic` (`ssr: false`, `loading: () => <div className="h-[200px] rounded-lg border border-border bg-surface" />`). In `SessionTestHistory`, every `useCssVar` call passes its fallback, e.g. `useCssVar("--color-success", "#0e8a4f")`, and each `Bar` gets `isAnimationActive={!usePrefersReducedMotion()}`.
 
 Replace the two Task 3 placeholders:
 
