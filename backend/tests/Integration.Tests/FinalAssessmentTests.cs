@@ -523,6 +523,98 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.False(perfect.Passed);                       // … is still not a "pass"
     }
 
+    // ---- the per-attempt route (sub-project 5) ----
+
+    [Fact]
+    public async Task The_intro_names_the_open_attempt_until_it_is_submitted()
+    {
+        var c = await SetUp();
+        var url = $"/api/sessions/{c.SessionId}/assessment";
+        Assert.Null((await AuthedGet<StudentAssessmentDto>(url, c.Token)).OpenAttemptId);
+
+        var state = await Start(c);
+        Assert.Equal(state.AttemptId, (await AuthedGet<StudentAssessmentDto>(url, c.Token)).OpenAttemptId);
+
+        await FinishAllSections(c, state.AttemptId);
+        Assert.Null((await AuthedGet<StudentAssessmentDto>(url, c.Token)).OpenAttemptId);
+    }
+
+    [Fact]
+    public async Task State_names_its_session_and_serves_no_questions_once_submitted()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        Assert.Equal(c.SessionId, state.SessionId);
+
+        await FinishAllSections(c, state.AttemptId);
+        var after = await GetState(c, state.AttemptId);
+
+        Assert.Equal("Submitted", after.Status);
+        Assert.Equal(c.SessionId, after.SessionId);
+        Assert.Empty(after.Questions);                     // GR-11 regression guard: nothing to re-read once it is over
+    }
+
+    [Fact]
+    public async Task Final_result_is_404_for_another_learners_attempt()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await FinishAllSections(c, state.AttemptId);
+        var (otherToken, _) = await VerifiedUser();
+
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/final-result", otherToken)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Final_result_is_409_while_the_sitting_is_in_progress_and_does_not_end_it()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/final-result", c.Token);
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Equal("InProgress", (await GetState(c, state.AttemptId)).Status);   // reading never finalises
+    }
+
+    [Fact]
+    public async Task Final_result_rereads_a_finished_sitting_without_the_answer_key()
+    {
+        var c = await SetUp();
+        var finished = await AnswerEverythingCorrectly(c, (await Start(c)).AttemptId);
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{finished.AttemptId}/final-result", c.Token);
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var raw = await res.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("correct", raw, StringComparison.OrdinalIgnoreCase);    // GR-11 (covers isCorrect)
+        Assert.DoesNotContain("answerKey", raw, StringComparison.OrdinalIgnoreCase);
+        var result = JsonSerializer.Deserialize<AttemptResultDto>(raw, Json)!;
+        Assert.NotNull(result.TotalScaledScore);
+        Assert.Equal(finished.TotalScaledScore, result.TotalScaledScore);
+        Assert.Equal(finished.PredictedBand, result.PredictedBand);
+        Assert.Equal(finished.Score, result.Score);
+        Assert.True(result.SessionCompleted);
+    }
+
+    [Fact]
+    public async Task Final_result_finalises_an_expired_sitting_on_read()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await ExpireAllSectionsAsync(state.AttemptId);
+
+        var result = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+
+        Assert.True(result.AutoSubmitted);                // the deadline is enforced on this read too (GR-12)
+        Assert.True(result.SessionCompleted);             // … and the sitting is really over
+        Assert.NotNull(result.TotalScaledScore);          // certificate issued (SetUp maps raw 0)
+
+        var again = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+        Assert.Equal(result.TotalScaledScore, again.TotalScaledScore);   // re-reading is idempotent
+    }
+
     // ---- the final's student route (FINAL sessions only) ----
 
     [Fact]

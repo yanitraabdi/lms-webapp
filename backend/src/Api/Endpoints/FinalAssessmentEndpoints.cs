@@ -29,6 +29,13 @@ public static class FinalAssessmentEndpoints
             TypedResults.Ok(await s.SubmitAsync(u.UserId(), id, ct)))
             .RequireRateLimiting("playback");
 
+        // The result of a FINISHED sitting, read-only — what /app/exam/{id} shows after a reload.
+        // An attempt still in progress is a 409; only /finish ends a sitting early. The gating
+        // /attempts/{id}/result route does not enforce deadlines or carry the band — finals use this.
+        g.MapGet("/{id:guid}/final-result", async Task<Ok<AttemptResultDto>> (
+                Guid id, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.GetResultAsync(u.UserId(), id, ct)));
+
         // The client REPORTS; the server decides warn / auto-submit (GR-13).
         g.MapPost("/{id:guid}/proctor-events", async Task<Ok<ProctorStateDto>> (
                 Guid id, ProctorEventRequest r, ClaimsPrincipal u, IProctorService s, CancellationToken ct) =>

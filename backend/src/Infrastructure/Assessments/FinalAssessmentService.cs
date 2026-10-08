@@ -26,15 +26,15 @@ public class FinalAssessmentService(
 
     public async Task<AttemptStateDto> GetStateAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
-        return await BuildStateAsync(attempt, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
     }
 
     public async Task<AttemptStateDto> SaveAnswersAsync(
         Guid userId, Guid attemptId, IReadOnlyDictionary<string, int> answers, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
 
         if (attempt.SubmittedAt is not null)
@@ -52,7 +52,7 @@ public class FinalAssessmentService(
 
         attempt.Answers = JsonSerializer.Serialize(merged);
         await db.SaveChangesAsync(ct);
-        return await BuildStateAsync(attempt, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
     }
 
     public async Task<AttemptStateDto> AdvanceSectionAsync(
@@ -60,30 +60,41 @@ public class FinalAssessmentService(
     {
         if (answers is { Count: > 0 }) await SaveAnswersAsync(userId, attemptId, answers, ct);
 
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
-        if (attempt.SubmittedAt is not null) return await BuildStateAsync(attempt, ct);
+        if (attempt.SubmittedAt is not null) return await BuildStateAsync(attempt, sessionId, ct);
 
         var state = AttemptState.Parse(attempt.State);
         await CloseCurrentAndAdvanceAsync(attempt, state, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
-        return await BuildStateAsync(attempt, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
     }
 
     public async Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
 
         if (attempt.SubmittedAt is null)
             await FinalizeAsync(attempt, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
 
-        return await BuildResultAsync(attempt, ct);
+        return await BuildResultAsync(attempt, sessionId, ct);
+    }
+
+    public async Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
+    {
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+        await EnforceDeadlinesAsync(attempt, ct);
+
+        if (attempt.SubmittedAt is null)
+            throw new AssessmentException("Tes ini belum selesai.", 409);
+
+        return await BuildResultAsync(attempt, sessionId, ct);
     }
 
     public async Task<string> GetAudioUrlAsync(
         Guid userId, Guid attemptId, Guid questionId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
         if (attempt.SubmittedAt is not null)
             throw new AssessmentException("Tes ini sudah selesai.", 409);
@@ -147,7 +158,7 @@ public class FinalAssessmentService(
     public async Task<SectionAudioDto> StartSectionAudioAsync(
         Guid userId, Guid attemptId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
         if (attempt.SubmittedAt is not null)
             throw new AssessmentException("Tes ini sudah selesai.", 409);
@@ -282,7 +293,7 @@ public class FinalAssessmentService(
         attempt.Passed = config.PassThreshold is int mark && score >= mark;
     }
 
-    private async Task<AttemptStateDto> BuildStateAsync(Attempt attempt, CancellationToken ct)
+    private async Task<AttemptStateDto> BuildStateAsync(Attempt attempt, Guid? sessionId, CancellationToken ct)
     {
         var config = AssessmentService.ParseConfig(
             await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
@@ -354,15 +365,12 @@ public class FinalAssessmentService(
             SectionHasAudio: attempt.SubmittedAt is null && current is not null
                              && AudioResolution.StorageKey(null, ParseSection(current.Section), config) is not null,
             SectionAudioStartedAt: current?.AudioStartedAt,
-            ServerNow: DateTimeOffset.UtcNow);
+            ServerNow: DateTimeOffset.UtcNow,
+            SessionId: sessionId);
     }
 
-    private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)
+    private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, Guid? sessionId, CancellationToken ct)
     {
-        var sessionId = await db.ProgramSessions
-            .Where(s => s.AssessmentId == attempt.AssessmentId)
-            .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
-
         var sessionCompleted = sessionId is Guid sid
             && await completion.IsCompleteAsync(attempt.UserId, sid, ct);
 
@@ -385,7 +393,7 @@ public class FinalAssessmentService(
     /// Loads the caller's own attempt AND re-checks the session gate (GR-1) — a revoked enrollment
     /// must close an in-progress sitting, not just future ones.
     /// </summary>
-    private async Task<Attempt> LoadOwnedAsync(Guid userId, Guid attemptId, CancellationToken ct)
+    private async Task<(Attempt Attempt, Guid? SessionId)> LoadOwnedAsync(Guid userId, Guid attemptId, CancellationToken ct)
     {
         var attempt = await db.Attempts.FirstOrDefaultAsync(a => a.Id == attemptId && a.UserId == userId, ct)
             ?? throw new AssessmentException("Percobaan tidak ditemukan.", 404);
@@ -395,7 +403,7 @@ public class FinalAssessmentService(
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
         if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
 
-        return attempt;
+        return (attempt, sessionId);
     }
 
     private async Task<HashSet<string>> SectionQuestionIdsAsync(Guid assessmentId, string section, CancellationToken ct)

@@ -255,6 +255,15 @@ public class AssessmentService(
             .Select(a => new { a.TotalScore, a.Passed })
             .ToListAsync(ct);
 
+        // Normally at most one (StartAttempt reuses it); two racing starts could make two, so pick
+        // the newest deterministically. Deadlines are not enforced here: an expired one is finalised
+        // by the exam page's own /state read, which then shows its result.
+        var openAttemptId = await db.Attempts
+            .Where(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null)
+            .OrderByDescending(a => a.StartedAt)
+            .Select(a => (Guid?)a.Id)
+            .FirstOrDefaultAsync(ct);
+
         var used = attempts.Count;
         var passed = attempts.Any(a => a.Passed);
         var canAttempt = config.RetakeCap is null || used < config.RetakeCap.Value;
@@ -267,7 +276,8 @@ public class AssessmentService(
             config.ProctoringEnabled, config.TimeLimitMinutes,
             questions,
             !string.IsNullOrWhiteSpace(config.AudioRef),
-            string.IsNullOrWhiteSpace(config.AudioRef) ? null : config.AudioPlayLimit ?? 1);
+            string.IsNullOrWhiteSpace(config.AudioRef) ? null : config.AudioPlayLimit ?? 1,
+            openAttemptId);
     }
 
     private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)
