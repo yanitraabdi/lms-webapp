@@ -710,3 +710,87 @@ Rebuild with `docker compose up -d --build api frontend`, then at `http://localh
 3. Go back to the intro URL. It redirects to the same attempt.
 4. Finish. The result is shown; reload and the same result is shown.
 5. Open the attempt URL as a different account. It is a 404.
+
+---
+
+### Task 4: Backend — the final's intro serves the count, not the paper
+
+**Why:** `GET /api/sessions/{id}/assessment` returns every question of every section of a final to the intro, before any clock runs. The answer key is not included, but a learner can still read all three sections ahead of the sitting, which defeats per-section timing (GR-12). The intro uses only `questionCount`. Questions reach the sitting section by section through `/api/attempts/{id}/state`.
+
+**Files:**
+- Modify: `backend/src/Infrastructure/Assessments/AssessmentService.cs` (`BuildStudentViewAsync`)
+- Test: `backend/tests/Integration.Tests/FinalAssessmentTests.cs`
+
+**Interfaces:**
+- Consumes: none.
+- Produces: for a `Final`, `StudentAssessmentDto.Questions` is always empty, and `QuestionCount` is still the real count. Gating tests are unchanged.
+
+- [ ] **Step 1: Write the failing test**
+
+Add it next to `The_final_assessment_is_served_without_the_answer_key`:
+
+```csharp
+    [Fact]
+    public async Task The_final_intro_gives_the_question_count_but_none_of_the_questions()
+    {
+        var c = await SetUp();
+
+        var intro = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.SessionId}/assessment", c.Token);
+
+        Assert.Empty(intro.Questions);                                   // nothing to read before the clock runs
+        Assert.Equal(c.Key.Values.Sum(k => k.Count), intro.QuestionCount);
+    }
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Run: `dotnet test backend/tests/Integration.Tests --filter "FullyQualifiedName~The_final_intro_gives"`
+Expected: FAIL, because `Questions` is not empty.
+
+- [ ] **Step 3: Implement**
+
+In `BuildStudentViewAsync`, replace the `questions` query with:
+
+```csharp
+        // A final's questions are served section by section once its clock runs (GR-12); its intro
+        // gets the count, never the paper. A gating test is untimed and shows its questions up front.
+        var isFinal = assessment.Kind == AssessmentKind.Final;
+        // NOTE: `Correct` is deliberately absent from this projection — the answer key must not
+        // leave the server (GR-11). StudentQuestionDto has no field for it either.
+        List<StudentQuestionDto> questions = isFinal ? [] : await db.AssessmentQuestions
+            .Where(q => q.AssessmentId == assessmentId)
+            .OrderBy(q => q.OrderIndex)
+            .Select(q => new StudentQuestionDto(
+                q.QuestionId,
+                q.Question.Section.ToString(),
+                q.Question.Prompt,
+                ParseChoices(q.Question.Choices),
+                q.Question.PassageRef,
+                q.Question.AudioRef != null))
+            .ToListAsync(ct);
+        var questionCount = isFinal
+            ? await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct)
+            : questions.Count;
+```
+
+In the `new StudentAssessmentDto(...)` call, replace both uses of `questions.Count` with `questionCount`. Those are `QuestionCount` and the `PassThreshold` fallback. `questions` stays as the `Questions` argument.
+
+Keep the projection exactly as it is today; only the `isFinal ? [] :` guard is new.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `dotnet test backend/tests/Integration.Tests --filter "FullyQualifiedName~FinalAssessmentTests|FullyQualifiedName~SessionGatingTests|FullyQualifiedName~TestAudioTests|FullyQualifiedName~SessionPartLearnerTests"`
+Expected: PASS. The final tests pass, and the gating-test suites still see their questions.
+
+Then run the full suite: `dotnet test backend/Academy.slnx`. Expected: green, with 0 warnings.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/src/Infrastructure/Assessments/AssessmentService.cs backend/tests/Integration.Tests/FinalAssessmentTests.cs
+git commit -m "fix: the final's intro no longer serves its questions before the clock runs
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+No client regeneration is needed, because the DTO shape is unchanged.

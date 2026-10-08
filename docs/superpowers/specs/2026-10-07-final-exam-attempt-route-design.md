@@ -62,6 +62,11 @@ All changes are additive, and the endpoints use TypedResults.
 - **Rate limit:** none. It is a cheap read, like `state`.
 - **Answer key:** none (GR-11). `AttemptResultDto` carries no answers.
 
+### 3.4 The final's intro serves the count, not the paper (added 2026-10-08)
+- **Today.** `GET /api/sessions/{id}/assessment` returns every question of a final, without the key, before any clock runs, so a learner can read all three sections in advance.
+- **Change.** For `AssessmentKind.Final`, `Questions` is empty and `QuestionCount` stays the real count.
+- **Unchanged.** Gating tests keep their questions.
+
 ## 4. Frontend
 
 **Split the 482-line page:**
@@ -85,6 +90,7 @@ All changes are additive, and the endpoints use TypedResults.
 - `final-result` on an attempt past its deadline → 200 and `AutoSubmitted` (deadline enforced on read).
 - `OpenAttemptId` → set while an attempt is open, null after it is submitted.
 - `state` → carries `SessionId`; a submitted attempt's `state` has no questions.
+- the final's intro → `Questions` empty, `QuestionCount` equal to the real count.
 
 **Frontend:**
 - lint + build (`/app/exam/[attemptId]` builds).
