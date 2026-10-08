@@ -26,20 +26,29 @@ public class FinalAssessmentService(
 
     public async Task<AttemptStateDto> GetStateAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
-        return await BuildStateAsync(attempt, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
     }
 
     public async Task<AttemptStateDto> SaveAnswersAsync(
         Guid userId, Guid attemptId, IReadOnlyDictionary<string, int> answers, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
 
         if (attempt.SubmittedAt is not null)
             throw new AssessmentException("Tes ini sudah selesai.", 409);
 
+        await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
+    }
+
+    /// <summary>Merges answers into the ACTIVE section only; the caller has already loaded the
+    /// attempt and enforced its deadlines.</summary>
+    private async Task SaveCurrentSectionAnswersAsync(
+        Attempt attempt, IReadOnlyDictionary<string, int> answers, CancellationToken ct)
+    {
         var state = AttemptState.Parse(attempt.State);
         var current = state.Current
             ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
@@ -52,38 +61,64 @@ public class FinalAssessmentService(
 
         attempt.Answers = JsonSerializer.Serialize(merged);
         await db.SaveChangesAsync(ct);
-        return await BuildStateAsync(attempt, ct);
     }
 
     public async Task<AttemptStateDto> AdvanceSectionAsync(
-        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default)
+        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, int? expectedSectionIndex,
+        CancellationToken ct = default)
     {
-        if (answers is { Count: > 0 }) await SaveAnswersAsync(userId, attemptId, answers, ct);
-
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
-        if (attempt.SubmittedAt is not null) return await BuildStateAsync(attempt, ct);
+        if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
+            return await BuildStateAsync(attempt, sessionId, ct);
 
-        var state = AttemptState.Parse(attempt.State);
-        await CloseCurrentAndAdvanceAsync(attempt, state, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
-        return await BuildStateAsync(attempt, ct);
+        // Already loaded, enforced and stale-checked above: save on this attempt directly, so an
+        // expiry enforced here returns the state rather than the public save's 409.
+        if (answers is { Count: > 0 })
+            await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
+
+        await CloseCurrentAndAdvanceAsync(attempt, AttemptState.Parse(attempt.State), DateTimeOffset.UtcNow,
+            autoSubmitted: false, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
     }
+
+    /// <summary>The client asked to close a section the server has already closed. Closing "the
+    /// current" one now would close a section the learner has never seen; its answers arrived after
+    /// their section ended, so they are not saved either (GR-12).</summary>
+    private static bool IsStale(Attempt attempt, int? expectedSectionIndex)
+        => expectedSectionIndex is int expected && expected != AttemptState.Parse(attempt.State).CurrentIndex;
 
     public async Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+        var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
         await EnforceDeadlinesAsync(attempt, ct);
 
         if (attempt.SubmittedAt is null)
             await FinalizeAsync(attempt, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
+        else if (wasSubmitted)
+            await HealIfUncertifiedAsync(attempt, ct);
 
-        return await BuildResultAsync(attempt, ct);
+        return await BuildResultAsync(attempt, sessionId, ct);
+    }
+
+    public async Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
+    {
+        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+        var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
+        await EnforceDeadlinesAsync(attempt, ct);
+
+        if (attempt.SubmittedAt is null)
+            throw new AssessmentException("Tes ini belum selesai.", 409);
+
+        if (wasSubmitted) await HealIfUncertifiedAsync(attempt, ct);
+        return await BuildResultAsync(attempt, sessionId, ct);
     }
 
     public async Task<string> GetAudioUrlAsync(
         Guid userId, Guid attemptId, Guid questionId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
         if (attempt.SubmittedAt is not null)
             throw new AssessmentException("Tes ini sudah selesai.", 409);
@@ -147,7 +182,7 @@ public class FinalAssessmentService(
     public async Task<SectionAudioDto> StartSectionAudioAsync(
         Guid userId, Guid attemptId, CancellationToken ct = default)
     {
-        var attempt = await LoadOwnedAsync(userId, attemptId, ct);
+        var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
         if (attempt.SubmittedAt is not null)
             throw new AssessmentException("Tes ini sudah selesai.", 409);
@@ -226,16 +261,52 @@ public class FinalAssessmentService(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Scores server-side, stamps submission, completes the session, and issues the certificate.</summary>
+    /// <summary>
+    /// Scores server-side and stamps submission in ONE conditional write, so of two requests
+    /// finalising the same expired attempt exactly one stamps it. Every caller then reloads the row
+    /// and runs the idempotent completion and certificate steps (GR-6, GR-12).
+    /// </summary>
     private async Task FinalizeAsync(Attempt attempt, DateTimeOffset at, bool autoSubmitted, CancellationToken ct)
     {
         if (attempt.SubmittedAt is not null) return;
 
-        await ScoreAsync(attempt, ct);
-        attempt.SubmittedAt = at;
-        attempt.AutoSubmitted |= autoSubmitted;
-        await db.SaveChangesAsync(ct);
+        await ScoreAsync(attempt, ct);                    // in memory only; written below
+        var auto = attempt.AutoSubmitted || autoSubmitted;
 
+        await db.Attempts
+            .Where(a => a.Id == attempt.Id && a.SubmittedAt == null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.SubmittedAt, at)
+                .SetProperty(a => a.AutoSubmitted, auto)
+                .SetProperty(a => a.State, attempt.State)
+                .SetProperty(a => a.TotalScore, attempt.TotalScore)
+                .SetProperty(a => a.MaxScore, attempt.MaxScore)
+                .SetProperty(a => a.SectionScores, attempt.SectionScores)
+                .SetProperty(a => a.Passed, attempt.Passed), ct);
+
+        // ExecuteUpdate bypasses the change tracker: reload so the tracked row is the database's
+        // either way, and no later SaveChanges re-writes stale in-memory values.
+        await db.Entry(attempt).ReloadAsync(ct);
+        // No early return for a "loser": a lost-ack retry looks like one, and both calls below are
+        // idempotent; it also closes the window where a losing reader saw no scaled score yet.
+        // The submission is committed: finishing its side effects must not depend on the caller
+        // staying connected, so the request's token is not passed on.
+        await CompleteAndCertifyAsync(attempt, CancellationToken.None);
+    }
+
+    /// <summary>A submitted attempt with no certificate was stranded — finalised while the score
+    /// map was incomplete, or cut off after the submit committed. Finish it now; both steps are
+    /// idempotent.</summary>
+    private async Task HealIfUncertifiedAsync(Attempt attempt, CancellationToken ct)
+    {
+        // ponytail: with an incomplete score map this re-attempts conversion (and logs its error)
+        // on every result read; move it to a background re-issue job if that gets noisy.
+        if (!await db.Certificates.AnyAsync(c => c.AttemptId == attempt.Id, ct))
+            await CompleteAndCertifyAsync(attempt, ct);
+    }
+
+    private async Task CompleteAndCertifyAsync(Attempt attempt, CancellationToken ct)
+    {
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == attempt.AssessmentId)
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
@@ -282,7 +353,7 @@ public class FinalAssessmentService(
         attempt.Passed = config.PassThreshold is int mark && score >= mark;
     }
 
-    private async Task<AttemptStateDto> BuildStateAsync(Attempt attempt, CancellationToken ct)
+    private async Task<AttemptStateDto> BuildStateAsync(Attempt attempt, Guid? sessionId, CancellationToken ct)
     {
         var config = AssessmentService.ParseConfig(
             await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
@@ -354,15 +425,12 @@ public class FinalAssessmentService(
             SectionHasAudio: attempt.SubmittedAt is null && current is not null
                              && AudioResolution.StorageKey(null, ParseSection(current.Section), config) is not null,
             SectionAudioStartedAt: current?.AudioStartedAt,
-            ServerNow: DateTimeOffset.UtcNow);
+            ServerNow: DateTimeOffset.UtcNow,
+            SessionId: sessionId);
     }
 
-    private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)
+    private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, Guid? sessionId, CancellationToken ct)
     {
-        var sessionId = await db.ProgramSessions
-            .Where(s => s.AssessmentId == attempt.AssessmentId)
-            .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
-
         var sessionCompleted = sessionId is Guid sid
             && await completion.IsCompleteAsync(attempt.UserId, sid, ct);
 
@@ -385,17 +453,21 @@ public class FinalAssessmentService(
     /// Loads the caller's own attempt AND re-checks the session gate (GR-1) — a revoked enrollment
     /// must close an in-progress sitting, not just future ones.
     /// </summary>
-    private async Task<Attempt> LoadOwnedAsync(Guid userId, Guid attemptId, CancellationToken ct)
+    private async Task<(Attempt Attempt, Guid? SessionId)> LoadOwnedAsync(Guid userId, Guid attemptId, CancellationToken ct)
     {
         var attempt = await db.Attempts.FirstOrDefaultAsync(a => a.Id == attemptId && a.UserId == userId, ct)
             ?? throw new AssessmentException("Percobaan tidak ditemukan.", 404);
+
+        // These routes serve the final exam only; a gating attempt has its own endpoints.
+        if (!await db.Assessments.AnyAsync(a => a.Id == attempt.AssessmentId && a.Kind == AssessmentKind.Final, ct))
+            throw new AssessmentException("Percobaan tidak ditemukan.", 404);
 
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == attempt.AssessmentId)
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
         if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
 
-        return attempt;
+        return (attempt, sessionId);
     }
 
     private async Task<HashSet<string>> SectionQuestionIdsAsync(Guid assessmentId, string section, CancellationToken ct)

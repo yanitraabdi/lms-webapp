@@ -13,4 +13,7 @@ public static class DbErrors
     /// <summary>The filtered unique index on session_parts.assessment_id. Verify against the
     /// generated migration's index name (EFCore.NamingConventions) and keep in sync.</summary>
     public const string SessionPartAssessmentIndex = "ix_session_parts_assessment_id";
+
+    /// <summary>The unique index on certificates.attempt_id. Keep in sync with the migration.</summary>
+    public const string CertificateAttemptIndex = "ix_certificates_attempt_id";
 }

@@ -22,12 +22,19 @@ public static class FinalAssessmentEndpoints
 
         g.MapPost("/{id:guid}/advance", async Task<Ok<AttemptStateDto>> (
                 Guid id, AdvanceSectionRequest? r, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
-            TypedResults.Ok(await s.AdvanceSectionAsync(u.UserId(), id, r?.Answers, ct)));
+            TypedResults.Ok(await s.AdvanceSectionAsync(u.UserId(), id, r?.Answers, r?.ExpectedSectionIndex, ct)));
 
         g.MapPost("/{id:guid}/finish", async Task<Ok<AttemptResultDto>> (
                 Guid id, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
             TypedResults.Ok(await s.SubmitAsync(u.UserId(), id, ct)))
             .RequireRateLimiting("playback");
+
+        // The result of a FINISHED sitting, read-only — what /app/exam/{id} shows after a reload.
+        // An attempt still in progress is a 409; only /finish ends a sitting early. The gating
+        // /attempts/{id}/result route does not enforce deadlines or carry the band — finals use this.
+        g.MapGet("/{id:guid}/final-result", async Task<Ok<AttemptResultDto>> (
+                Guid id, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
+            TypedResults.Ok(await s.GetResultAsync(u.UserId(), id, ct)));
 
         // The client REPORTS; the server decides warn / auto-submit (GR-13).
         g.MapPost("/{id:guid}/proctor-events", async Task<Ok<ProctorStateDto>> (

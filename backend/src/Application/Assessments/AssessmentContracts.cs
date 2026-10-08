@@ -66,7 +66,8 @@ public record StudentAssessmentDto(
     bool Passed, int? BestScore,
     bool ProctoringEnabled, int? TimeLimitMinutes,
     IReadOnlyList<StudentQuestionDto> Questions,
-    bool HasTestAudio, int? TestAudioPlayLimit);
+    bool HasTestAudio, int? TestAudioPlayLimit,
+    Guid? OpenAttemptId);   // the caller's unsubmitted attempt, so a sitting is resumed, not restarted
 
 public record TestAudioDto(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow, int PlaysUsed, int PlayLimit);
 

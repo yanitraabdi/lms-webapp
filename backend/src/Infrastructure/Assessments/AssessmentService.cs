@@ -236,9 +236,12 @@ public class AssessmentService(
     {
         var (assessment, config, _, _) = await LoadAsync(assessmentId, ct);
 
+        // A final's questions are served section by section once its clock runs (GR-12); its intro
+        // gets the count, never the paper. A gating test is untimed and shows its questions up front.
+        var isFinal = assessment.Kind == AssessmentKind.Final;
         // NOTE: `Correct` is deliberately absent from this projection — the answer key must not
         // leave the server (GR-11). StudentQuestionDto has no field for it either.
-        var questions = await db.AssessmentQuestions
+        List<StudentQuestionDto> questions = isFinal ? [] : await db.AssessmentQuestions
             .Where(q => q.AssessmentId == assessmentId)
             .OrderBy(q => q.OrderIndex)
             .Select(q => new StudentQuestionDto(
@@ -249,11 +252,23 @@ public class AssessmentService(
                 q.Question.PassageRef,
                 q.Question.AudioRef != null))
             .ToListAsync(ct);
+        var questionCount = isFinal
+            ? await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct)
+            : questions.Count;
 
         var attempts = await db.Attempts
             .Where(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt != null)
             .Select(a => new { a.TotalScore, a.Passed })
             .ToListAsync(ct);
+
+        // Normally at most one (StartAttempt reuses it); two racing starts could make two, so pick
+        // the newest deterministically. Deadlines are not enforced here: an expired one is finalised
+        // by the exam page's own /state read, which then shows its result.
+        var openAttemptId = await db.Attempts
+            .Where(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null)
+            .OrderByDescending(a => a.StartedAt)
+            .Select(a => (Guid?)a.Id)
+            .FirstOrDefaultAsync(ct);
 
         var used = attempts.Count;
         var passed = attempts.Any(a => a.Passed);
@@ -261,13 +276,14 @@ public class AssessmentService(
 
         return new StudentAssessmentDto(
             assessmentId, sessionId, assessment.Kind.ToString(), assessment.Title,
-            questions.Count, config.PassThreshold ?? questions.Count,
+            questionCount, config.PassThreshold ?? questionCount,
             config.RetakeCap, used, canAttempt,
             passed, attempts.Count > 0 ? attempts.Max(a => a.TotalScore) : null,
             config.ProctoringEnabled, config.TimeLimitMinutes,
             questions,
             !string.IsNullOrWhiteSpace(config.AudioRef),
-            string.IsNullOrWhiteSpace(config.AudioRef) ? null : config.AudioPlayLimit ?? 1);
+            string.IsNullOrWhiteSpace(config.AudioRef) ? null : config.AudioPlayLimit ?? 1,
+            openAttemptId);
     }
 
     private async Task<AttemptResultDto> BuildResultAsync(Attempt attempt, CancellationToken ct)

@@ -26,7 +26,8 @@ public record AttemptStateDto(
     IReadOnlyDictionary<string, int> AudioPlaysLeft,  // per-question clips ONLY
     bool SectionHasAudio,                            // one recording for the whole active section
     DateTimeOffset? SectionAudioStartedAt,           // null until the learner starts it
-    DateTimeOffset ServerNow);                       // so the client never positions audio by its own clock
+    DateTimeOffset ServerNow,                        // so the client never positions audio by its own clock
+    Guid? SessionId);                                // the owning session, for the result's way back
 
 /// <summary>
 /// The section recording: a signed URL plus the server's facts about where playback must be. The
@@ -35,7 +36,9 @@ public record AttemptStateDto(
 /// </summary>
 public record SectionAudioDto(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow);
 
-public record AdvanceSectionRequest(IReadOnlyDictionary<string, int>? Answers);
+/// <summary>`ExpectedSectionIndex` is the section the client means to close. When the server has
+/// already moved past it (its deadline, or another request), the advance is a no-op.</summary>
+public record AdvanceSectionRequest(IReadOnlyDictionary<string, int>? Answers, int? ExpectedSectionIndex);
 
 /// <summary>
 /// The multi-section timed sitting. Separate from <see cref="IAssessmentService"/> (which owns the
@@ -52,9 +55,14 @@ public interface IFinalAssessmentService
 
     /// <summary>Closes the active section and opens the next — or finalizes if it was the last.</summary>
     Task<AttemptStateDto> AdvanceSectionAsync(
-        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default);
+        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, int? expectedSectionIndex,
+        CancellationToken ct = default);
 
     Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default);
+
+    /// <summary>The result of a FINISHED sitting, read-only. Enforces elapsed deadlines like every
+    /// other read; an attempt still in progress is a 409, never finalised here.</summary>
+    Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default);
 
     /// <summary>Signed audio URL for a question with its OWN clip; the play limit is counted
     /// server-side. A question covered by the section recording has no per-question audio.</summary>

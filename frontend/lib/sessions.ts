@@ -210,11 +210,29 @@ export const getAttemptState = (t: string, attemptId: string) =>
 export const saveSectionAnswers = (t: string, attemptId: string, answers: Record<string, number>) =>
   api<AttemptState>("POST", `/api/attempts/${attemptId}/section-answers`, t, { answers });
 
-export const advanceSection = (t: string, attemptId: string, answers?: Record<string, number>) =>
-  api<AttemptState>("POST", `/api/attempts/${attemptId}/advance`, t, { answers: answers ?? null });
+/** Closes the section the client names. If the server has already moved past it (its deadline, or
+ *  a duplicate request), nothing is closed and the current state comes back. */
+export const advanceSection = (t: string, attemptId: string, answers?: Record<string, number>, expectedSectionIndex?: number) =>
+  api<AttemptState>("POST", `/api/attempts/${attemptId}/advance`, t, {
+    answers: answers ?? null,
+    expectedSectionIndex: expectedSectionIndex ?? null,
+  });
 
 export const finishAttempt = (t: string, attemptId: string) =>
   api<AttemptResult>("POST", `/api/attempts/${attemptId}/finish`, t);
+
+/** A sitting's state, or null when it is not the caller's or does not exist — the server answers
+ *  both with 404, so the page cannot tell them apart either. */
+export async function getAttemptStateOrNull(t: string, attemptId: string): Promise<AttemptState | null> {
+  const res = await apiFetch(`${API}/api/attempts/${attemptId}/state`, { cache: "no-store" }, t);
+  if (res.status === 404) return null;
+  if (!res.ok) throw await problem(res, "Gagal memuat tes.");
+  return res.json();
+}
+
+/** The result of a FINISHED sitting, read-only (409 while it is still running). */
+export const getFinalResult = (t: string, attemptId: string) =>
+  api<AttemptResult>("GET", `/api/attempts/${attemptId}/final-result`, t);
 
 /** Report a focus-loss event. The SERVER decides warn vs auto-submit (GR-13). */
 export const reportProctorEvent = (t: string, attemptId: string, kind: string, durationMs?: number) =>

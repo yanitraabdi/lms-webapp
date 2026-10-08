@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Academy.Api.Endpoints;
 using Academy.Application.Abstractions;
@@ -240,6 +241,25 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.Null(result.TotalScaledScore);
         Assert.Null(result.PredictedBand);
         Assert.Empty(await AuthedGet<List<ProgramCertificateDto>>("/api/me/program-certificates", c.Token));
+    }
+
+    [Fact]
+    public async Task A_submitted_sitting_left_without_a_certificate_is_certified_on_the_next_result_read()
+    {
+        // Finalised while the map was incomplete: the attempt is saved, the certificate is not —
+        // the same stranded state an aborted request or crash after the submit commit leaves.
+        var c = await SetUp(bandsCoverOnlyZero: true);
+        var state = await Start(c);
+        var first = await AnswerEverythingCorrectly(c, state.AttemptId);
+        Assert.Null(first.TotalScaledScore);
+        Assert.False(await WithDbResult(db => db.Certificates.AnyAsync(x => x.AttemptId == state.AttemptId)));
+
+        await PutBands(c.Admin, c.ProgramId);        // the admin completes the table
+
+        var healed = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+        Assert.NotNull(healed.TotalScaledScore);
+        Assert.True(healed.SessionCompleted);
+        Assert.Equal(1, await WithDbResult(db => db.Certificates.CountAsync(x => x.AttemptId == state.AttemptId)));
     }
 
     [Fact]
@@ -523,6 +543,98 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.False(perfect.Passed);                       // … is still not a "pass"
     }
 
+    // ---- the per-attempt route (sub-project 5) ----
+
+    [Fact]
+    public async Task The_intro_names_the_open_attempt_until_it_is_submitted()
+    {
+        var c = await SetUp();
+        var url = $"/api/sessions/{c.SessionId}/assessment";
+        Assert.Null((await AuthedGet<StudentAssessmentDto>(url, c.Token)).OpenAttemptId);
+
+        var state = await Start(c);
+        Assert.Equal(state.AttemptId, (await AuthedGet<StudentAssessmentDto>(url, c.Token)).OpenAttemptId);
+
+        await FinishAllSections(c, state.AttemptId);
+        Assert.Null((await AuthedGet<StudentAssessmentDto>(url, c.Token)).OpenAttemptId);
+    }
+
+    [Fact]
+    public async Task State_names_its_session_and_serves_no_questions_once_submitted()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        Assert.Equal(c.SessionId, state.SessionId);
+
+        await FinishAllSections(c, state.AttemptId);
+        var after = await GetState(c, state.AttemptId);
+
+        Assert.Equal("Submitted", after.Status);
+        Assert.Equal(c.SessionId, after.SessionId);
+        Assert.Empty(after.Questions);                     // GR-11 regression guard: nothing to re-read once it is over
+    }
+
+    [Fact]
+    public async Task Final_result_is_404_for_another_learners_attempt()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await FinishAllSections(c, state.AttemptId);
+        var (otherToken, _) = await VerifiedUser();
+
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/final-result", otherToken)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Final_result_is_409_while_the_sitting_is_in_progress_and_does_not_end_it()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{state.AttemptId}/final-result", c.Token);
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Equal("InProgress", (await GetState(c, state.AttemptId)).Status);   // reading never finalises
+    }
+
+    [Fact]
+    public async Task Final_result_rereads_a_finished_sitting_without_the_answer_key()
+    {
+        var c = await SetUp();
+        var finished = await AnswerEverythingCorrectly(c, (await Start(c)).AttemptId);
+
+        var res = await Authed(HttpMethod.Get, $"/api/attempts/{finished.AttemptId}/final-result", c.Token);
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var raw = await res.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("correct", raw, StringComparison.OrdinalIgnoreCase);    // GR-11 (covers isCorrect)
+        Assert.DoesNotContain("answerKey", raw, StringComparison.OrdinalIgnoreCase);
+        var result = JsonSerializer.Deserialize<AttemptResultDto>(raw, Json)!;
+        Assert.NotNull(result.TotalScaledScore);
+        Assert.Equal(finished.TotalScaledScore, result.TotalScaledScore);
+        Assert.Equal(finished.PredictedBand, result.PredictedBand);
+        Assert.Equal(finished.Score, result.Score);
+        Assert.True(result.SessionCompleted);
+    }
+
+    [Fact]
+    public async Task Final_result_finalises_an_expired_sitting_on_read()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await ExpireAllSectionsAsync(state.AttemptId);
+
+        var result = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+
+        Assert.True(result.AutoSubmitted);                // the deadline is enforced on this read too (GR-12)
+        Assert.True(result.SessionCompleted);             // … and the sitting is really over
+        Assert.NotNull(result.TotalScaledScore);          // certificate issued (SetUp maps raw 0)
+
+        var again = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+        Assert.Equal(result.TotalScaledScore, again.TotalScaledScore);   // re-reading is idempotent
+    }
+
     // ---- the final's student route (FINAL sessions only) ----
 
     [Fact]
@@ -536,6 +648,17 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         var raw = await res.Content.ReadAsStringAsync();
         Assert.DoesNotContain("correct", raw, StringComparison.OrdinalIgnoreCase);     // GR-11
         Assert.Equal(c.AssessmentId, JsonSerializer.Deserialize<StudentAssessmentDto>(raw, Json)!.Id);
+    }
+
+    [Fact]
+    public async Task The_final_intro_gives_the_question_count_but_none_of_the_questions()
+    {
+        var c = await SetUp();
+
+        var intro = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.SessionId}/assessment", c.Token);
+
+        Assert.Empty(intro.Questions);                                   // nothing to read before the clock runs
+        Assert.Equal(c.Key.Values.Sum(k => k.Count), intro.QuestionCount);
     }
 
     [Fact]
@@ -562,6 +685,43 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
             (await Authed(HttpMethod.Get, $"/api/sessions/{video.Id}/assessment", c.Token)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden,
             (await Authed(HttpMethod.Get, $"/api/sessions/{c.SessionId}/assessment", c.Token)).StatusCode);
+    }
+
+    // ---- finalisation happens once (GR-6) ----
+
+    [Fact]
+    public async Task The_database_refuses_a_second_certificate_for_one_attempt()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await ExpireAllSectionsAsync(state.AttemptId);
+        await GetState(c, state.AttemptId);                       // finalises + issues the certificate
+
+        var copy = await WithDbResult(db => db.Certificates.AsNoTracking().FirstAsync(x => x.AttemptId == state.AttemptId));
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => WithDb(async db =>
+        {
+            copy.Id = Guid.CreateVersion7();
+            copy.VerificationCode = copy.VerificationCode + "X";
+            db.Certificates.Add(copy);
+            await db.SaveChangesAsync();
+        }));
+        Assert.True(DbErrors.IsUniqueViolation(ex, DbErrors.CertificateAttemptIndex));
+    }
+
+    [Fact]
+    public async Task Concurrent_reads_of_an_expired_sitting_finalise_it_once()
+    {
+        var c = await SetUp(retakeCap: null);                     // unlimited: one attempt per round
+        for (var round = 0; round < 5; round++)
+        {
+            var state = await Start(c);
+            await ExpireAllSectionsAsync(state.AttemptId);
+
+            var reads = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => GetState(c, state.AttemptId)));
+
+            Assert.All(reads, r => Assert.Equal("Submitted", r.Status));
+            Assert.Equal(1, await WithDbResult(db => db.Certificates.CountAsync(x => x.AttemptId == state.AttemptId)));
+        }
     }
 
     // ================================================================ helpers
@@ -602,25 +762,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         // Score bands must cover the FULL ITP raw-score range per section — full coverage so
         // the program is publishable...
-        var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
-        {
-            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
-            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
-            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
-        };
-        var rows = new List<(string Section, int Raw, int MaxRaw, int ScaledMax)>();
-        foreach (var (section, maxRaw, scaledMax) in sectionSizes)
-            for (var raw = 0; raw <= maxRaw; raw++)
-                rows.Add((section, raw, maxRaw, scaledMax));
-        object BandRow((string Section, int Raw, int MaxRaw, int ScaledMax) r) => new
-        {
-            id = Guid.Empty, section = r.Section, minRaw = r.Raw, maxRaw = r.Raw,
-            scaledScore = ToeflScoring.ScaledMin
-                + (int)Math.Round((double)r.Raw / r.MaxRaw * (r.ScaledMax - ToeflScoring.ScaledMin)),
-            predictedBand = (string?)null,
-        };
-        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
-            new { bands = rows.Select(BandRow) })).EnsureSuccessStatusCode();
+        await PutBands(admin, program.Id);
 
         (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
         {
@@ -630,9 +772,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         // ...then, for the fail-loudly test, drift the table down to only raw 0 post-publish.
         // Publish gates on readiness; it never re-checks bands an admin edits afterwards.
-        if (bandsCoverOnlyZero)
-            (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
-                new { bands = rows.Where(r => r.Raw == 0).Select(BandRow) })).EnsureSuccessStatusCode();
+        if (bandsCoverOnlyZero) await PutBands(admin, program.Id, onlyRawZero: true);
 
         var (token, userId) = await VerifiedUser();
         var checkout = await Authed(HttpMethod.Post, $"/api/programs/{program.Id}/enroll", token, new { });
@@ -644,12 +784,82 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         return new Ctx(token, userId, admin, program.Id, session.Id, assessment.AssessmentId, key);
     }
 
+    /// <summary>Replaces the program's score-band table: one band per raw score per section, or
+    /// (onlyRawZero) just raw 0, which leaves every higher score unmapped.</summary>
+    private async Task PutBands(string admin, Guid programId, bool onlyRawZero = false)
+    {
+        var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        };
+        var rows = new List<(string Section, int Raw, int MaxRaw, int ScaledMax)>();
+        foreach (var (section, maxRaw, scaledMax) in sectionSizes)
+            for (var raw = 0; raw <= (onlyRawZero ? 0 : maxRaw); raw++)
+                rows.Add((section, raw, maxRaw, scaledMax));
+        var bands = rows.Select(r => new
+        {
+            id = Guid.Empty, section = r.Section, minRaw = r.Raw, maxRaw = r.Raw,
+            scaledScore = ToeflScoring.ScaledMin
+                + (int)Math.Round((double)r.Raw / r.MaxRaw * (r.ScaledMax - ToeflScoring.ScaledMin)),
+            predictedBand = (string?)null,
+        });
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{programId}/score-bands", admin, new { bands }))
+            .EnsureSuccessStatusCode();
+    }
+
     private async Task<AttemptStateDto> Start(Ctx c)
     {
         var res = await Authed(HttpMethod.Post, $"/api/assessments/{c.AssessmentId}/attempts", c.Token);
         res.EnsureSuccessStatusCode();
         var attempt = (await res.Content.ReadFromJsonAsync<AttemptDto>(Json))!;
         return await GetState(c, attempt.Id);
+    }
+
+    // ---- an advance never closes an unseen section ----
+
+    [Fact]
+    public async Task A_repeated_advance_for_the_same_section_closes_only_that_section()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+
+        var first = await Advance(c, state.AttemptId, null, expectedSectionIndex: 0);
+        var again = await Advance(c, state.AttemptId, null, expectedSectionIndex: 0);
+
+        Assert.Equal(1, first.SectionIndex);
+        Assert.Equal(1, again.SectionIndex);                         // not 2: Structure was never seen
+        Assert.Equal(nameof(QuestionSection.Structure), again.CurrentSection);
+        Assert.Equal("InProgress", again.Status);
+    }
+
+    [Fact]
+    public async Task An_advance_arriving_after_its_sections_deadline_does_not_close_the_next_one()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await ExpireCurrentSectionAsync(state.AttemptId, TimeSpan.FromSeconds(5));
+
+        // The client's countdown hit zero a moment after the server's: it still asks to close Listening.
+        var after = await Advance(c, state.AttemptId, CorrectFor(c, QuestionSection.Listening), expectedSectionIndex: 0);
+
+        Assert.Equal(1, after.SectionIndex);                         // Listening closed by its deadline ...
+        Assert.Equal(nameof(QuestionSection.Structure), after.CurrentSection);
+        Assert.True(after.SecondsRemaining > 0);                     // ... and Structure is open, with time left
+
+        await Advance(c, state.AttemptId, null, 1);
+        await Advance(c, state.AttemptId, null, 2);
+        var result = await Finish(c, state.AttemptId);
+        Assert.Equal(0, result.SectionScores[nameof(QuestionSection.Listening)]);   // late answers not saved (GR-12)
+    }
+
+    [Fact]
+    public async Task An_advance_without_an_expected_index_still_works()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        Assert.Equal(1, (await Advance(c, state.AttemptId, null)).SectionIndex);   // older clients unchanged
     }
 
     private Task<AttemptStateDto> GetState(Ctx c, Guid attemptId)
@@ -663,9 +873,11 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         return (await res.Content.ReadFromJsonAsync<AttemptStateDto>(Json))!;
     }
 
-    private async Task<AttemptStateDto> Advance(Ctx c, Guid attemptId, Dictionary<string, int>? answers)
+    private async Task<AttemptStateDto> Advance(
+        Ctx c, Guid attemptId, Dictionary<string, int>? answers, int? expectedSectionIndex = null)
     {
-        var res = await Authed(HttpMethod.Post, $"/api/attempts/{attemptId}/advance", c.Token, new { answers });
+        var res = await Authed(HttpMethod.Post, $"/api/attempts/{attemptId}/advance", c.Token,
+            new { answers, expectedSectionIndex });
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<AttemptStateDto>(Json))!;
     }
@@ -700,6 +912,21 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     private async Task FinishAllSections(Ctx c, Guid attemptId)
     {
         for (var i = 0; i < 3; i++) await Advance(c, attemptId, null);
+    }
+
+    /// <summary>Moves the CURRENT section's start back so its deadline passed `by` ago, leaving
+    /// later sections untouched — the next section then opens at that deadline with time left.</summary>
+    private async Task ExpireCurrentSectionAsync(Guid attemptId, TimeSpan by)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var attempt = await db.Attempts.FirstAsync(a => a.Id == attemptId);
+        var root = JsonNode.Parse(attempt.State)!;
+        var current = root["sections"]![root["currentIndex"]!.GetValue<int>()]!;
+        var minutes = current["minutes"]!.GetValue<int>();
+        current["startedAt"] = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(minutes) - by;
+        attempt.State = root.ToJsonString();
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Rewinds every section clock so all deadlines are in the past.</summary>
