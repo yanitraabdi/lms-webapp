@@ -392,3 +392,19 @@ git commit -m "fix: an exam advance names its section, so a late or duplicate on
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
+
+## Outcome and deferred minors (after final review)
+
+Fixed in the final wave (2dd129e):
+- post-commit completion and certificate run with `CancellationToken.None`, and a submitted-but-uncertified attempt is healed on the next `SubmitAsync` or `GetResultAsync`;
+- DEPLOY.md has the pre-flight duplicate check for migration `CertificateOnePerAttempt`;
+- an advance can no longer 409 because of its own expiry.
+
+**Deploy note:** before deploying, run the DEPLOY.md duplicate-certificate check. If it returns rows, stop: certificates are immutable (GR-6/7), so which duplicate stands is a business decision.
+
+Still open (non-blocking, follow-up):
+- **Concurrent saves on one attempt.** Last-writer-wins on `attempts.state` and `attempts.answers` between concurrent requests. It can lose a concurrent answer save, or leave the section timestamps inconsistent after a concurrent expiry. Scores, submission and the certificate are unaffected. Fix: an `xmin` concurrency token on `Attempt`.
+- **`SessionCompletionService`.** Its `catch (DbUpdateException)` is not narrowed to the `(user_id, session_id)` unique index.
+- **Incomplete score map.** While it stays incomplete, every result read retries conversion and logs an error (`ponytail:` comment). Upgrade path: a background re-issue job.
+- **UI:** `busy` is cleared by whichever overlapping advance finishes first (the server rejects duplicates); a failed expiry advance is not retried (the 15 s autosave resyncs).
+- **Tests:** there is no deterministic test of the certificate detach-and-requery catch, and none of the lost-ack path.
