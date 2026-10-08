@@ -889,3 +889,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 No client regeneration is needed, because the DTO shape is unchanged.
+
+## Deferred minors (after final review)
+
+Fixed in the final wave (e24a6a4): the result loads only from `/final-result` (no stranded sitting if `/finish` fails); final routes 404 for a gating attempt; dead "sedang diproses" branch removed.
+
+Tracked separately (pre-existing, before launch): a timer-expiry or double `/advance` can close the next section unseen; two concurrent reads of an expired attempt can finalise it twice and issue two certificates.
+
+Still open (non-blocking):
+- Tests: the other-learner 404 test alone is not red pre-change (paired with the owner-200 test); the "correct" substring key-leak check is brittle; no test for the two-open-attempts tiebreak; no assertion that a gating intro still returns its questions.
+- UI: "Coba lagi" not disabled while refetching; the load-failure title "Tes tidak tersedia" reads as permanent for a network blip; the autosave's `applyState` can revert a choice clicked during the save round trip (pre-existing).
+- `OpenAttemptId` is also filled for gating tests (harmless, unused).
