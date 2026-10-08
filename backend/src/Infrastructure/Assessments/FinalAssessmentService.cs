@@ -56,18 +56,32 @@ public class FinalAssessmentService(
     }
 
     public async Task<AttemptStateDto> AdvanceSectionAsync(
-        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default)
+        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, int? expectedSectionIndex,
+        CancellationToken ct = default)
     {
-        if (answers is { Count: > 0 }) await SaveAnswersAsync(userId, attemptId, answers, ct);
-
         var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
         await EnforceDeadlinesAsync(attempt, ct);
-        if (attempt.SubmittedAt is not null) return await BuildStateAsync(attempt, sessionId, ct);
+        if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
+            return await BuildStateAsync(attempt, sessionId, ct);
 
-        var state = AttemptState.Parse(attempt.State);
-        await CloseCurrentAndAdvanceAsync(attempt, state, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
+        if (answers is { Count: > 0 })
+        {
+            // Same tracked attempt (EF identity resolution); it re-enforces deadlines, so check again.
+            await SaveAnswersAsync(userId, attemptId, answers, ct);
+            if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
+                return await BuildStateAsync(attempt, sessionId, ct);
+        }
+
+        await CloseCurrentAndAdvanceAsync(attempt, AttemptState.Parse(attempt.State), DateTimeOffset.UtcNow,
+            autoSubmitted: false, ct);
         return await BuildStateAsync(attempt, sessionId, ct);
     }
+
+    /// <summary>The client asked to close a section the server has already closed. Closing "the
+    /// current" one now would close a section the learner has never seen; its answers arrived after
+    /// their section ended, so they are not saved either (GR-12).</summary>
+    private static bool IsStale(Attempt attempt, int? expectedSectionIndex)
+        => expectedSectionIndex is int expected && expected != AttemptState.Parse(attempt.State).CurrentIndex;
 
     public async Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {

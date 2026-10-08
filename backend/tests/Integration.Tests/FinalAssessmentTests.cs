@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Academy.Api.Endpoints;
 using Academy.Application.Abstractions;
@@ -792,6 +793,51 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         return await GetState(c, attempt.Id);
     }
 
+    // ---- an advance never closes an unseen section ----
+
+    [Fact]
+    public async Task A_repeated_advance_for_the_same_section_closes_only_that_section()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+
+        var first = await Advance(c, state.AttemptId, null, expectedSectionIndex: 0);
+        var again = await Advance(c, state.AttemptId, null, expectedSectionIndex: 0);
+
+        Assert.Equal(1, first.SectionIndex);
+        Assert.Equal(1, again.SectionIndex);                         // not 2: Structure was never seen
+        Assert.Equal(nameof(QuestionSection.Structure), again.CurrentSection);
+        Assert.Equal("InProgress", again.Status);
+    }
+
+    [Fact]
+    public async Task An_advance_arriving_after_its_sections_deadline_does_not_close_the_next_one()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await ExpireCurrentSectionAsync(state.AttemptId, TimeSpan.FromSeconds(5));
+
+        // The client's countdown hit zero a moment after the server's: it still asks to close Listening.
+        var after = await Advance(c, state.AttemptId, CorrectFor(c, QuestionSection.Listening), expectedSectionIndex: 0);
+
+        Assert.Equal(1, after.SectionIndex);                         // Listening closed by its deadline ...
+        Assert.Equal(nameof(QuestionSection.Structure), after.CurrentSection);
+        Assert.True(after.SecondsRemaining > 0);                     // ... and Structure is open, with time left
+
+        await Advance(c, state.AttemptId, null, 1);
+        await Advance(c, state.AttemptId, null, 2);
+        var result = await Finish(c, state.AttemptId);
+        Assert.Equal(0, result.SectionScores[nameof(QuestionSection.Listening)]);   // late answers not saved (GR-12)
+    }
+
+    [Fact]
+    public async Task An_advance_without_an_expected_index_still_works()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        Assert.Equal(1, (await Advance(c, state.AttemptId, null)).SectionIndex);   // older clients unchanged
+    }
+
     private Task<AttemptStateDto> GetState(Ctx c, Guid attemptId)
         => AuthedGet<AttemptStateDto>($"/api/attempts/{attemptId}/state", c.Token);
 
@@ -803,9 +849,11 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         return (await res.Content.ReadFromJsonAsync<AttemptStateDto>(Json))!;
     }
 
-    private async Task<AttemptStateDto> Advance(Ctx c, Guid attemptId, Dictionary<string, int>? answers)
+    private async Task<AttemptStateDto> Advance(
+        Ctx c, Guid attemptId, Dictionary<string, int>? answers, int? expectedSectionIndex = null)
     {
-        var res = await Authed(HttpMethod.Post, $"/api/attempts/{attemptId}/advance", c.Token, new { answers });
+        var res = await Authed(HttpMethod.Post, $"/api/attempts/{attemptId}/advance", c.Token,
+            new { answers, expectedSectionIndex });
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<AttemptStateDto>(Json))!;
     }
@@ -840,6 +888,21 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     private async Task FinishAllSections(Ctx c, Guid attemptId)
     {
         for (var i = 0; i < 3; i++) await Advance(c, attemptId, null);
+    }
+
+    /// <summary>Moves the CURRENT section's start back so its deadline passed `by` ago, leaving
+    /// later sections untouched — the next section then opens at that deadline with time left.</summary>
+    private async Task ExpireCurrentSectionAsync(Guid attemptId, TimeSpan by)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var attempt = await db.Attempts.FirstAsync(a => a.Id == attemptId);
+        var root = JsonNode.Parse(attempt.State)!;
+        var current = root["sections"]![root["currentIndex"]!.GetValue<int>()]!;
+        var minutes = current["minutes"]!.GetValue<int>();
+        current["startedAt"] = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(minutes) - by;
+        attempt.State = root.ToJsonString();
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Rewinds every section clock so all deadlines are in the past.</summary>

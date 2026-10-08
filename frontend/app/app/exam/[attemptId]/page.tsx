@@ -89,11 +89,12 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
 
   // When the local clock hits zero, ask the server what actually happened.
   useEffect(() => {
-    if (!running || remaining > 0) return;
+    if (!running || remaining > 0 || !state) return;
+    setBusy(true);
     void (async () => {
       try {
-        applyState(await advanceSection(token, attemptId, answers));
-      } catch { /* the next poll corrects it */ }
+        applyState(await advanceSection(token, attemptId, answers, num(state.sectionIndex)));
+      } catch { /* the next poll corrects it */ } finally { setBusy(false); }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, running, attemptId]);
@@ -113,7 +114,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
     if (!state) return;
     setBusy(true); setError(null);
     try {
-      applyState(await advanceSection(token, attemptId, answers));
+      applyState(await advanceSection(token, attemptId, answers, num(state.sectionIndex)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal melanjutkan.");
     } finally {

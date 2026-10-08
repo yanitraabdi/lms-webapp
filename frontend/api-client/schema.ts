@@ -6241,6 +6241,8 @@ export interface components {
             answers: null | {
                 [key: string]: number | string;
             };
+            /** Format: int32 */
+            expectedSectionIndex: null | number | string;
         };
         AssessmentConfig: {
             /** Format: int32 */

@@ -210,8 +210,13 @@ export const getAttemptState = (t: string, attemptId: string) =>
 export const saveSectionAnswers = (t: string, attemptId: string, answers: Record<string, number>) =>
   api<AttemptState>("POST", `/api/attempts/${attemptId}/section-answers`, t, { answers });
 
-export const advanceSection = (t: string, attemptId: string, answers?: Record<string, number>) =>
-  api<AttemptState>("POST", `/api/attempts/${attemptId}/advance`, t, { answers: answers ?? null });
+/** Closes the section the client names. If the server has already moved past it (its deadline, or
+ *  a duplicate request), nothing is closed and the current state comes back. */
+export const advanceSection = (t: string, attemptId: string, answers?: Record<string, number>, expectedSectionIndex?: number) =>
+  api<AttemptState>("POST", `/api/attempts/${attemptId}/advance`, t, {
+    answers: answers ?? null,
+    expectedSectionIndex: expectedSectionIndex ?? null,
+  });
 
 export const finishAttempt = (t: string, attemptId: string) =>
   api<AttemptResult>("POST", `/api/attempts/${attemptId}/finish`, t);

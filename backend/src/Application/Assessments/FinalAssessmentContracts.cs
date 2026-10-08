@@ -36,7 +36,9 @@ public record AttemptStateDto(
 /// </summary>
 public record SectionAudioDto(string Url, DateTimeOffset StartedAt, DateTimeOffset ServerNow);
 
-public record AdvanceSectionRequest(IReadOnlyDictionary<string, int>? Answers);
+/// <summary>`ExpectedSectionIndex` is the section the client means to close. When the server has
+/// already moved past it (its deadline, or another request), the advance is a no-op.</summary>
+public record AdvanceSectionRequest(IReadOnlyDictionary<string, int>? Answers, int? ExpectedSectionIndex);
 
 /// <summary>
 /// The multi-section timed sitting. Separate from <see cref="IAssessmentService"/> (which owns the
@@ -53,7 +55,8 @@ public interface IFinalAssessmentService
 
     /// <summary>Closes the active section and opens the next — or finalizes if it was the last.</summary>
     Task<AttemptStateDto> AdvanceSectionAsync(
-        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default);
+        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, int? expectedSectionIndex,
+        CancellationToken ct = default);
 
     Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default);
 

@@ -22,7 +22,7 @@ public static class FinalAssessmentEndpoints
 
         g.MapPost("/{id:guid}/advance", async Task<Ok<AttemptStateDto>> (
                 Guid id, AdvanceSectionRequest? r, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
-            TypedResults.Ok(await s.AdvanceSectionAsync(u.UserId(), id, r?.Answers, ct)));
+            TypedResults.Ok(await s.AdvanceSectionAsync(u.UserId(), id, r?.Answers, r?.ExpectedSectionIndex, ct)));
 
         g.MapPost("/{id:guid}/finish", async Task<Ok<AttemptResultDto>> (
                 Guid id, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
