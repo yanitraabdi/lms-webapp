@@ -56,8 +56,15 @@ export function ExamResult({ result, sessionId }: { result: AttemptResult; sessi
                 <li key={name} className="flex items-center justify-between text-[13.5px]">
                   <span className="text-ink-muted">{name}</span>
                   <span>
-                    {scaled != null && <span className="font-bold text-ink">{num(scaled)} </span>}
-                    <span className={scaled != null ? "text-ink-muted" : "font-bold text-ink"}>{num(raw)} benar</span>
+                    {scaled != null && (
+                      <>
+                        <span className="sr-only">Skor prediksi </span>
+                        <span className="font-bold text-ink">{num(scaled)} </span>
+                      </>
+                    )}
+                    <span className={scaled != null ? "text-ink-muted" : "font-bold text-ink"}>
+                      {scaled != null ? <>({num(raw)} benar)</> : <>{num(raw)} benar</>}
+                    </span>
                   </span>
                 </li>
               );
