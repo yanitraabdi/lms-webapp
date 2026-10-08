@@ -237,15 +237,34 @@ public class FinalAssessmentService(
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Scores server-side, stamps submission, completes the session, and issues the certificate.</summary>
+    /// <summary>
+    /// Scores server-side and stamps submission in ONE conditional write, so of two requests
+    /// finalising the same expired attempt exactly one wins; only the winner completes the session
+    /// and issues the certificate. The loser reloads the winner's row (GR-6, GR-12).
+    /// </summary>
     private async Task FinalizeAsync(Attempt attempt, DateTimeOffset at, bool autoSubmitted, CancellationToken ct)
     {
         if (attempt.SubmittedAt is not null) return;
 
-        await ScoreAsync(attempt, ct);
-        attempt.SubmittedAt = at;
-        attempt.AutoSubmitted |= autoSubmitted;
-        await db.SaveChangesAsync(ct);
+        await ScoreAsync(attempt, ct);                    // in memory only; written below
+        var auto = attempt.AutoSubmitted || autoSubmitted;
+
+        var won = await db.Attempts
+            .Where(a => a.Id == attempt.Id && a.SubmittedAt == null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.SubmittedAt, at)
+                .SetProperty(a => a.AutoSubmitted, auto)
+                .SetProperty(a => a.State, attempt.State)
+                .SetProperty(a => a.TotalScore, attempt.TotalScore)
+                .SetProperty(a => a.MaxScore, attempt.MaxScore)
+                .SetProperty(a => a.SectionScores, attempt.SectionScores)
+                .SetProperty(a => a.Passed, attempt.Passed), ct) == 1;
+
+        // ExecuteUpdate bypasses the change tracker: reload so the tracked row is the database's
+        // either way, and no later SaveChanges re-writes stale in-memory values.
+        await db.Entry(attempt).ReloadAsync(ct);
+        // ponytail: a loser reading between the winner's write and its certificate insert sees no scaled score yet ("konversi belum tersedia") until the next read; accepted.
+        if (!won) return;
 
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == attempt.AssessmentId)

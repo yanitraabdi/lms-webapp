@@ -87,9 +87,10 @@ public class ProgramCertificateService(
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.CertificateAttemptIndex))
         {
             // Concurrent finalize raced us; the other one won. Certificates are immutable either way.
+            db.Entry(certificate).State = EntityState.Detached;
             var raced = await db.Certificates.FirstOrDefaultAsync(c => c.AttemptId == attemptId, ct);
             return raced is null ? null : await MapAsync(raced, ct);
         }

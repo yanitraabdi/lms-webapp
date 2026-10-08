@@ -667,6 +667,43 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
             (await Authed(HttpMethod.Get, $"/api/sessions/{c.SessionId}/assessment", c.Token)).StatusCode);
     }
 
+    // ---- finalisation happens once (GR-6) ----
+
+    [Fact]
+    public async Task The_database_refuses_a_second_certificate_for_one_attempt()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        await ExpireAllSectionsAsync(state.AttemptId);
+        await GetState(c, state.AttemptId);                       // finalises + issues the certificate
+
+        var copy = await WithDbResult(db => db.Certificates.AsNoTracking().FirstAsync(x => x.AttemptId == state.AttemptId));
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => WithDb(async db =>
+        {
+            copy.Id = Guid.CreateVersion7();
+            copy.VerificationCode = copy.VerificationCode + "X";
+            db.Certificates.Add(copy);
+            await db.SaveChangesAsync();
+        }));
+        Assert.True(DbErrors.IsUniqueViolation(ex, DbErrors.CertificateAttemptIndex));
+    }
+
+    [Fact]
+    public async Task Concurrent_reads_of_an_expired_sitting_finalise_it_once()
+    {
+        var c = await SetUp(retakeCap: null);                     // unlimited: one attempt per round
+        for (var round = 0; round < 5; round++)
+        {
+            var state = await Start(c);
+            await ExpireAllSectionsAsync(state.AttemptId);
+
+            var reads = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => GetState(c, state.AttemptId)));
+
+            Assert.All(reads, r => Assert.Equal("Submitted", r.Status));
+            Assert.Equal(1, await WithDbResult(db => db.Certificates.CountAsync(x => x.AttemptId == state.AttemptId)));
+        }
+    }
+
     // ================================================================ helpers
 
     private record Ctx(string Token, Guid UserId, string Admin, Guid ProgramId, Guid SessionId,

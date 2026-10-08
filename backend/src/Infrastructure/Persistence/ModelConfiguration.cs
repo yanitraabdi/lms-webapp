@@ -290,6 +290,9 @@ public class CertificateConfig : IEntityTypeConfiguration<Certificate>
         // Deliberately NO unique on (user_id, program_id): a granted retake issues a NEW
         // certificate rather than mutating the old one (GR-6). attempt_id is the anchor.
         e.HasIndex(x => new { x.UserId, x.ProgramId });
+        // One certificate per attempt (GR-6): the database, not a check-then-insert, is what makes
+        // a race between two finalising requests issue exactly one.
+        e.HasIndex(x => x.AttemptId).IsUnique();
         e.Property(x => x.CompletedModuleIds).HasColumnType("jsonb"); // snapshot (dormant)
         e.Property(x => x.SectionScores).HasColumnType("jsonb");
         e.Property(x => x.ScaledScores).HasColumnType("jsonb");
