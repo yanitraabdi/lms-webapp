@@ -1,21 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Spinner, ErrorState, AlertTriangleIcon, CheckIcon } from "@/components/ui";
-import { ProctorWatcher } from "@/components/learn/ProctorWatcher";
-import { Sitting, WarningOverlay } from "@/components/exam/Sitting";
-import { ExamResult } from "@/components/exam/ExamResult";
-import {
-  getSessionAssessment, startAttempt, getAttemptState, saveSectionAnswers,
-  advanceSection, finishAttempt, num,
-  type AttemptState, type AttemptResult, type ProctorState, type StudentAssessment,
-} from "@/lib/sessions";
-
-type Phase = "intro" | "running" | "done";
+import { getSessionAssessment, startAttempt, num, type StudentAssessment } from "@/lib/sessions";
 
 export default function AssessmentPage() {
   const { status, accessToken } = useAuth();
@@ -29,90 +20,41 @@ export default function AssessmentPage() {
   if (status !== "authenticated" || !accessToken) {
     return <div className="flex min-h-screen items-center justify-center bg-bg"><Spinner size={24} /></div>;
   }
-  return <Runner token={accessToken} sessionId={sessionId} />;
+  return <IntroPage token={accessToken} sessionId={sessionId} />;
 }
 
-function Runner({ token, sessionId }: { token: string; sessionId: string }) {
-  const [phase, setPhase] = useState<Phase>("intro");
-  const [state, setState] = useState<AttemptState | null>(null);
-  const [result, setResult] = useState<AttemptResult | null>(null);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [warning, setWarning] = useState<ProctorState | null>(null);
+function IntroPage({ token, sessionId }: { token: string; sessionId: string }) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [remaining, setRemaining] = useState(0);
 
+  // Never served from cache: a stale openAttemptId would bounce a learner into a finished sitting.
   const meta = useQuery({
     queryKey: ["assessment-meta", sessionId],
     queryFn: () => getSessionAssessment(token, sessionId),
     retry: false,
+    gcTime: 0,
   });
+  const openAttemptId = meta.data?.openAttemptId;
 
-  const applyState = useCallback((s: AttemptState) => {
-    setState(s);
-    setAnswers(Object.fromEntries(Object.entries(s.answers).map(([k, v]) => [k, num(v)])));
-    setRemaining(num(s.secondsRemaining));
-    if (s.status === "Submitted") setPhase("done");
-  }, []);
-
-  // Local countdown for display only — the server is the authority and is re-checked on every call.
+  // A sitting already under way is resumed, never restarted from the intro.
   useEffect(() => {
-    if (phase !== "running" || remaining <= 0) return;
-    const t = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
-    return () => clearInterval(t);
-  }, [phase, remaining]);
-
-  // When the local clock hits zero, ask the server what actually happened.
-  const attemptId = state?.attemptId;
-  useEffect(() => {
-    if (phase !== "running" || remaining > 0 || !attemptId) return;
-    void (async () => {
-      try {
-        applyState(await advanceSection(token, attemptId, answers));
-      } catch { /* the next poll corrects it */ }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, phase, attemptId]);
+    if (openAttemptId) router.replace(`/app/exam/${openAttemptId}`);
+  }, [openAttemptId, router]);
 
   async function begin() {
     if (!meta.data) return;
     setBusy(true); setError(null);
     try {
       const attempt = await startAttempt(token, meta.data.id);
-      applyState(await getAttemptState(token, attempt.id));
-      setPhase("running");
+      router.replace(`/app/exam/${attempt.id}`);       // busy stays on while the page changes
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memulai tes.");
-    } finally {
       setBusy(false);
     }
   }
 
-  async function next() {
-    if (!state) return;
-    setBusy(true); setError(null);
-    try {
-      const s = await advanceSection(token, state.attemptId, answers);
-      if (s.status === "Submitted") setResult(await finishAttempt(token, state.attemptId));
-      applyState(s);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal melanjutkan.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onProctor(p: ProctorState) {
-    setWarning(p);
-    if (p.action === "autoSubmit" && state) {
-      try {
-        setResult(await finishAttempt(token, state.attemptId));
-        applyState(await getAttemptState(token, state.attemptId));
-      } catch { /* state refresh will catch up */ }
-    }
-  }
-
-  if (meta.isPending) {
+  if (meta.isPending || openAttemptId) {
     return <div className="flex min-h-screen items-center justify-center bg-bg"><Spinner size={24} /></div>;
   }
   if (meta.isError || !meta.data) {
@@ -126,36 +68,10 @@ function Runner({ token, sessionId }: { token: string; sessionId: string }) {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-bg">
-      {state && phase === "running" && state.proctoringEnabled && (
-        <ProctorWatcher token={token} attemptId={state.attemptId} active onState={onProctor} />
-      )}
-
-      {warning?.action === "warn" && (
-        <WarningOverlay strikes={num(warning.strikes)} limit={num(warning.strikeLimit)} onClose={() => setWarning(null)} />
-      )}
-
       <div className="mx-auto max-w-3xl px-6 py-8">
-        {phase === "intro" && <Intro test={meta.data} onBegin={begin} busy={busy} error={error} />}
-        {phase === "running" && state && (
-          <Sitting
-            token={token}
-            state={state}
-            answers={answers}
-            remaining={remaining}
-            busy={busy}
-            error={error}
-            onAnswer={(qid, choice) => setAnswers((a) => ({ ...a, [qid]: choice }))}
-            onSave={async () => {
-              if (!state) return;
-              try { applyState(await saveSectionAnswers(token, state.attemptId, answers)); } catch { /* retried */ }
-            }}
-            onNext={next}
-          />
-        )}
-        {phase === "done" && <ExamResult result={result} sessionId={sessionId} />}
+        <Intro test={meta.data} onBegin={begin} busy={busy} error={error} />
       </div>
     </div>
   );

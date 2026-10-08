@@ -216,6 +216,19 @@ export const advanceSection = (t: string, attemptId: string, answers?: Record<st
 export const finishAttempt = (t: string, attemptId: string) =>
   api<AttemptResult>("POST", `/api/attempts/${attemptId}/finish`, t);
 
+/** A sitting's state, or null when it is not the caller's or does not exist — the server answers
+ *  both with 404, so the page cannot tell them apart either. */
+export async function getAttemptStateOrNull(t: string, attemptId: string): Promise<AttemptState | null> {
+  const res = await apiFetch(`${API}/api/attempts/${attemptId}/state`, { cache: "no-store" }, t);
+  if (res.status === 404) return null;
+  if (!res.ok) throw await problem(res, "Gagal memuat tes.");
+  return res.json();
+}
+
+/** The result of a FINISHED sitting, read-only (409 while it is still running). */
+export const getFinalResult = (t: string, attemptId: string) =>
+  api<AttemptResult>("GET", `/api/attempts/${attemptId}/final-result`, t);
+
 /** Report a focus-loss event. The SERVER decides warn vs auto-submit (GR-13). */
 export const reportProctorEvent = (t: string, attemptId: string, kind: string, durationMs?: number) =>
   api<ProctorState>("POST", `/api/attempts/${attemptId}/proctor-events`, t, { kind, durationMs: durationMs ?? null });
