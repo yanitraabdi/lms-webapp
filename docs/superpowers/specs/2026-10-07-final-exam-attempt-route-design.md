@@ -50,7 +50,7 @@ All changes are additive, and the endpoints use TypedResults.
 - Gating tests get the field too. It is harmless there and unused.
 
 ### 3.2 `AttemptStateDto.SessionId`
-- Add `Guid SessionId`, the session that owns the attempt's assessment.
+- Add `Guid? SessionId` (last field), the session that owns the attempt's assessment. It is null only for an assessment no session owns, and the result view then omits the session link.
 - `LoadOwnedAsync` already looks it up to re-check the gate; reuse that value rather than querying again.
 - The result view uses it for "Kembali ke sesi".
 
