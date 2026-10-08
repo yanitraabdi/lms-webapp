@@ -209,3 +209,15 @@
   ```
 
   with the same trailer.
+
+## Outcome and deferred minors
+
+All five findings are fixed. The final review said it was ready to merge, and its accessibility minor was fixed in `6d37f26` (the result rows now say what each number is).
+
+**Before merge:** the backend tests for Task 3 have not run yet, because the Docker daemon hung during the session. Run `dotnet test backend/Academy.slnx`, which includes FinalAssessmentTests, SessionGatingTests and SessionPartLearnerTests.
+
+Still open (non-blocking):
+- **Admin parts editor:** the duration input rounds decimals and 0 to whole minutes (minimum 1), and the manual video ID is not validated.
+- **`Modal` width check:** its `max-w-*` test ignores variant-prefixed classes such as `sm:max-w-lg`. No caller uses one.
+- **Dashboard tour:** the `setTimeout` that starts it is not cleared on unmount (a 250 ms window).
+- **Exam result:** a final made of non-ITP sections (Vocabulary or General) would not be listed under "Rincian per bagian". Finals are ITP-only.
