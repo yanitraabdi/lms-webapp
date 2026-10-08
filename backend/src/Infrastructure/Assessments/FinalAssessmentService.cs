@@ -40,6 +40,15 @@ public class FinalAssessmentService(
         if (attempt.SubmittedAt is not null)
             throw new AssessmentException("Tes ini sudah selesai.", 409);
 
+        await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
+        return await BuildStateAsync(attempt, sessionId, ct);
+    }
+
+    /// <summary>Merges answers into the ACTIVE section only; the caller has already loaded the
+    /// attempt and enforced its deadlines.</summary>
+    private async Task SaveCurrentSectionAnswersAsync(
+        Attempt attempt, IReadOnlyDictionary<string, int> answers, CancellationToken ct)
+    {
         var state = AttemptState.Parse(attempt.State);
         var current = state.Current
             ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
@@ -52,7 +61,6 @@ public class FinalAssessmentService(
 
         attempt.Answers = JsonSerializer.Serialize(merged);
         await db.SaveChangesAsync(ct);
-        return await BuildStateAsync(attempt, sessionId, ct);
     }
 
     public async Task<AttemptStateDto> AdvanceSectionAsync(
@@ -64,13 +72,10 @@ public class FinalAssessmentService(
         if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
             return await BuildStateAsync(attempt, sessionId, ct);
 
+        // Already loaded, enforced and stale-checked above: save on this attempt directly, so an
+        // expiry enforced here returns the state rather than the public save's 409.
         if (answers is { Count: > 0 })
-        {
-            // Same tracked attempt (EF identity resolution); it re-enforces deadlines, so check again.
-            await SaveAnswersAsync(userId, attemptId, answers, ct);
-            if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
-                return await BuildStateAsync(attempt, sessionId, ct);
-        }
+            await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
 
         await CloseCurrentAndAdvanceAsync(attempt, AttemptState.Parse(attempt.State), DateTimeOffset.UtcNow,
             autoSubmitted: false, ct);
@@ -86,10 +91,13 @@ public class FinalAssessmentService(
     public async Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {
         var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+        var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
         await EnforceDeadlinesAsync(attempt, ct);
 
         if (attempt.SubmittedAt is null)
             await FinalizeAsync(attempt, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
+        else if (wasSubmitted)
+            await HealIfUncertifiedAsync(attempt, ct);
 
         return await BuildResultAsync(attempt, sessionId, ct);
     }
@@ -97,11 +105,13 @@ public class FinalAssessmentService(
     public async Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {
         var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+        var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
         await EnforceDeadlinesAsync(attempt, ct);
 
         if (attempt.SubmittedAt is null)
             throw new AssessmentException("Tes ini belum selesai.", 409);
 
+        if (wasSubmitted) await HealIfUncertifiedAsync(attempt, ct);
         return await BuildResultAsync(attempt, sessionId, ct);
     }
 
@@ -279,7 +289,24 @@ public class FinalAssessmentService(
         await db.Entry(attempt).ReloadAsync(ct);
         // No early return for a "loser": a lost-ack retry looks like one, and both calls below are
         // idempotent; it also closes the window where a losing reader saw no scaled score yet.
+        // The submission is committed: finishing its side effects must not depend on the caller
+        // staying connected, so the request's token is not passed on.
+        await CompleteAndCertifyAsync(attempt, CancellationToken.None);
+    }
 
+    /// <summary>A submitted attempt with no certificate was stranded — finalised while the score
+    /// map was incomplete, or cut off after the submit committed. Finish it now; both steps are
+    /// idempotent.</summary>
+    private async Task HealIfUncertifiedAsync(Attempt attempt, CancellationToken ct)
+    {
+        // ponytail: with an incomplete score map this re-attempts conversion (and logs its error)
+        // on every result read; move it to a background re-issue job if that gets noisy.
+        if (!await db.Certificates.AnyAsync(c => c.AttemptId == attempt.Id, ct))
+            await CompleteAndCertifyAsync(attempt, ct);
+    }
+
+    private async Task CompleteAndCertifyAsync(Attempt attempt, CancellationToken ct)
+    {
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == attempt.AssessmentId)
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);

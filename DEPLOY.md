@@ -158,6 +158,22 @@ Notes:
 
 ## 2. Build & run
 
+### Before deploying the 2026-10-08 certificate migration
+
+The API applies migrations at startup, and `CertificateOnePerAttempt` adds a unique index
+(`ix_certificates_attempt_id`) that fails — so the API will not boot — if the database already
+holds two certificates for one attempt. Check first, against the running stack (start just
+Postgres with `docker compose -f docker-compose.tunnel.yml up -d postgres` if it is down):
+
+```bash
+docker compose -f docker-compose.tunnel.yml exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT attempt_id, count(*) FROM certificates WHERE attempt_id IS NOT NULL GROUP BY 1 HAVING count(*) > 1;"'
+```
+
+If it returns any rows, **stop**: certificates are immutable and never deleted (GR-6/7), so which
+duplicate stands is a business decision — do not deploy until it is resolved.
+
+### Build and start
+
 ```bash
 cd "/Users/yanitra/Development/LMS App/lms-webapp"
 docker compose -f docker-compose.tunnel.yml up -d --build

@@ -244,6 +244,25 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     }
 
     [Fact]
+    public async Task A_submitted_sitting_left_without_a_certificate_is_certified_on_the_next_result_read()
+    {
+        // Finalised while the map was incomplete: the attempt is saved, the certificate is not —
+        // the same stranded state an aborted request or crash after the submit commit leaves.
+        var c = await SetUp(bandsCoverOnlyZero: true);
+        var state = await Start(c);
+        var first = await AnswerEverythingCorrectly(c, state.AttemptId);
+        Assert.Null(first.TotalScaledScore);
+        Assert.False(await WithDbResult(db => db.Certificates.AnyAsync(x => x.AttemptId == state.AttemptId)));
+
+        await PutBands(c.Admin, c.ProgramId);        // the admin completes the table
+
+        var healed = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+        Assert.NotNull(healed.TotalScaledScore);
+        Assert.True(healed.SessionCompleted);
+        Assert.Equal(1, await WithDbResult(db => db.Certificates.CountAsync(x => x.AttemptId == state.AttemptId)));
+    }
+
+    [Fact]
     public async Task A_retake_issues_a_NEW_certificate_and_leaves_the_first_untouched()
     {
         var c = await SetUp(retakeCap: 2);
@@ -743,25 +762,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         // Score bands must cover the FULL ITP raw-score range per section — full coverage so
         // the program is publishable...
-        var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
-        {
-            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
-            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
-            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
-        };
-        var rows = new List<(string Section, int Raw, int MaxRaw, int ScaledMax)>();
-        foreach (var (section, maxRaw, scaledMax) in sectionSizes)
-            for (var raw = 0; raw <= maxRaw; raw++)
-                rows.Add((section, raw, maxRaw, scaledMax));
-        object BandRow((string Section, int Raw, int MaxRaw, int ScaledMax) r) => new
-        {
-            id = Guid.Empty, section = r.Section, minRaw = r.Raw, maxRaw = r.Raw,
-            scaledScore = ToeflScoring.ScaledMin
-                + (int)Math.Round((double)r.Raw / r.MaxRaw * (r.ScaledMax - ToeflScoring.ScaledMin)),
-            predictedBand = (string?)null,
-        };
-        (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
-            new { bands = rows.Select(BandRow) })).EnsureSuccessStatusCode();
+        await PutBands(admin, program.Id);
 
         (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}", admin, new
         {
@@ -771,9 +772,7 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         // ...then, for the fail-loudly test, drift the table down to only raw 0 post-publish.
         // Publish gates on readiness; it never re-checks bands an admin edits afterwards.
-        if (bandsCoverOnlyZero)
-            (await Authed(HttpMethod.Put, $"/api/admin/programs/{program.Id}/score-bands", admin,
-                new { bands = rows.Where(r => r.Raw == 0).Select(BandRow) })).EnsureSuccessStatusCode();
+        if (bandsCoverOnlyZero) await PutBands(admin, program.Id, onlyRawZero: true);
 
         var (token, userId) = await VerifiedUser();
         var checkout = await Authed(HttpMethod.Post, $"/api/programs/{program.Id}/enroll", token, new { });
@@ -783,6 +782,31 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
             .EnsureSuccessStatusCode();
 
         return new Ctx(token, userId, admin, program.Id, session.Id, assessment.AssessmentId, key);
+    }
+
+    /// <summary>Replaces the program's score-band table: one band per raw score per section, or
+    /// (onlyRawZero) just raw 0, which leaves every higher score unmapped.</summary>
+    private async Task PutBands(string admin, Guid programId, bool onlyRawZero = false)
+    {
+        var sectionSizes = new (string Section, int MaxRaw, int ScaledMax)[]
+        {
+            ("Listening", ToeflScoring.ListeningQuestions, ToeflScoring.ListeningScaledMax),
+            ("Structure", ToeflScoring.StructureQuestions, ToeflScoring.StructureScaledMax),
+            ("Reading",   ToeflScoring.ReadingQuestions,   ToeflScoring.ReadingScaledMax),
+        };
+        var rows = new List<(string Section, int Raw, int MaxRaw, int ScaledMax)>();
+        foreach (var (section, maxRaw, scaledMax) in sectionSizes)
+            for (var raw = 0; raw <= (onlyRawZero ? 0 : maxRaw); raw++)
+                rows.Add((section, raw, maxRaw, scaledMax));
+        var bands = rows.Select(r => new
+        {
+            id = Guid.Empty, section = r.Section, minRaw = r.Raw, maxRaw = r.Raw,
+            scaledScore = ToeflScoring.ScaledMin
+                + (int)Math.Round((double)r.Raw / r.MaxRaw * (r.ScaledMax - ToeflScoring.ScaledMin)),
+            predictedBand = (string?)null,
+        });
+        (await Authed(HttpMethod.Put, $"/api/admin/programs/{programId}/score-bands", admin, new { bands }))
+            .EnsureSuccessStatusCode();
     }
 
     private async Task<AttemptStateDto> Start(Ctx c)

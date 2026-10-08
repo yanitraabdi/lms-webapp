@@ -58,7 +58,8 @@ public class ProgramCertificateService(
         catch (AssessmentException ex)
         {
             // FAIL LOUDLY (KAK §9.9.4): no certificate, explicit admin-visible error, and the
-            // learner's submitted attempt is preserved for re-issue once the table is fixed.
+            // learner's submitted attempt is preserved, and the next result read of it re-issues
+            // (FinalAssessmentService.HealIfUncertifiedAsync) once the table is fixed.
             logger.LogError(
                 "Certificate NOT issued for attempt {AttemptId}: score conversion failed — {Reason}",
                 attemptId, ex.Message);
