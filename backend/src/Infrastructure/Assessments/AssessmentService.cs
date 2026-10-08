@@ -236,9 +236,12 @@ public class AssessmentService(
     {
         var (assessment, config, _, _) = await LoadAsync(assessmentId, ct);
 
+        // A final's questions are served section by section once its clock runs (GR-12); its intro
+        // gets the count, never the paper. A gating test is untimed and shows its questions up front.
+        var isFinal = assessment.Kind == AssessmentKind.Final;
         // NOTE: `Correct` is deliberately absent from this projection — the answer key must not
         // leave the server (GR-11). StudentQuestionDto has no field for it either.
-        var questions = await db.AssessmentQuestions
+        List<StudentQuestionDto> questions = isFinal ? [] : await db.AssessmentQuestions
             .Where(q => q.AssessmentId == assessmentId)
             .OrderBy(q => q.OrderIndex)
             .Select(q => new StudentQuestionDto(
@@ -249,6 +252,9 @@ public class AssessmentService(
                 q.Question.PassageRef,
                 q.Question.AudioRef != null))
             .ToListAsync(ct);
+        var questionCount = isFinal
+            ? await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct)
+            : questions.Count;
 
         var attempts = await db.Attempts
             .Where(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt != null)
@@ -270,7 +276,7 @@ public class AssessmentService(
 
         return new StudentAssessmentDto(
             assessmentId, sessionId, assessment.Kind.ToString(), assessment.Title,
-            questions.Count, config.PassThreshold ?? questions.Count,
+            questionCount, config.PassThreshold ?? questionCount,
             config.RetakeCap, used, canAttempt,
             passed, attempts.Count > 0 ? attempts.Max(a => a.TotalScore) : null,
             config.ProctoringEnabled, config.TimeLimitMinutes,

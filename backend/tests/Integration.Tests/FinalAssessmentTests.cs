@@ -631,6 +631,17 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     }
 
     [Fact]
+    public async Task The_final_intro_gives_the_question_count_but_none_of_the_questions()
+    {
+        var c = await SetUp();
+
+        var intro = await AuthedGet<StudentAssessmentDto>($"/api/sessions/{c.SessionId}/assessment", c.Token);
+
+        Assert.Empty(intro.Questions);                                   // nothing to read before the clock runs
+        Assert.Equal(c.Key.Values.Sum(k => k.Count), intro.QuestionCount);
+    }
+
+    [Fact]
     public async Task The_final_route_is_empty_for_a_video_session_and_gated_while_locked()
     {
         var c = await SetUp();
