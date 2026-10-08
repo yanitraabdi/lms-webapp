@@ -51,7 +51,7 @@ export function Modal({ open, onClose, title, icon, children, footer, className 
       <div
         role="dialog"
         aria-modal="true"
-        className={cn("w-full max-w-sm rounded-base bg-surface p-5 shadow-lg", className)}
+        className={cn("w-full rounded-base bg-surface p-5 shadow-lg", !/(^|\s)max-w-/.test(className ?? "") && "max-w-sm", className)}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
