@@ -60,7 +60,7 @@ export default function SessionTestHistory({
           return (
             <div key={first.partId} className="flex flex-col gap-1">
               <h3 className="text-[13px] font-bold text-ink">
-                Sesi {num(first.sessionOrderIndex)} · {first.partTitle}
+                {first.sessionTitle} · {first.partTitle}
               </h3>
               <div aria-hidden="true">
                 <ResponsiveContainer width="100%" height={110}>

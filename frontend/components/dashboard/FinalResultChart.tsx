@@ -15,7 +15,8 @@ export default function FinalResultChart({ scores }: { scores: Record<string, nu
     <div aria-hidden="true">
       <ResponsiveContainer width="100%" height={160}>
         <BarChart layout="vertical" data={data} margin={{ top: 4, right: 28, bottom: 4, left: 0 }}>
-          <XAxis type="number" domain={[31, 68]} tick={{ fill: muted, fontSize: 11 }} />
+          {/* floor 30, not 31: a section at the ITP minimum would be a zero-length bar and Recharts draws no label */}
+          <XAxis type="number" domain={[30, 68]} ticks={[31, 40, 50, 60, 68]} tick={{ fill: muted, fontSize: 11 }} />
           <YAxis type="category" dataKey="section" width={80} tick={{ fill: muted, fontSize: 12 }} />
           <Bar dataKey="score" fill={primary} radius={[0, 4, 4, 0]} isAnimationActive={!reduced}>
             <LabelList dataKey="score" position="right" fill={muted} fontSize={12} />
