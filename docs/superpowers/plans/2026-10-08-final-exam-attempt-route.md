@@ -114,7 +114,7 @@ Add this region to `FinalAssessmentTests.cs`, just before `// ---- the final's s
 
         Assert.Equal("Submitted", after.Status);
         Assert.Equal(c.SessionId, after.SessionId);
-        Assert.Empty(after.Questions);                     // GR-11: nothing to re-read once it is over
+        Assert.Empty(after.Questions);                     // GR-11 regression guard: nothing to re-read once it is over
     }
 
     [Fact]
@@ -171,6 +171,11 @@ Add this region to `FinalAssessmentTests.cs`, just before `// ---- the final's s
         var result = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
 
         Assert.True(result.AutoSubmitted);                // the deadline is enforced on this read too (GR-12)
+        Assert.True(result.SessionCompleted);             // … and the sitting is really over
+        Assert.NotNull(result.TotalScaledScore);          // certificate issued (SetUp maps raw 0)
+
+        var again = await AuthedGet<AttemptResultDto>($"/api/attempts/{state.AttemptId}/final-result", c.Token);
+        Assert.Equal(result.TotalScaledScore, again.TotalScaledScore);   // re-reading is idempotent
     }
 ```
 
@@ -215,8 +220,12 @@ Add to `IFinalAssessmentService`, after `SubmitAsync`:
 In `AssessmentService.BuildStudentViewAsync`, after the `attempts` query:
 
 ```csharp
+        // Normally at most one (StartAttempt reuses it); two racing starts could make two, so pick
+        // the newest deterministically. Deadlines are not enforced here: an expired one is finalised
+        // by the exam page's own /state read, which then shows its result.
         var openAttemptId = await db.Attempts
             .Where(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null)
+            .OrderByDescending(a => a.StartedAt)
             .Select(a => (Guid?)a.Id)
             .FirstOrDefaultAsync(ct);
 ```
@@ -254,7 +263,14 @@ Change both builders to take the id:
 
 Every `BuildStateAsync(attempt, ct)` call becomes `BuildStateAsync(attempt, sessionId, ct)`, and `BuildResultAsync(attempt, ct)` becomes `BuildResultAsync(attempt, sessionId, ct)`.
 
-If any other caller of `BuildStateAsync` or `BuildResultAsync` exists, check with `grep -n "BuildStateAsync\|BuildResultAsync\|LoadOwnedAsync" backend/src/Infrastructure/Assessments/FinalAssessmentService.cs`. Such a caller has its attempt from `LoadOwnedAsync` in scope, so pass that `sessionId`.
+The complete call-site list:
+- `LoadOwnedAsync` is called at about lines 29, 37, 63, 74, 86 and 150.
+- `BuildStateAsync` is called at about lines 31, 55, 65 and 69.
+- `BuildResultAsync` is called at about line 80.
+
+All three are private, and nothing outside the class calls them. `BuildStateAsync` already ends with named arguments, so `SessionId: sessionId` is appended the same way.
+
+`FinalizeAsync` keeps its own session-id lookup (~line 239) on purpose. Threading the id through `EnforceDeadlinesAsync`, `CloseCurrentAndAdvanceAsync` and `FinalizeAsync` would widen the diff to save one query per finalisation.
 
 - [ ] **Step 6: Implement `GetResultAsync`**
 
@@ -279,7 +295,8 @@ In `FinalAssessmentEndpoints.cs`, after the `/{id:guid}/finish` mapping:
 
 ```csharp
         // The result of a FINISHED sitting, read-only — what /app/exam/{id} shows after a reload.
-        // An attempt still in progress is a 409; only /finish ends a sitting early.
+        // An attempt still in progress is a 409; only /finish ends a sitting early. The gating
+        // /attempts/{id}/result route does not enforce deadlines or carry the band — finals use this.
         g.MapGet("/{id:guid}/final-result", async Task<Ok<AttemptResultDto>> (
                 Guid id, ClaimsPrincipal u, IFinalAssessmentService s, CancellationToken ct) =>
             TypedResults.Ok(await s.GetResultAsync(u.UserId(), id, ct)));
@@ -376,7 +393,11 @@ Its signature becomes:
 export function ExamResult({ result, sessionId }: { result: AttemptResult | null; sessionId?: string | null }) {
 ```
 
-Render the "Kembali ke sesi" `<Link>` only when `sessionId` is truthy (`{sessionId && (<Link …>Kembali ke sesi</Link>)}`). Everything else, including the GR-14 note, is unchanged.
+Render the "Kembali ke sesi" `<Link>` only when `sessionId` is truthy (`{sessionId && (<Link …>Kembali ke sesi</Link>)}`).
+
+Give the `<h1>` in **both** branches `id="exam-result-title" tabIndex={-1}`, and add `focus:outline-none` to its `className`, so the attempt page can move focus there when a sitting ends.
+
+Everything else, including the GR-14 note, is unchanged.
 
 The file has no hooks, so it needs no `"use client"`.
 
@@ -386,7 +407,7 @@ In `app/app/assessment/[id]/page.tsx`:
 - delete the moved functions;
 - import `Sitting` and `WarningOverlay` from `@/components/exam/Sitting`, and `ExamResult` from `@/components/exam/ExamResult`;
 - render `<ExamResult result={result} sessionId={sessionId} />` where it rendered `<Result … />`;
-- remove the imports that are no longer used: `LiveAudioPlayer`, `getAudioUrl`, `startSectionAudio`, `clock`. Keep `AlertTriangleIcon` and `CheckIcon`, which `Intro` uses. Lint names anything else left over.
+- remove the imports that are no longer used: `useRef`, `LiveAudioPlayer`, `getAudioUrl`, `startSectionAudio`, `clock`. `useCallback` stays until Task 3. Keep `AlertTriangleIcon` and `CheckIcon`, which `Intro` uses. Lint names anything else left over.
 
 - [ ] **Step 4: Verify**
 
@@ -411,6 +432,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Modify: `frontend/lib/sessions.ts` (M4 block, after `finishAttempt`)
 - Create: `frontend/app/app/exam/[attemptId]/page.tsx`
+- Create: `frontend/app/app/exam/[attemptId]/not-found.tsx`
 - Modify: `frontend/app/app/assessment/[id]/page.tsx`
 
 **Interfaces:**
@@ -442,20 +464,17 @@ export const getFinalResult = (t: string, attemptId: string) =>
 
 - [ ] **Step 2: The attempt page**
 
-Create `app/app/exam/[attemptId]/page.tsx`. The sitting logic is the old `Runner`'s: `applyState`, the countdown, the expiry advance, `next`, `onProctor` and `onSave`. The changes are:
-- it starts from the server's state instead of an intro;
-- "running" is derived from `state.status`;
-- a submitted state fetches its result.
+Create `app/app/exam/[attemptId]/page.tsx`. The sitting logic is the old `Runner`'s: `applyState`, the countdown, the expiry advance, `next`, `onProctor` and `onSave`. The intended changes are listed under **Intended differences** below.
 
 ```tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Spinner, ErrorState } from "@/components/ui";
+import { Button, Spinner, ErrorState } from "@/components/ui";
 import { ProctorWatcher } from "@/components/learn/ProctorWatcher";
 import { Sitting, WarningOverlay } from "@/components/exam/Sitting";
 import { ExamResult } from "@/components/exam/ExamResult";
@@ -465,6 +484,12 @@ import {
 } from "@/lib/sessions";
 
 const fullSpinner = <div className="flex min-h-screen items-center justify-center bg-bg"><Spinner size={24} /></div>;
+
+/** A thrown TypeError is the browser's own (English) network failure; problem() only localises HTTP errors. */
+function loadMessage(e: unknown, fallback: string): string {
+  if (e instanceof TypeError) return `${fallback} Periksa koneksi Anda.`;
+  return e instanceof Error ? e.message : fallback;
+}
 
 /**
  * One final-exam sitting, addressed by its attempt. A reload resumes it on the server's clock; once
@@ -492,7 +517,8 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(0);
 
-  // Loaded once and never cached: a cached state would resume a section with a stale clock.
+  // Fetched once per mount. Any refetch would re-run applyState and overwrite unsaved answers, so it
+  // must never go stale; gcTime 0 so a remount reads the server's clock afresh.
   const load = useQuery({
     queryKey: ["attempt-state", attemptId],
     queryFn: () => getAttemptStateOrNull(token, attemptId),
@@ -513,6 +539,18 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
 
   const running = state?.status === "InProgress";
 
+  // However the sitting ended — reload, timer, last section — read its result. `next` and
+  // `onProctor` already hold it from /finish, so this only runs when they did not.
+  const resultQuery = useQuery({
+    queryKey: ["attempt-result", attemptId],
+    queryFn: () => getFinalResult(token, attemptId),
+    enabled: state?.status === "Submitted" && !result,
+    retry: 1,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+  const shown = result ?? resultQuery.data ?? null;
+
   // Local countdown for display only — the server is the authority and is re-checked on every call.
   useEffect(() => {
     if (!running || remaining <= 0) return;
@@ -531,11 +569,16 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, running, attemptId]);
 
-  // However the sitting ended — reload, timer, last section, proctoring — show its result once.
+  // When the sitting ends IN this tab, the focused button unmounts: move focus and scroll to the
+  // result's heading so the end (or an auto-submit) is announced. A cold reload keeps focus alone.
+  const wasRunning = useRef(false);
   useEffect(() => {
-    if (state?.status !== "Submitted" || result) return;
-    getFinalResult(token, attemptId).then(setResult).catch(() => { /* ExamResult shows "sedang diproses" */ });
-  }, [state?.status, result, token, attemptId]);
+    if (running) { wasRunning.current = true; return; }
+    if (wasRunning.current && shown) {
+      window.scrollTo(0, 0);
+      document.getElementById("exam-result-title")?.focus();
+    }
+  }, [running, shown]);
 
   async function next() {
     if (!state) return;
@@ -561,14 +604,22 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
     }
   }
 
+  const toDashboard = <Link href="/app/dashboard" className="text-sm font-bold text-primary hover:underline">Ke dasbor</Link>;
+
   if (load.isPending) return fullSpinner;
   if (load.isError) {
+    // The server clock keeps running, so a failed reload must be retryable in place.
     return (
       <div className="mx-auto max-w-md px-6 py-20">
         <ErrorState
           title="Tes tidak tersedia"
-          message={load.error instanceof Error ? load.error.message : "Gagal memuat tes."}
-          action={<Link href="/app/dashboard" className="text-sm font-bold text-primary hover:underline">Ke dasbor</Link>}
+          message={loadMessage(load.error, "Gagal memuat tes.")}
+          action={
+            <div className="flex items-center gap-4">
+              <Button size="sm" onClick={() => load.refetch()}>Coba lagi</Button>
+              {toDashboard}
+            </div>
+          }
         />
       </div>
     );
@@ -601,8 +652,21 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
             }}
             onNext={next}
           />
+        ) : shown ? (
+          <ExamResult result={shown} sessionId={state.sessionId ?? null} />
+        ) : resultQuery.isError ? (
+          <ErrorState
+            title="Gagal memuat hasil"
+            message={loadMessage(resultQuery.error, "Gagal memuat hasil.")}
+            action={
+              <div className="flex items-center gap-4">
+                <Button size="sm" onClick={() => resultQuery.refetch()}>Coba lagi</Button>
+                {toDashboard}
+              </div>
+            }
+          />
         ) : (
-          <ExamResult result={result} sessionId={state.sessionId ?? null} />
+          <div className="flex justify-center py-20"><Spinner size={24} /></div>
         )}
       </div>
     </div>
@@ -610,7 +674,37 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
 }
 ```
 
-**Before writing:** compare this body with `Runner`'s `next`, `onProctor`, `onSave` and effects, which are still in `app/app/assessment/[id]/page.tsx` at this point (Step 3 removes them). If they differ in anything other than the three changes listed above, keep the old behaviour and note it in the report.
+Also create `app/app/exam/[attemptId]/not-found.tsx`, so a learner who opens someone else's attempt, or a dead link, lands somewhere that fits:
+
+```tsx
+import Link from "next/link";
+import { ErrorState } from "@/components/ui";
+
+export default function ExamNotFound() {
+  return (
+    <div className="mx-auto max-w-md px-6 py-20">
+      <ErrorState
+        title="Tes tidak ditemukan"
+        message="Tautan tes ini tidak berlaku untuk akun Anda."
+        action={<Link href="/app/dashboard" className="text-sm font-bold text-primary hover:underline">Ke dasbor</Link>}
+      />
+    </div>
+  );
+}
+```
+
+Check that `ErrorState`'s `action` prop accepts any `ReactNode` and that `Button` takes `size="sm"`; `grep -rn "ErrorState" components app | head` shows how they are used elsewhere. If the real props differ, adapt and say so in the report.
+
+**Before writing:** compare this body with `Runner`'s `next`, `onProctor`, `onSave` and effects, which are still in `app/app/assessment/[id]/page.tsx` at this point (Step 3 removes them).
+
+**Intended differences from `Runner`** (do NOT revert these):
+1. It starts from the server's state, not an intro.
+2. "Running" is derived from `state.status`.
+3. A submitted state with no result reads `/final-result`. Under `Runner`, timer expiry on the last section left the learner on "sedang diproses" forever; now it shows the real result.
+4. Failed loads can be retried in place.
+5. Focus moves to the result heading when the sitting ends in the tab.
+
+Anything else that differs: keep the old behaviour and note it in the report.
 
 - [ ] **Step 3: Cut the intro down to the intro**
 
@@ -709,7 +803,8 @@ Rebuild with `docker compose up -d --build api frontend`, then at `http://localh
 2. Reload mid-section. It is the same section and the clock carries on.
 3. Go back to the intro URL. It redirects to the same attempt.
 4. Finish. The result is shown; reload and the same result is shown.
-5. Open the attempt URL as a different account. It is a 404.
+5. Open the attempt URL as a different account. It shows "Tes tidak ditemukan".
+6. Set DevTools offline and reload mid-sitting: "Coba lagi" recovers once back online.
 
 ---
 
