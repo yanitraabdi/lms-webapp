@@ -239,8 +239,8 @@ public class FinalAssessmentService(
 
     /// <summary>
     /// Scores server-side and stamps submission in ONE conditional write, so of two requests
-    /// finalising the same expired attempt exactly one wins; only the winner completes the session
-    /// and issues the certificate. The loser reloads the winner's row (GR-6, GR-12).
+    /// finalising the same expired attempt exactly one stamps it. Every caller then reloads the row
+    /// and runs the idempotent completion and certificate steps (GR-6, GR-12).
     /// </summary>
     private async Task FinalizeAsync(Attempt attempt, DateTimeOffset at, bool autoSubmitted, CancellationToken ct)
     {
@@ -249,7 +249,7 @@ public class FinalAssessmentService(
         await ScoreAsync(attempt, ct);                    // in memory only; written below
         var auto = attempt.AutoSubmitted || autoSubmitted;
 
-        var won = await db.Attempts
+        await db.Attempts
             .Where(a => a.Id == attempt.Id && a.SubmittedAt == null)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.SubmittedAt, at)
@@ -258,13 +258,13 @@ public class FinalAssessmentService(
                 .SetProperty(a => a.TotalScore, attempt.TotalScore)
                 .SetProperty(a => a.MaxScore, attempt.MaxScore)
                 .SetProperty(a => a.SectionScores, attempt.SectionScores)
-                .SetProperty(a => a.Passed, attempt.Passed), ct) == 1;
+                .SetProperty(a => a.Passed, attempt.Passed), ct);
 
         // ExecuteUpdate bypasses the change tracker: reload so the tracked row is the database's
         // either way, and no later SaveChanges re-writes stale in-memory values.
         await db.Entry(attempt).ReloadAsync(ct);
-        // ponytail: a loser reading between the winner's write and its certificate insert sees no scaled score yet ("konversi belum tersedia") until the next read; accepted.
-        if (!won) return;
+        // No early return for a "loser": a lost-ack retry looks like one, and both calls below are
+        // idempotent; it also closes the window where a losing reader saw no scaled score yet.
 
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == attempt.AssessmentId)

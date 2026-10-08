@@ -39,14 +39,15 @@ public class SessionCompletionService(AppDbContext db, SessionPartStates partSta
         };
         if (!complete) return false;
 
-        db.SessionCompletions.Add(new SessionCompletion
+        var row = new SessionCompletion
         {
             Id = Guid.CreateVersion7(),
             UserId = userId,
             SessionId = sessionId,
             CompletedAt = DateTimeOffset.UtcNow,
             Method = method,
-        });
+        };
+        db.SessionCompletions.Add(row);
         try
         {
             await db.SaveChangesAsync(ct);
@@ -54,6 +55,7 @@ public class SessionCompletionService(AppDbContext db, SessionPartStates partSta
         catch (DbUpdateException)
         {
             // UNIQUE(user_id, session_id) — a concurrent request completed it first. Still complete.
+            db.Entry(row).State = EntityState.Detached;   // or a later SaveChanges re-inserts it
         }
         return true;
     }
