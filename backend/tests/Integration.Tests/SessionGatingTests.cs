@@ -323,6 +323,24 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
+    [Fact]
+    public async Task The_final_exam_routes_do_not_serve_a_gating_attempt()
+    {
+        var c = await EnrolledLearner();
+        await AttachGatingTest(c, c.Session1, passThreshold: 2);
+        await SaveProgress(c.Token, c.Session1, 900, 100m);
+        var assessmentId = await AssessmentIdFor(c.Session1);
+
+        var start = await Authed(HttpMethod.Post, $"/api/assessments/{assessmentId}/attempts", c.Token);
+        var attempt = (await start.Content.ReadFromJsonAsync<AttemptDto>(Json))!;
+
+        foreach (var path in new[] { "state", "final-result" })
+        {
+            var res = await Authed(HttpMethod.Get, $"/api/attempts/{attempt.Id}/{path}", c.Token);
+            Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+        }
+    }
+
     // ---- admin review ----
 
     [Fact]

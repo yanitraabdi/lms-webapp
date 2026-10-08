@@ -11,7 +11,7 @@ import { Sitting, WarningOverlay } from "@/components/exam/Sitting";
 import { ExamResult } from "@/components/exam/ExamResult";
 import {
   getAttemptStateOrNull, getAttemptState, getFinalResult, saveSectionAnswers, advanceSection,
-  finishAttempt, num, type AttemptState, type AttemptResult, type ProctorState,
+  num, type AttemptState, type ProctorState,
 } from "@/lib/sessions";
 
 const fullSpinner = <div className="flex min-h-screen items-center justify-center bg-bg"><Spinner size={24} /></div>;
@@ -41,7 +41,6 @@ export default function ExamPage() {
 
 function Exam({ token, attemptId }: { token: string; attemptId: string }) {
   const [state, setState] = useState<AttemptState | null>(null);
-  const [result, setResult] = useState<AttemptResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [warning, setWarning] = useState<ProctorState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,17 +69,16 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
 
   const running = state?.status === "InProgress";
 
-  // However the sitting ended — reload, timer, last section — read its result. `next` and
-  // `onProctor` already hold it from /finish, so this only runs when they did not.
+  // However the sitting ended — reload, timer, last section, proctor — read its result from the server.
   const resultQuery = useQuery({
     queryKey: ["attempt-result", attemptId],
     queryFn: () => getFinalResult(token, attemptId),
-    enabled: state?.status === "Submitted" && !result,
+    enabled: state?.status === "Submitted",
     retry: 1,
     staleTime: Infinity,
     gcTime: 0,
   });
-  const shown = result ?? resultQuery.data ?? null;
+  const shown = resultQuery.data ?? null;
 
   // Local countdown for display only — the server is the authority and is re-checked on every call.
   useEffect(() => {
@@ -115,9 +113,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
     if (!state) return;
     setBusy(true); setError(null);
     try {
-      const s = await advanceSection(token, attemptId, answers);
-      if (s.status === "Submitted") setResult(await finishAttempt(token, attemptId));
-      applyState(s);
+      applyState(await advanceSection(token, attemptId, answers));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal melanjutkan.");
     } finally {
@@ -129,7 +125,6 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
     setWarning(p);
     if (p.action === "autoSubmit") {
       try {
-        setResult(await finishAttempt(token, attemptId));
         applyState(await getAttemptState(token, attemptId));
       } catch { /* state refresh will catch up */ }
     }

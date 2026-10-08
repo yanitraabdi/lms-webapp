@@ -1,19 +1,7 @@
 import Link from "next/link";
 import { num, type AttemptResult } from "@/lib/sessions";
 
-export function ExamResult({ result, sessionId }: { result: AttemptResult | null; sessionId?: string | null }) {
-  if (!result) {
-    return (
-      <div className="rounded-lg border border-border bg-surface p-6 text-center shadow-sm">
-        <h1 id="exam-result-title" tabIndex={-1} className="text-xl font-extrabold focus:outline-none">Tes selesai</h1>
-        <p className="mt-2 text-[13.5px] text-ink-muted">Hasil Anda sedang diproses.</p>
-        <Link href="/app/certificates" className="mt-4 inline-block text-sm font-bold text-primary hover:underline">
-          Lihat sertifikat →
-        </Link>
-      </div>
-    );
-  }
-
+export function ExamResult({ result, sessionId }: { result: AttemptResult; sessionId?: string | null }) {
   const sections = Object.entries(result.sectionScores);
 
   return (

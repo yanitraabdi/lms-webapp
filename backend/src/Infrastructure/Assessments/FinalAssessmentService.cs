@@ -398,6 +398,10 @@ public class FinalAssessmentService(
         var attempt = await db.Attempts.FirstOrDefaultAsync(a => a.Id == attemptId && a.UserId == userId, ct)
             ?? throw new AssessmentException("Percobaan tidak ditemukan.", 404);
 
+        // These routes serve the final exam only; a gating attempt has its own endpoints.
+        if (!await db.Assessments.AnyAsync(a => a.Id == attempt.AssessmentId && a.Kind == AssessmentKind.Final, ct))
+            throw new AssessmentException("Percobaan tidak ditemukan.", 404);
+
         var sessionId = await db.ProgramSessions
             .Where(s => s.AssessmentId == attempt.AssessmentId)
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
