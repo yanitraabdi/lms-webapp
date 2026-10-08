@@ -438,7 +438,7 @@ public class FinalAssessmentService(
         // certificate exists, so these stay null rather than showing a guessed band (KAK §9.9.4).
         var cert = await db.Certificates
             .Where(c => c.AttemptId == attempt.Id)
-            .Select(c => new { c.TotalScaledScore, c.PredictedBand })
+            .Select(c => new { c.TotalScaledScore, c.PredictedBand, c.ScaledScores })
             .FirstOrDefaultAsync(ct);
 
         return new AttemptResultDto(
@@ -446,7 +446,8 @@ public class FinalAssessmentService(
             attempt.AutoSubmitted, attempt.ProctorFlagged,
             ParseInts(attempt.SectionScores),
             cert?.TotalScaledScore, cert?.PredictedBand,
-            sessionCompleted, null);
+            sessionCompleted, null,
+            cert?.ScaledScores is { } s ? ParseInts(s) : null);
     }
 
     /// <summary>
