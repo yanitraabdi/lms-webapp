@@ -2,7 +2,8 @@ import Link from "next/link";
 import { num, type AttemptResult } from "@/lib/sessions";
 
 export function ExamResult({ result, sessionId }: { result: AttemptResult; sessionId?: string | null }) {
-  const sections = Object.entries(result.sectionScores);
+  // ITP order, same names as the certificate page.
+  const sections = ["Listening", "Structure", "Reading"].filter((s) => s in result.sectionScores);
 
   return (
     <div className="flex flex-col gap-5">
@@ -34,7 +35,7 @@ export function ExamResult({ result, sessionId }: { result: AttemptResult; sessi
 
         {result.autoSubmitted && (
           <p className="mt-2 text-[12.5px] font-semibold text-warning">
-            Tes ini dikirim otomatis (waktu habis atau pengawasan).
+            Sebagian atau seluruh tes ditutup otomatis (waktu habis atau pengawasan).
           </p>
         )}
         {result.proctorFlagged && (
@@ -48,12 +49,26 @@ export function ExamResult({ result, sessionId }: { result: AttemptResult; sessi
         <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-extrabold">Rincian per bagian</h2>
           <ul className="mt-3 flex flex-col gap-2">
-            {sections.map(([name, value]) => (
-              <li key={name} className="flex items-center justify-between text-[13.5px]">
-                <span className="text-ink-muted">{name}</span>
-                <span className="font-bold text-ink">{num(value)}</span>
-              </li>
-            ))}
+            {sections.map((name) => {
+              const scaled = result.scaledScores?.[name];
+              const raw = result.sectionScores[name];
+              return (
+                <li key={name} className="flex items-center justify-between text-[13.5px]">
+                  <span className="text-ink-muted">{name}</span>
+                  <span>
+                    {scaled != null && (
+                      <>
+                        <span className="sr-only">Skor prediksi </span>
+                        <span className="font-bold text-ink">{num(scaled)} </span>
+                      </>
+                    )}
+                    <span className={scaled != null ? "text-ink-muted" : "font-bold text-ink"}>
+                      {scaled != null ? <>({num(raw)} benar)</> : <>{num(raw)} benar</>}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

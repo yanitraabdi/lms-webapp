@@ -309,7 +309,7 @@ public class AssessmentService(
             attempt.AutoSubmitted, attempt.ProctorFlagged,
             ParseSectionScores(attempt.SectionScores),
             null, null,                                  // scaled score + band: M4 (final assessment)
-            sessionCompleted, nextSessionId);
+            sessionCompleted, nextSessionId, null);
     }
 
     private async Task EnsureCanAttemptAsync(

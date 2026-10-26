@@ -86,7 +86,8 @@ public record AttemptResultDto(
     bool AutoSubmitted, bool ProctorFlagged,
     IReadOnlyDictionary<string, int> SectionScores,
     int? TotalScaledScore, string? PredictedBand,
-    bool SessionCompleted, Guid? NextSessionId);
+    bool SessionCompleted, Guid? NextSessionId,
+    IReadOnlyDictionary<string, int>? ScaledScores);   // final only: the certificate's scaled section scores; null without one
 
 public interface IAssessmentService
 {

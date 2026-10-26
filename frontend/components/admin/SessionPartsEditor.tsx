@@ -6,7 +6,7 @@ import { inputBlockCls } from "@/components/admin/fields";
 import { VideoPicker } from "@/components/admin/VideoPicker";
 import { GatingTestEditor } from "@/components/admin/GatingTestEditor";
 import {
-  listSessionParts, saveSessionParts, minutesLabel, num,
+  listSessionParts, saveSessionParts, num,
   type AdminSessionPart,
 } from "@/lib/programs";
 
@@ -225,9 +225,27 @@ export function SessionPartsEditor({
                       onPick={(v) => update(i, { providerAssetId: v.id, durationSeconds: v.lengthSeconds })}
                       onBusyChange={(b) => setRowUploading(keyOf(r), b)}
                     />
-                    {r.durationSeconds != null && (
-                      <span className="text-[11.5px] text-ink-subtle">{minutesLabel(r.durationSeconds)}</span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="flex min-w-0 flex-1 items-center gap-2 text-[12px] text-ink-muted">
+                        ID video
+                        <input
+                          value={r.providerAssetId ?? ""}
+                          onChange={(e) => update(i, { providerAssetId: e.target.value.trim() || undefined })}
+                          placeholder="mis. 3f1c…"
+                          className={inputBlockCls + " min-w-0 flex-1 font-mono text-[12px]"}
+                        />
+                      </label>
+                      <label className="flex items-center gap-2 text-[12px] text-ink-muted">
+                        Durasi (menit)
+                        <input
+                          type="number"
+                          min={1}
+                          value={r.durationSeconds != null ? Math.round(r.durationSeconds / 60) : ""}
+                          onChange={(e) => update(i, { durationSeconds: e.target.value === "" ? undefined : Math.max(1, Number(e.target.value)) * 60 })}
+                          className={inputBlockCls + " w-20"}
+                        />
+                      </label>
+                    </div>
                   </div>
                 )}
               </li>

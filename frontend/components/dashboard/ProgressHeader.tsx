@@ -49,11 +49,11 @@ export function ProgressHeader({ program, firstName }: { program: StudentProgram
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-base border border-primary bg-primary-soft/50 px-4 py-3">
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-[13.5px] font-bold text-ink">{next.title}</span>
-              <span className="text-[12px] text-ink-muted">
-                {partsDone != null && partCount != null && partCount > 0
-                  ? `Sesi ${num(next.orderIndex)} · bagian ${Math.min(partsDone + 1, partCount)} dari ${partCount}`
-                  : `Sesi ${num(next.orderIndex)}`}
-              </span>
+              {partsDone != null && partCount != null && partCount > 0 && (
+                <span className="text-[12px] text-ink-muted">
+                  {`bagian ${Math.min(partsDone + 1, partCount)} dari ${partCount}`}
+                </span>
+              )}
             </div>
             <Link
               href={nextHref(next, program.programId)}

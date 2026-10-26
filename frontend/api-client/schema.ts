@@ -6303,6 +6303,9 @@ export interface components {
             sessionCompleted: boolean;
             /** Format: uuid */
             nextSessionId: null | string;
+            scaledScores: null | {
+                [key: string]: number | string;
+            };
         };
         AttemptStateDto: {
             /** Format: uuid */

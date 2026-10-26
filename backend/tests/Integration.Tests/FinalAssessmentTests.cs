@@ -166,6 +166,20 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
     // ---- scoring & certificate (GR-6, KAK §9.9.4) ----
 
     [Fact]
+    public async Task The_final_result_carries_the_certificates_scaled_section_scores()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        var result = await AnswerEverythingCorrectly(c, state.AttemptId);
+        var cert = Assert.Single(await AuthedGet<List<ProgramCertificateDto>>("/api/me/program-certificates", c.Token));
+
+        Assert.NotNull(result.ScaledScores);
+        Assert.Equal(cert.ScaledScores, result.ScaledScores);
+        var reread = await AuthedGet<AttemptResultDto>($"/api/attempts/{result.AttemptId}/final-result", c.Token);
+        Assert.Equal(cert.ScaledScores, reread.ScaledScores);
+    }
+
+    [Fact]
     public async Task A_perfect_sitting_converts_to_the_ITP_total_and_issues_a_certificate()
     {
         var c = await SetUp();
