@@ -28,6 +28,8 @@
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
     <!-- Certificate PDF (MIT) -->
     <PackageVersion Include="PdfSharp" Version="6.2.1" />
+    <!-- PdfSharp (up to 6.5.0) pulls Pkcs 8.0.1: CVE-2026-84008 / CVE-2026-70162 (DoS), patched in 10.0.13. Drop once PdfSharp depends on a patched version. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <!-- Test stack -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

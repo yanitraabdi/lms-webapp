@@ -16,6 +16,7 @@
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="PdfSharp" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />  <!-- overrides PdfSharp's vulnerable 8.0.1; see Directory.Packages.props -->
   </ItemGroup>
 
   <!-- Embed fonts so PDFsharp renders certificates without system fonts (Docker/Linux). -->
