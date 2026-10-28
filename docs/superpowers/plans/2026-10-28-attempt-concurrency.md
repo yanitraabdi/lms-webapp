@@ -153,3 +153,17 @@ Check that `AssessmentException(string, int)` lives where the `using` says. Adju
   ```
 
   with the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
+## Outcome (2026-10-28)
+
+**Done:** `7edb487` and `984b96f`. The review said ready to merge, and the fix round (an `xmin` guard on finalise, so an answer saved while the exam is being finished is either scored or refused, never lost) was re-reviewed clean.
+
+**Deviations from this plan, accepted in review:**
+- **The 50-way test now checks "200 or 409, never silently lost".** Three retries can't absorb 50 simultaneous writers. A separate 3-way test requires every save to succeed.
+- **The migration's `AddColumn("xmin")` emits no SQL in either direction.** Npgsql skips system columns; the rollback script was checked.
+- **`ProctorService.ReportAsync` is only partly wrapped.** The event insert stays outside the retry, so it is never recorded twice.
+
+**Still open (non-blocking):**
+- **A strike-2 report can end in 409 without ending the sitting.** That needs 3 straight conflicts. The next counted strike retries the auto-submit.
+- **Two simultaneous starts can create two open attempts.** This was already possible. Fix: a partial unique index on `(user_id, assessment_id) WHERE submitted_at IS NULL`.
+- **An exhausted retry on "Bagian berikutnya" shows "Coba lagi".** The learner clicks again.
