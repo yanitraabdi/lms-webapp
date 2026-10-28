@@ -280,8 +280,11 @@ public class FinalAssessmentService(
         await ScoreAsync(attempt, ct);                    // in memory only; written below
         var auto = attempt.AutoSubmitted || autoSubmitted;
 
-        await db.Attempts
-            .Where(a => a.Id == attempt.Id && a.SubmittedAt == null)
+        // Also conditioned on the row version EF would check: answers saved after this request read
+        // the row must not be stamped as submitted without being scored.
+        var loadedXmin = db.Entry(attempt).Property<uint>("xmin").OriginalValue;
+        var stamped = await db.Attempts
+            .Where(a => a.Id == attempt.Id && a.SubmittedAt == null && EF.Property<uint>(a, "xmin") == loadedXmin)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.SubmittedAt, at)
                 .SetProperty(a => a.AutoSubmitted, auto)
@@ -294,6 +297,10 @@ public class FinalAssessmentService(
         // ExecuteUpdate bypasses the change tracker: reload so the tracked row is the database's
         // either way, and no later SaveChanges re-writes stale in-memory values.
         await db.Entry(attempt).ReloadAsync(ct);
+        // Not stamped and still open: another request changed the row (not finalised it). Every
+        // caller runs inside ConcurrencyRetry, which re-reads and re-scores on fresh data.
+        if (stamped == 0 && attempt.SubmittedAt is null)
+            throw new DbUpdateConcurrencyException("The attempt changed while it was being finalised.");
         // No early return for a "loser": a lost-ack retry looks like one, and both calls below are
         // idempotent; it also closes the window where a losing reader saw no scaled score yet.
         // The submission is committed: finishing its side effects must not depend on the caller
