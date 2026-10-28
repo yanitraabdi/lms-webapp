@@ -62,35 +62,43 @@ public class ProctorService(AppDbContext db, IFinalAssessmentService finals) : I
             return new ProctorStateDto(strikes, FinalAssessmentService.StrikeLimit, "warn", attempt.ProctorFlagged);
         }
 
-        // Strike 2 → the SERVER ends the sitting and flags it.
-        attempt.ProctorFlagged = true;
-        db.ProctorEvents.Add(Decision(attempt.Id, ProctorEventKind.AutoSubmitted, strikes));
-        await db.SaveChangesAsync(ct);
+        // Strike 2 → the SERVER ends the sitting and flags it. The flag is this operation's only
+        // attempt write, so only it retries: the strike event above is already committed and must
+        // not be inserted twice. The retry re-reads the attempt and re-adds its decision row.
+        await ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var fresh = await db.Attempts.FirstAsync(a => a.Id == attemptId, ct);
+            fresh.ProctorFlagged = true;
+            db.ProctorEvents.Add(Decision(attemptId, ProctorEventKind.AutoSubmitted, strikes));
+            await db.SaveChangesAsync(ct);
+        });
 
-        await finals.SubmitAsync(userId, attempt.Id, ct);
+        // Wrapped on its own (it may clear the change tracker): nothing below may use `attempt`.
+        await finals.SubmitAsync(userId, attemptId, ct);
 
         return new ProctorStateDto(strikes, FinalAssessmentService.StrikeLimit, "autoSubmit", true);
     }
 
-    public async Task ReinstateAsync(Guid actor, Guid attemptId, CancellationToken ct = default)
-    {
-        var attempt = await db.Attempts.FirstOrDefaultAsync(a => a.Id == attemptId, ct)
-            ?? throw new AssessmentException("Percobaan tidak ditemukan.", 404);
-
-        attempt.ProctorFlagged = false;
-        attempt.Reinstated = true;
-        // NOTE: proctor_events are deliberately NOT deleted — the trail survives reinstatement.
-
-        db.AuditLogs.Add(new AuditLog
+    public Task ReinstateAsync(Guid actor, Guid attemptId, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
         {
-            Id = Guid.CreateVersion7(),
-            ActorUserId = actor,
-            Action = "attempt_reinstated",
-            Target = attemptId.ToString(),
-            Metadata = JsonSerializer.Serialize(new { attempt.UserId, attempt.AssessmentId }),
+            var attempt = await db.Attempts.FirstOrDefaultAsync(a => a.Id == attemptId, ct)
+                ?? throw new AssessmentException("Percobaan tidak ditemukan.", 404);
+
+            attempt.ProctorFlagged = false;
+            attempt.Reinstated = true;
+            // NOTE: proctor_events are deliberately NOT deleted — the trail survives reinstatement.
+
+            db.AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.CreateVersion7(),
+                ActorUserId = actor,
+                Action = "attempt_reinstated",
+                Target = attemptId.ToString(),
+                Metadata = JsonSerializer.Serialize(new { attempt.UserId, attempt.AssessmentId }),
+            });
+            await db.SaveChangesAsync(ct);
         });
-        await db.SaveChangesAsync(ct);
-    }
 
     /// <summary>Only counting kinds are strikes; `Ignored` and server decisions never count.</summary>
     private Task<int> CountStrikesAsync(Guid attemptId, CancellationToken ct)

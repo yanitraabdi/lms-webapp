@@ -127,6 +127,10 @@ public class AttemptConfig : IEntityTypeConfiguration<Attempt>
         e.Property(x => x.Answers).HasColumnType("jsonb");
         e.Property(x => x.SectionScores).HasColumnType("jsonb");
         e.Property(x => x.State).HasColumnType("jsonb");
+        // Optimistic concurrency on the attempt row (PostgreSQL's xmin): a request that read the
+        // row before another request wrote it gets DbUpdateConcurrencyException instead of
+        // silently overwriting answers/state. Callers retry via ConcurrencyRetry.
+        e.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
         e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);  // retained (GR-7)
         e.HasOne(x => x.Assessment).WithMany().HasForeignKey(x => x.AssessmentId)

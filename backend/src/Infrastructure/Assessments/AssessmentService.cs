@@ -59,41 +59,39 @@ public class AssessmentService(
         return signer.Sign(storageKey);
     }
 
-    public async Task<TestAudioDto> StartTestAudioAsync(
+    public Task<TestAudioDto> StartTestAudioAsync(
         Guid userId, Guid sessionId, Guid partId, bool replay, CancellationToken ct = default)
-    {
-        var part = await access.EnsurePartAccessAsync(userId, sessionId, partId, ct);
-        var assessmentId = part.AssessmentId ?? throw new AssessmentException("Bagian ini bukan tes.", 400);
-        var config = ParseConfig(await db.Assessments.Where(a => a.Id == assessmentId).Select(a => a.Config).FirstAsync(ct));
-        if (string.IsNullOrWhiteSpace(config.AudioRef))
-            throw new AssessmentException("Tes ini tidak memiliki audio.", 400);
-
-        // Plays are charged to the open attempt, so a retake starts with fresh plays.
-        var attempt = await db.Attempts.FirstOrDefaultAsync(
-                a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null, ct)
-            ?? throw new AssessmentException("Mulai tes terlebih dahulu.", 409);
-
-        var state = AttemptState.Parse(attempt.State);
-        var limit = config.AudioPlayLimit ?? 1;
-        state.AudioPlays.TryGetValue(AttemptState.TestAudioKey, out var used);
-        var now = DateTimeOffset.UtcNow;
-
-        if (state.TestAudioStartedAt is null || replay)
+        => ConcurrencyRetry.RunAsync(db, async () =>
         {
-            if (used >= limit)
-                throw new AssessmentException("Audio sudah diputar sebanyak batas yang diizinkan.", 409);
-            state.TestAudioStartedAt = now;
-            state.AudioPlays[AttemptState.TestAudioKey] = ++used;
-            attempt.State = state.Serialize();
-            await db.SaveChangesAsync(ct);
-        }
+            var part = await access.EnsurePartAccessAsync(userId, sessionId, partId, ct);
+            var assessmentId = part.AssessmentId ?? throw new AssessmentException("Bagian ini bukan tes.", 400);
+            var config = ParseConfig(await db.Assessments.Where(a => a.Id == assessmentId).Select(a => a.Config).FirstAsync(ct));
+            if (string.IsNullOrWhiteSpace(config.AudioRef))
+                throw new AssessmentException("Tes ini tidak memiliki audio.", 400);
 
-        // ponytail: read-modify-write on attempts.state with no concurrency token — two replay
-        // requests racing can both pass the limit check (one extra play). Same as the final's
-        // section audio; acceptable for deterrence. Add an xmin concurrency token if it matters.
-        // Signed, short-TTL, minted per request (GR-3). Deterrence, not a guarantee (GR-14).
-        return new TestAudioDto(signer.Sign(config.AudioRef), state.TestAudioStartedAt!.Value, now, used, limit);
-    }
+            // Plays are charged to the open attempt, so a retake starts with fresh plays.
+            var attempt = await db.Attempts.FirstOrDefaultAsync(
+                    a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null, ct)
+                ?? throw new AssessmentException("Mulai tes terlebih dahulu.", 409);
+
+            var state = AttemptState.Parse(attempt.State);
+            var limit = config.AudioPlayLimit ?? 1;
+            state.AudioPlays.TryGetValue(AttemptState.TestAudioKey, out var used);
+            var now = DateTimeOffset.UtcNow;
+
+            if (state.TestAudioStartedAt is null || replay)
+            {
+                if (used >= limit)
+                    throw new AssessmentException("Audio sudah diputar sebanyak batas yang diizinkan.", 409);
+                state.TestAudioStartedAt = now;
+                state.AudioPlays[AttemptState.TestAudioKey] = ++used;
+                attempt.State = state.Serialize();
+                await db.SaveChangesAsync(ct);
+            }
+
+            // Signed, short-TTL, minted per request (GR-3). Deterrence, not a guarantee (GR-14).
+            return new TestAudioDto(signer.Sign(config.AudioRef), state.TestAudioStartedAt!.Value, now, used, limit);
+        });
 
     public async Task<StudentAssessmentDto?> GetForSessionAsync(
         Guid userId, Guid sessionId, CancellationToken ct = default)
@@ -113,82 +111,85 @@ public class AssessmentService(
         return await BuildStudentViewAsync(userId, part.AssessmentId.Value, sessionId, ct);
     }
 
-    public async Task<AttemptDto> StartAttemptAsync(Guid userId, Guid assessmentId, CancellationToken ct = default)
-    {
-        var (assessment, config, sessionId, partId) = await LoadAsync(assessmentId, ct);
-        if (partId is Guid pid) await access.EnsurePartAccessAsync(userId, sessionId!.Value, pid, ct);
-        else if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
-        // A test no session or part owns (detached, or replaced on a video session) has no gate to
-        // pass, so a learner never starts it (GR-1).
-        else throw new AssessmentException("Tes tidak ditemukan.", 404);
-
-        var questionCount = await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct);
-        if (questionCount == 0)
-            throw new AssessmentException("Tes ini belum memiliki soal.", 400);
-
-        // Reuse an unsubmitted attempt so a refresh doesn't burn a retake.
-        var open = await db.Attempts
-            .FirstOrDefaultAsync(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null, ct);
-        if (open is not null) return Map(open);
-
-        await EnsureCanAttemptAsync(userId, assessmentId, config, ct);
-
-        var now = DateTimeOffset.UtcNow;
-        var attempt = new Attempt
+    public Task<AttemptDto> StartAttemptAsync(Guid userId, Guid assessmentId, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
         {
-            Id = Guid.CreateVersion7(),
-            UserId = userId,
-            AssessmentId = assessmentId,
-            StartedAt = now,                       // SERVER-stamped (GR-12)
-            Answers = "{}",
-            SectionScores = "{}",
-            // Sectional sittings (M4) carry per-section server clocks; a gating test has none.
-            State = AttemptState.Create(config, now).Serialize(),
-            MaxScore = questionCount,
-        };
-        db.Attempts.Add(attempt);
-        await db.SaveChangesAsync(ct);
-        return Map(attempt);
-    }
+            var (assessment, config, sessionId, partId) = await LoadAsync(assessmentId, ct);
+            if (partId is Guid pid) await access.EnsurePartAccessAsync(userId, sessionId!.Value, pid, ct);
+            else if (sessionId is Guid sid) await access.EnsureAccessAsync(userId, sid, ct);
+            // A test no session or part owns (detached, or replaced on a video session) has no gate to
+            // pass, so a learner never starts it (GR-1).
+            else throw new AssessmentException("Tes tidak ditemukan.", 404);
 
-    public async Task SaveAnswersAsync(
+            var questionCount = await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == assessmentId, ct);
+            if (questionCount == 0)
+                throw new AssessmentException("Tes ini belum memiliki soal.", 400);
+
+            // Reuse an unsubmitted attempt so a refresh doesn't burn a retake.
+            var open = await db.Attempts
+                .FirstOrDefaultAsync(a => a.UserId == userId && a.AssessmentId == assessmentId && a.SubmittedAt == null, ct);
+            if (open is not null) return Map(open);
+
+            await EnsureCanAttemptAsync(userId, assessmentId, config, ct);
+
+            var now = DateTimeOffset.UtcNow;
+            var attempt = new Attempt
+            {
+                Id = Guid.CreateVersion7(),
+                UserId = userId,
+                AssessmentId = assessmentId,
+                StartedAt = now,                       // SERVER-stamped (GR-12)
+                Answers = "{}",
+                SectionScores = "{}",
+                // Sectional sittings (M4) carry per-section server clocks; a gating test has none.
+                State = AttemptState.Create(config, now).Serialize(),
+                MaxScore = questionCount,
+            };
+            db.Attempts.Add(attempt);
+            await db.SaveChangesAsync(ct);
+            return Map(attempt);
+        });
+
+    public Task SaveAnswersAsync(
         Guid userId, Guid attemptId, IReadOnlyDictionary<string, int> answers, CancellationToken ct = default)
-    {
-        var attempt = await LoadOwnedAttemptAsync(userId, attemptId, ct);
-        if (attempt.SubmittedAt is not null)
-            throw new AssessmentException("Percobaan ini sudah dikirim.", 409);
-
-        var merged = Parse(attempt.Answers);
-        foreach (var (k, v) in answers) merged[k] = v;
-        attempt.Answers = JsonSerializer.Serialize(merged);
-        await db.SaveChangesAsync(ct);
-    }
-
-    public async Task<AttemptResultDto> SubmitAsync(
-        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default)
-    {
-        var attempt = await LoadOwnedAttemptAsync(userId, attemptId, ct);
-        if (attempt.SubmittedAt is not null)
-            return await BuildResultAsync(attempt, ct);          // idempotent re-submit
-
-        if (answers is not null)
+        => ConcurrencyRetry.RunAsync(db, async () =>
         {
+            var attempt = await LoadOwnedAttemptAsync(userId, attemptId, ct);
+            if (attempt.SubmittedAt is not null)
+                throw new AssessmentException("Percobaan ini sudah dikirim.", 409);
+
             var merged = Parse(attempt.Answers);
             foreach (var (k, v) in answers) merged[k] = v;
             attempt.Answers = JsonSerializer.Serialize(merged);
-        }
+            await db.SaveChangesAsync(ct);
+        });
 
-        var (_, config, sessionId, _) = await LoadAsync(attempt.AssessmentId, ct);
-        await ScoreAsync(attempt, config, ct);
-        attempt.SubmittedAt = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(ct);
+    public Task<AttemptResultDto> SubmitAsync(
+        Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var attempt = await LoadOwnedAttemptAsync(userId, attemptId, ct);
+            if (attempt.SubmittedAt is not null)
+                return await BuildResultAsync(attempt, ct);          // idempotent re-submit
 
-        // Passing satisfies the gating half of the completion rule; the completion service
-        // re-evaluates the whole rule (watch threshold AND test) and advances the lock.
-        if (sessionId is Guid sid) await completion.TryCompleteAsync(userId, sid, ct);
+            if (answers is not null)
+            {
+                var merged = Parse(attempt.Answers);
+                foreach (var (k, v) in answers) merged[k] = v;
+                attempt.Answers = JsonSerializer.Serialize(merged);
+            }
 
-        return await BuildResultAsync(attempt, ct);
-    }
+            var (_, config, sessionId, _) = await LoadAsync(attempt.AssessmentId, ct);
+            await ScoreAsync(attempt, config, ct);
+            attempt.SubmittedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+
+            // Passing satisfies the gating half of the completion rule; the completion service
+            // re-evaluates the whole rule (watch threshold AND test) and advances the lock.
+            if (sessionId is Guid sid) await completion.TryCompleteAsync(userId, sid, ct);
+
+            return await BuildResultAsync(attempt, ct);
+        });
 
     public async Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
     {

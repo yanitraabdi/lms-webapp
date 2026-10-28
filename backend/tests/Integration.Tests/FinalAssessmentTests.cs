@@ -876,6 +876,74 @@ public class FinalAssessmentTests(AuthApiFactory factory) : IClassFixture<AuthAp
         Assert.Equal(1, (await Advance(c, state.AttemptId, null)).SectionIndex);   // older clients unchanged
     }
 
+    [Fact]
+    public async Task Concurrent_answer_saves_on_one_attempt_lose_nothing()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        var listening = c.Key[QuestionSection.Listening];   // (Id, Correct) per question
+
+        // Each request saves ONE different answer, all at once. Under this much contention the
+        // bounded retry can run out, but then the request says so (409) — it never reports success
+        // for an answer it lost. The client re-sends what was refused.
+        var responses = await Task.WhenAll(listening.Select(async q => (q, res: await Authed(HttpMethod.Post,
+            $"/api/attempts/{state.AttemptId}/section-answers", c.Token,
+            new { answers = new Dictionary<string, int> { [q.Id.ToString()] = q.Correct } }))));
+        Assert.All(responses, r => Assert.Contains(r.res.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
+
+        var mid = await GetState(c, state.AttemptId);
+        Assert.All(responses.Where(r => r.res.IsSuccessStatusCode),
+            r => Assert.Equal(r.q.Correct, mid.Answers[r.q.Id.ToString()]));   // no silent loss
+
+        foreach (var (q, _) in responses.Where(r => !r.res.IsSuccessStatusCode))
+            await SaveAnswers(c, state.AttemptId, new Dictionary<string, int> { [q.Id.ToString()] = q.Correct });
+
+        var after = await GetState(c, state.AttemptId);
+        Assert.Equal(listening.Count, after.Answers.Count);
+        Assert.All(listening, q => Assert.Equal(q.Correct, after.Answers[q.Id.ToString()]));
+    }
+
+    [Fact]
+    public async Task An_answer_saved_while_the_attempt_is_being_finished_is_scored_or_refused()
+    {
+        var c = await SetUp(retakeCap: null);
+        var q = c.Key[QuestionSection.Reading][0];
+
+        // Racy by nature (the finish must read before the save commits and write after it), so it
+        // is repeated; each round either scores the saved answer or refuses the save — never a 200
+        // whose answer the score ignores.
+        for (var round = 0; round < 15; round++)
+        {
+            var state = await Start(c);
+            await Advance(c, state.AttemptId, null, 0);
+            await Advance(c, state.AttemptId, null, 1);              // Reading: the last section
+
+            var save = Authed(HttpMethod.Post, $"/api/attempts/{state.AttemptId}/section-answers", c.Token,
+                new { answers = new Dictionary<string, int> { [q.Id.ToString()] = q.Correct } });
+            var finish = Authed(HttpMethod.Post, $"/api/attempts/{state.AttemptId}/finish", c.Token);
+            var (saved, finished) = (await save, await finish);
+
+            Assert.Contains(saved.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict });
+            finished.EnsureSuccessStatusCode();
+            var result = await Finish(c, state.AttemptId);           // idempotent: the stored result
+            Assert.Equal(saved.IsSuccessStatusCode ? 1 : 0, result.SectionScores[nameof(QuestionSection.Reading)]);
+        }
+    }
+
+    [Fact]
+    public async Task A_few_concurrent_answer_saves_all_succeed_and_survive()
+    {
+        var c = await SetUp();
+        var state = await Start(c);
+        var three = c.Key[QuestionSection.Listening].Take(3).ToList();   // realistic: autosave, advance, a retry
+
+        await Task.WhenAll(three.Select(q =>
+            SaveAnswers(c, state.AttemptId, new Dictionary<string, int> { [q.Id.ToString()] = q.Correct })));
+
+        var after = await GetState(c, state.AttemptId);
+        Assert.All(three, q => Assert.Equal(q.Correct, after.Answers[q.Id.ToString()]));
+    }
+
     private Task<AttemptStateDto> GetState(Ctx c, Guid attemptId)
         => AuthedGet<AttemptStateDto>($"/api/attempts/{attemptId}/state", c.Token);
 

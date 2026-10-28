@@ -24,25 +24,27 @@ public class FinalAssessmentService(
     /// <summary>Two strikes ends the sitting (KAK §9.8.1).</summary>
     public const int StrikeLimit = 2;
 
-    public async Task<AttemptStateDto> GetStateAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
-    {
-        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
-        await EnforceDeadlinesAsync(attempt, ct);
-        return await BuildStateAsync(attempt, sessionId, ct);
-    }
+    public Task<AttemptStateDto> GetStateAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+            await EnforceDeadlinesAsync(attempt, ct);
+            return await BuildStateAsync(attempt, sessionId, ct);
+        });
 
-    public async Task<AttemptStateDto> SaveAnswersAsync(
+    public Task<AttemptStateDto> SaveAnswersAsync(
         Guid userId, Guid attemptId, IReadOnlyDictionary<string, int> answers, CancellationToken ct = default)
-    {
-        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
-        await EnforceDeadlinesAsync(attempt, ct);
+        => ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+            await EnforceDeadlinesAsync(attempt, ct);
 
-        if (attempt.SubmittedAt is not null)
-            throw new AssessmentException("Tes ini sudah selesai.", 409);
+            if (attempt.SubmittedAt is not null)
+                throw new AssessmentException("Tes ini sudah selesai.", 409);
 
-        await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
-        return await BuildStateAsync(attempt, sessionId, ct);
-    }
+            await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
+            return await BuildStateAsync(attempt, sessionId, ct);
+        });
 
     /// <summary>Merges answers into the ACTIVE section only; the caller has already loaded the
     /// attempt and enforced its deadlines.</summary>
@@ -63,24 +65,25 @@ public class FinalAssessmentService(
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<AttemptStateDto> AdvanceSectionAsync(
+    public Task<AttemptStateDto> AdvanceSectionAsync(
         Guid userId, Guid attemptId, IReadOnlyDictionary<string, int>? answers, int? expectedSectionIndex,
         CancellationToken ct = default)
-    {
-        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
-        await EnforceDeadlinesAsync(attempt, ct);
-        if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
+        => ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+            await EnforceDeadlinesAsync(attempt, ct);
+            if (attempt.SubmittedAt is not null || IsStale(attempt, expectedSectionIndex))
+                return await BuildStateAsync(attempt, sessionId, ct);
+
+            // Already loaded, enforced and stale-checked above: save on this attempt directly, so an
+            // expiry enforced here returns the state rather than the public save's 409.
+            if (answers is { Count: > 0 })
+                await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
+
+            await CloseCurrentAndAdvanceAsync(attempt, AttemptState.Parse(attempt.State), DateTimeOffset.UtcNow,
+                autoSubmitted: false, ct);
             return await BuildStateAsync(attempt, sessionId, ct);
-
-        // Already loaded, enforced and stale-checked above: save on this attempt directly, so an
-        // expiry enforced here returns the state rather than the public save's 409.
-        if (answers is { Count: > 0 })
-            await SaveCurrentSectionAnswersAsync(attempt, answers, ct);
-
-        await CloseCurrentAndAdvanceAsync(attempt, AttemptState.Parse(attempt.State), DateTimeOffset.UtcNow,
-            autoSubmitted: false, ct);
-        return await BuildStateAsync(attempt, sessionId, ct);
-    }
+        });
 
     /// <summary>The client asked to close a section the server has already closed. Closing "the
     /// current" one now would close a section the learner has never seen; its answers arrived after
@@ -88,83 +91,86 @@ public class FinalAssessmentService(
     private static bool IsStale(Attempt attempt, int? expectedSectionIndex)
         => expectedSectionIndex is int expected && expected != AttemptState.Parse(attempt.State).CurrentIndex;
 
-    public async Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
-    {
-        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
-        var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
-        await EnforceDeadlinesAsync(attempt, ct);
-
-        if (attempt.SubmittedAt is null)
-            await FinalizeAsync(attempt, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
-        else if (wasSubmitted)
-            await HealIfUncertifiedAsync(attempt, ct);
-
-        return await BuildResultAsync(attempt, sessionId, ct);
-    }
-
-    public async Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
-    {
-        var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
-        var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
-        await EnforceDeadlinesAsync(attempt, ct);
-
-        if (attempt.SubmittedAt is null)
-            throw new AssessmentException("Tes ini belum selesai.", 409);
-
-        if (wasSubmitted) await HealIfUncertifiedAsync(attempt, ct);
-        return await BuildResultAsync(attempt, sessionId, ct);
-    }
-
-    public async Task<string> GetAudioUrlAsync(
-        Guid userId, Guid attemptId, Guid questionId, CancellationToken ct = default)
-    {
-        var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
-        await EnforceDeadlinesAsync(attempt, ct);
-        if (attempt.SubmittedAt is not null)
-            throw new AssessmentException("Tes ini sudah selesai.", 409);
-
-        var question = await db.Questions
-            .Where(q => q.Id == questionId)
-            .Select(q => new { q.Id, q.AudioRef, q.Section })
-            .FirstOrDefaultAsync(ct)
-            ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
-
-        // The question must belong to this assessment AND the active section.
-        var state = AttemptState.Parse(attempt.State);
-        var current = state.Current ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
-        var allowed = await SectionQuestionIdsAsync(attempt.AssessmentId, current.Section, ct);
-        if (!allowed.Contains(questionId.ToString()))
-            throw new AssessmentException("Soal ini bukan bagian dari sesi yang sedang berjalan.", 403);
-
-        var config = AssessmentService.ParseConfig(
-            await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
-
-        // A question's OWN clip only. The section recording used to be served here too, one URL per
-        // question, each with native player controls — so fifty Listening questions meant fifty
-        // ways to pause, rewind and replay a conversation the ITP plays once. It now has exactly
-        // one way in, StartSectionAudioAsync, which stamps a single start.
-        var storageKey = string.IsNullOrWhiteSpace(question.AudioRef)
-            ? throw new AssessmentException(
-                AudioResolution.StorageKey(null, question.Section, config) is null
-                    ? "Soal ini tidak memiliki audio."
-                    : "Audio bagian ini diputar sekali untuk seluruh bagian, bukan per soal.", 400)
-            : question.AudioRef;
-
-        // Play limit is counted SERVER-side; the client cannot grant itself another play.
-        if (config.AudioPlayLimit is int limit)
+    public Task<AttemptResultDto> SubmitAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
         {
-            var key = AudioResolution.PlayKey(questionId, question.AudioRef, question.Section, config)!;
-            state.AudioPlays.TryGetValue(key, out var used);
-            if (used >= limit)
-                throw new AssessmentException("Batas pemutaran audio untuk soal ini sudah tercapai.", 409);
-            state.AudioPlays[key] = used + 1;
-            attempt.State = state.Serialize();
-            await db.SaveChangesAsync(ct);
-        }
+            var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+            var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
+            await EnforceDeadlinesAsync(attempt, ct);
 
-        // Signed, short-TTL, minted per play (GR-3).
-        return signer.Sign(storageKey);
-    }
+            if (attempt.SubmittedAt is null)
+                await FinalizeAsync(attempt, DateTimeOffset.UtcNow, autoSubmitted: false, ct);
+            else if (wasSubmitted)
+                await HealIfUncertifiedAsync(attempt, ct);
+
+            return await BuildResultAsync(attempt, sessionId, ct);
+        });
+
+    public Task<AttemptResultDto> GetResultAsync(Guid userId, Guid attemptId, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var (attempt, sessionId) = await LoadOwnedAsync(userId, attemptId, ct);
+            var wasSubmitted = attempt.SubmittedAt is not null;   // else finalisation runs in this request
+            await EnforceDeadlinesAsync(attempt, ct);
+
+            if (attempt.SubmittedAt is null)
+                throw new AssessmentException("Tes ini belum selesai.", 409);
+
+            if (wasSubmitted) await HealIfUncertifiedAsync(attempt, ct);
+            return await BuildResultAsync(attempt, sessionId, ct);
+        });
+
+    public Task<string> GetAudioUrlAsync(
+        Guid userId, Guid attemptId, Guid questionId, CancellationToken ct = default)
+        => ConcurrencyRetry.RunAsync(db, async () =>
+        {
+            var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
+            await EnforceDeadlinesAsync(attempt, ct);
+            if (attempt.SubmittedAt is not null)
+                throw new AssessmentException("Tes ini sudah selesai.", 409);
+
+            var question = await db.Questions
+                .Where(q => q.Id == questionId)
+                .Select(q => new { q.Id, q.AudioRef, q.Section })
+                .FirstOrDefaultAsync(ct)
+                ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
+
+            // The question must belong to this assessment AND the active section.
+            var state = AttemptState.Parse(attempt.State);
+            var current = state.Current ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
+            var allowed = await SectionQuestionIdsAsync(attempt.AssessmentId, current.Section, ct);
+            if (!allowed.Contains(questionId.ToString()))
+                throw new AssessmentException("Soal ini bukan bagian dari sesi yang sedang berjalan.", 403);
+
+            var config = AssessmentService.ParseConfig(
+                await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
+
+            // A question's OWN clip only. The section recording used to be served here too, one URL per
+            // question, each with native player controls — so fifty Listening questions meant fifty
+            // ways to pause, rewind and replay a conversation the ITP plays once. It now has exactly
+            // one way in, StartSectionAudioAsync, which stamps a single start.
+            var storageKey = string.IsNullOrWhiteSpace(question.AudioRef)
+                ? throw new AssessmentException(
+                    AudioResolution.StorageKey(null, question.Section, config) is null
+                        ? "Soal ini tidak memiliki audio."
+                        : "Audio bagian ini diputar sekali untuk seluruh bagian, bukan per soal.", 400)
+                : question.AudioRef;
+
+            // Play limit is counted SERVER-side; the client cannot grant itself another play.
+            if (config.AudioPlayLimit is int limit)
+            {
+                var key = AudioResolution.PlayKey(questionId, question.AudioRef, question.Section, config)!;
+                state.AudioPlays.TryGetValue(key, out var used);
+                if (used >= limit)
+                    throw new AssessmentException("Batas pemutaran audio untuk soal ini sudah tercapai.", 409);
+                state.AudioPlays[key] = used + 1;
+                attempt.State = state.Serialize();
+                await db.SaveChangesAsync(ct);
+            }
+
+            // Signed, short-TTL, minted per play (GR-3).
+            return signer.Sign(storageKey);
+        });
 
     /// <summary>
     /// One recording for the whole Listening section, played once, without pausing or replaying.
@@ -179,34 +185,35 @@ public class FinalAssessmentService(
     /// audio element themselves: the signed URL serves the whole file. That is the same line soft
     /// proctoring already draws — deterrence, not exam security (GR-14).
     /// </summary>
-    public async Task<SectionAudioDto> StartSectionAudioAsync(
+    public Task<SectionAudioDto> StartSectionAudioAsync(
         Guid userId, Guid attemptId, CancellationToken ct = default)
-    {
-        var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
-        await EnforceDeadlinesAsync(attempt, ct);
-        if (attempt.SubmittedAt is not null)
-            throw new AssessmentException("Tes ini sudah selesai.", 409);
-
-        var state = AttemptState.Parse(attempt.State);
-        var current = state.Current ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
-
-        var config = AssessmentService.ParseConfig(
-            await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
-        var storageKey = AudioResolution.StorageKey(null, ParseSection(current.Section), config)
-            ?? throw new AssessmentException("Bagian ini tidak memiliki audio.", 400);
-
-        var now = DateTimeOffset.UtcNow;
-        if (current.AudioStartedAt is null)
+        => ConcurrencyRetry.RunAsync(db, async () =>
         {
-            current.AudioStartedAt = now;
-            attempt.State = state.Serialize();
-            await db.SaveChangesAsync(ct);
-        }
+            var (attempt, _) = await LoadOwnedAsync(userId, attemptId, ct);
+            await EnforceDeadlinesAsync(attempt, ct);
+            if (attempt.SubmittedAt is not null)
+                throw new AssessmentException("Tes ini sudah selesai.", 409);
 
-        // Signed, short-TTL, minted per request (GR-3). The TTL outlasts the longest section, so a
-        // URL minted at the start does not expire partway through the recording.
-        return new SectionAudioDto(signer.Sign(storageKey), current.AudioStartedAt.Value, now);
-    }
+            var state = AttemptState.Parse(attempt.State);
+            var current = state.Current ?? throw new AssessmentException("Tidak ada bagian yang aktif.", 409);
+
+            var config = AssessmentService.ParseConfig(
+                await db.Assessments.Where(a => a.Id == attempt.AssessmentId).Select(a => a.Config).FirstAsync(ct));
+            var storageKey = AudioResolution.StorageKey(null, ParseSection(current.Section), config)
+                ?? throw new AssessmentException("Bagian ini tidak memiliki audio.", 400);
+
+            var now = DateTimeOffset.UtcNow;
+            if (current.AudioStartedAt is null)
+            {
+                current.AudioStartedAt = now;
+                attempt.State = state.Serialize();
+                await db.SaveChangesAsync(ct);
+            }
+
+            // Signed, short-TTL, minted per request (GR-3). The TTL outlasts the longest section, so a
+            // URL minted at the start does not expire partway through the recording.
+            return new SectionAudioDto(signer.Sign(storageKey), current.AudioStartedAt.Value, now);
+        });
 
     // ================================================================ internals
 
@@ -273,8 +280,11 @@ public class FinalAssessmentService(
         await ScoreAsync(attempt, ct);                    // in memory only; written below
         var auto = attempt.AutoSubmitted || autoSubmitted;
 
-        await db.Attempts
-            .Where(a => a.Id == attempt.Id && a.SubmittedAt == null)
+        // Also conditioned on the row version EF would check: answers saved after this request read
+        // the row must not be stamped as submitted without being scored.
+        var loadedXmin = db.Entry(attempt).Property<uint>("xmin").OriginalValue;
+        var stamped = await db.Attempts
+            .Where(a => a.Id == attempt.Id && a.SubmittedAt == null && EF.Property<uint>(a, "xmin") == loadedXmin)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.SubmittedAt, at)
                 .SetProperty(a => a.AutoSubmitted, auto)
@@ -287,6 +297,10 @@ public class FinalAssessmentService(
         // ExecuteUpdate bypasses the change tracker: reload so the tracked row is the database's
         // either way, and no later SaveChanges re-writes stale in-memory values.
         await db.Entry(attempt).ReloadAsync(ct);
+        // Not stamped and still open: another request changed the row (not finalised it). Every
+        // caller runs inside ConcurrencyRetry, which re-reads and re-scores on fresh data.
+        if (stamped == 0 && attempt.SubmittedAt is null)
+            throw new DbUpdateConcurrencyException("The attempt changed while it was being finalised.");
         // No early return for a "loser": a lost-ack retry looks like one, and both calls below are
         // idempotent; it also closes the window where a losing reader saw no scaled score yet.
         // The submission is committed: finishing its side effects must not depend on the caller
