@@ -125,3 +125,55 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* ---- Exam motion ----
+   Still while the clock runs (short confirmations only), one warm count-up when it ends.
+   Opacity/transform only; everything below is switched off under reduced motion. */
+:root {
+  --ds-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ds-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes exam-rise {
+  from { opacity: 0; transform: translateY(var(--exam-rise, 12px)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes exam-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes exam-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes exam-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes exam-grow {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.exam-option { transition: border-color 150ms var(--ds-ease-out), background-color 150ms var(--ds-ease-out); }
+.exam-timer { transition: color 400ms var(--ds-ease-std); }
+.exam-fade-in { animation: exam-fade-in 220ms var(--ds-ease-out) both; }
+
+.exam-section-enter { animation: exam-rise 300ms var(--ds-ease-out) both; }
+.exam-section-leave {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms var(--ds-ease-std), transform 160ms var(--ds-ease-std);
+}
+
+.exam-scrim { animation: exam-fade-in 220ms var(--ds-ease-std) both; }
+.exam-scrim > * { animation: exam-pop 240ms var(--ds-ease-out) both; }
+.exam-scrim[data-closing] { animation: exam-fade-out 150ms var(--ds-ease-std) both; pointer-events: none; }
+
+/* Result: rows settle under the count-up (1200ms), 90ms apart; the band grows in as it lands. */
+.exam-settle {
+  --exam-rise: 10px;
+  animation: exam-rise 320ms var(--ds-ease-out) both;
+  animation-delay: calc(600ms + var(--i, 0) * 90ms);
+}
+.exam-band { animation: exam-grow 260ms var(--ds-ease-out) 1200ms both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-option, .exam-timer, .exam-section-leave { transition: none; }
+  .exam-fade-in, .exam-section-enter, .exam-scrim, .exam-scrim > *, .exam-scrim[data-closing],
+  .exam-settle, .exam-band { animation: none; }
+}

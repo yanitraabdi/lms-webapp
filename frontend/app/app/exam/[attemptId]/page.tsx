@@ -9,6 +9,7 @@ import { Button, Spinner, ErrorState } from "@/components/ui";
 import { ProctorWatcher } from "@/components/learn/ProctorWatcher";
 import { Sitting, WarningOverlay } from "@/components/exam/Sitting";
 import { ExamResult } from "@/components/exam/ExamResult";
+import { prefersReducedMotion } from "@/lib/useCssVar";
 import {
   getAttemptStateOrNull, getAttemptState, getFinalResult, saveSectionAnswers, advanceSection,
   num, type AttemptState, type ProctorState,
@@ -46,6 +47,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(0);
+  const [leaving, setLeaving] = useState(false);
 
   // Fetched once per mount. Any refetch would re-run applyState and overwrite unsaved answers, so it
   // must never go stale; gcTime 0 so a remount reads the server's clock afresh.
@@ -114,7 +116,14 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
     if (!state) return;
     setBusy(true); setError(null);
     try {
-      applyState(await advanceSection(token, attemptId, answers, num(state.sectionIndex)));
+      const s = await advanceSection(token, attemptId, answers, num(state.sectionIndex));
+      // Let the finished section step back (160ms) before the next one replaces it.
+      if (s.status === "InProgress" && s.sectionIndex !== state.sectionIndex && !prefersReducedMotion()) {
+        setLeaving(true);
+        await new Promise((done) => setTimeout(done, 160));
+        setLeaving(false);
+      }
+      applyState(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal melanjutkan.");
     } finally {
@@ -173,14 +182,19 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
             remaining={remaining}
             busy={busy}
             error={error}
+            leaving={leaving}
             onAnswer={(qid, choice) => setAnswers((a) => ({ ...a, [qid]: choice }))}
             onSave={async () => {
-              try { applyState(await saveSectionAnswers(token, attemptId, answers)); } catch { /* retried */ }
+              try {
+                applyState(await saveSectionAnswers(token, attemptId, answers));
+                return true;
+              } catch { return false; /* retried on the next tick */ }
             }}
             onNext={next}
           />
         ) : shown ? (
-          <ExamResult result={shown} sessionId={state.sessionId ?? null} />
+          // Count up only when the sitting ended in this tab; a revisit shows the result at rest.
+          <ExamResult result={shown} sessionId={state.sessionId ?? null} celebrate={wasRunning.current} />
         ) : resultQuery.isError ? (
           <ErrorState
             title="Gagal memuat hasil"
