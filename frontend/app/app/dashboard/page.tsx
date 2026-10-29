@@ -39,7 +39,7 @@ export default function DashboardPage() {
     return <div className="flex min-h-screen items-center justify-center bg-bg"><Spinner size={24} /></div>;
   }
 
-  const firstName = (user?.name ?? "").split(" ")[0] || "kembali";
+  const firstName = (user?.name ?? "").split(" ")[0] || "";
   const active = (enrollments.data ?? []).filter(
     (e) => e.status === "Active" || e.status === "Completed");
 
@@ -49,7 +49,7 @@ export default function DashboardPage() {
       <OnboardingFlow token={accessToken} />
       <SheetPage>
         {active[0] && <RunningHead>{active[0].programName}</RunningHead>}
-        <PageTitle>{`Selamat datang kembali, ${firstName}`}</PageTitle>
+        <PageTitle>{`Selamat datang kembali${firstName ? `, ${firstName}` : ""}`}</PageTitle>
 
         {enrollments.isPending ? (
           <div className="flex min-h-[200px] items-center justify-center"><Spinner size={24} /></div>

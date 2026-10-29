@@ -180,7 +180,7 @@ function AttemptDetail({
 
           {sections.length > 0 && (
             <div>
-              <h3 className="text-[12px] font-bold uppercase tracking-wide text-ink-subtle">Skor per bagian</h3>
+              <h3 className="text-[13.5px] font-semibold text-ink-muted">Skor per bagian</h3>
               <ul className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1">
                 {sections.map(([name, value]) => (
                   <li key={name} className="text-[13px] text-ink-muted">
@@ -192,7 +192,7 @@ function AttemptDetail({
           )}
 
           <div>
-            <h3 className="text-[12px] font-bold uppercase tracking-wide text-ink-subtle">
+            <h3 className="text-[13.5px] font-semibold text-ink-muted">
               Jejak pengawasan ({q.data!.events.length})
             </h3>
             <p className="mt-1 text-[11.5px] text-ink-subtle">
@@ -232,7 +232,7 @@ function AttemptDetail({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">{label}</span>
+      <span className="text-[13.5px] font-semibold text-ink-muted">{label}</span>
       <span className="text-ink">{value}</span>
     </div>
   );

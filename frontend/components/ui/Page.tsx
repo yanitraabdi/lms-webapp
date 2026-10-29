@@ -35,11 +35,12 @@ export interface PageTitleProps {
   className?: string;
   /** "page" = display size; "compact" = 30px (auth, admin). */
   size?: "page" | "compact";
+  as?: "h1" | "h2";
 }
 
-export function PageTitle({ children, id, tabIndex, className, size = "page" }: PageTitleProps) {
+export function PageTitle({ children, id, tabIndex, className, size = "page", as: Tag = "h1" }: PageTitleProps) {
   return (
-    <h1
+    <Tag
       id={id}
       tabIndex={tabIndex}
       className={cn(
@@ -52,7 +53,7 @@ export function PageTitle({ children, id, tabIndex, className, size = "page" }: 
       )}
     >
       {children}
-    </h1>
+    </Tag>
   );
 }
 
@@ -75,7 +76,7 @@ export function Chapter({
 }) {
   const headingId = id ? `${id}-heading` : undefined;
   return (
-    <section id={id} aria-labelledby={headingId} className={cn("mt-12 border-t border-ink pt-4", className)}>
+    <section id={id} aria-labelledby={headingId} className={cn("mt-12 scroll-mt-20 border-t border-ink pt-4", className)}>
       <h2 id={headingId} className="text-[26px] font-extrabold tracking-[-0.015em] text-ink">
         {title}
       </h2>
@@ -144,7 +145,7 @@ export function TocItem({ n, title, kind, meta, note, state, href }: TocItemProp
         )}
         {note && <span className="mt-0.5 block text-[13px] font-medium text-ink-muted">{note}</span>}
       </span>
-      <span className="text-[13px] tabular-nums text-ink-muted">{meta}</span>
+      <span className="max-w-[40%] text-right text-[13px] tabular-nums text-ink-muted">{meta}</span>
     </li>
   );
 }

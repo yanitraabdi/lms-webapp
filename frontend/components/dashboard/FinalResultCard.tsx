@@ -23,7 +23,7 @@ export function FinalResultCard({
   if (!certificate) {
     return (
       <Chapter title="Hasil tes akhir">
-        <p className="mt-3 max-w-[60ch] text-ink-muted">Belum ada hasil tes akhir.</p>
+        {sessionsRemaining > 0 && <p className="mt-3 max-w-[60ch] text-ink-muted">Belum ada hasil tes akhir.</p>}
         <p className="mt-2 max-w-[60ch] text-ink-muted">
           Simulasi TOEFL ITP (Listening, Structure, Reading) dengan durasi 115 menit. Terbuka setelah semua sesi selesai.
         </p>
@@ -50,12 +50,14 @@ export function FinalResultCard({
     <Chapter title="Hasil tes akhir">
       <div className="mt-4">
         {certificate.totalScore != null && (
-          <p className="text-[60px] font-extrabold leading-none tabular-nums text-primary">{num(certificate.totalScore)}</p>
+          <>
+            <p className="text-[60px] font-extrabold leading-none tabular-nums text-primary">{num(certificate.totalScore)}</p>
+            <p className="mt-2 text-[13.5px] font-semibold text-ink-muted">
+              Skor prediksi<sup>1</sup>
+              {certificate.predictedBand && <span>{`, ${certificate.predictedBand}`}</span>}
+            </p>
+          </>
         )}
-        <p className="mt-2 text-[13.5px] font-semibold text-ink-muted">
-          Skor prediksi<sup>1</sup>
-          {certificate.predictedBand && <span>{`, ${certificate.predictedBand}`}</span>}
-        </p>
       </div>
       {rows.length > 0 && (
         <table className="data-table mt-5">

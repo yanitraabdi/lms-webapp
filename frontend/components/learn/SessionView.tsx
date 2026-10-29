@@ -88,7 +88,7 @@ export function SessionView({
           <RunningHead>Sesi {num(s.orderIndex)}</RunningHead>
           {s.completed && <Badge status="completed" className="px-2.5 py-0.5" />}
         </div>
-        <PageTitle size={embedded ? "compact" : "page"}>{s.title}</PageTitle>
+        <PageTitle as={embedded ? "h2" : "h1"} size={embedded ? "compact" : "page"}>{s.title}</PageTitle>
         {s.description && <Lead>{s.description}</Lead>}
       </div>
 

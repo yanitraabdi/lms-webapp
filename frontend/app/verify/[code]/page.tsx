@@ -73,7 +73,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                   ))}
                   <tr>
                     <td>Kode verifikasi</td>
-                    <td className="num font-bold">{result.code}</td>
+                    <td className="num break-all font-bold">{result.code}</td>
                   </tr>
                   {result.issuedAt && (
                     <tr>
@@ -88,7 +88,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
             <>
               <PageTitle>Sertifikat tidak ditemukan</PageTitle>
               <p className="mt-3 max-w-[60ch] text-ink-muted">
-                Kode <strong className="text-ink">{code}</strong> tidak cocok dengan sertifikat mana pun.
+                Kode <strong className="break-all text-ink">{code}</strong> tidak cocok dengan sertifikat mana pun.
                 Periksa kembali penulisannya.
               </p>
             </>

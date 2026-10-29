@@ -21,7 +21,7 @@ export function CertificateCards({ certificates }: { certificates: ProgramCertif
             </RunningHead>
             <span className="break-all font-mono text-[13px] text-ink">{c.verificationCode}</span>
             <span className="mt-1 flex gap-4">
-              <Link href="/app/certificates" className={LINK}>Unduh PDF</Link>
+              <Link href="/app/certificates" className={LINK}>Buka sertifikat</Link>
               <Link href={`/verify/${c.verificationCode}`} className={LINK}>Halaman verifikasi</Link>
             </span>
           </li>
