@@ -24,3 +24,8 @@ export function usePrefersReducedMotion(): boolean {
   }, []);
   return reduced;
 }
+
+/** One-off read for event handlers and initial state, where waiting a render for the hook is too late. */
+export function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}

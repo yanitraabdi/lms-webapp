@@ -1,9 +1,38 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { num, type AttemptResult } from "@/lib/sessions";
+import { prefersReducedMotion } from "@/lib/useCssVar";
 
-export function ExamResult({ result, sessionId }: { result: AttemptResult; sessionId?: string | null }) {
+const COUNT_MS = 1200;
+
+/** Counts 0 → target once, fast then settling (ease-out-expo), so the last digits read clearly. */
+function useCountUp(target: number, run: boolean): number {
+  const animate = run && !prefersReducedMotion();
+  const [value, setValue] = useState(animate ? 0 : target);
+  useEffect(() => {
+    if (!animate) { setValue(target); return; }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const x = Math.min(1, (now - start) / COUNT_MS);
+      setValue(Math.round((x === 1 ? 1 : 1 - Math.pow(2, -10 * x)) * target));
+      if (x < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, animate]);
+  return value;
+}
+
+export function ExamResult({
+  result, sessionId, celebrate = false,
+}: { result: AttemptResult; sessionId?: string | null; celebrate?: boolean }) {
   // ITP order, same names as the certificate page.
   const sections = ["Listening", "Structure", "Reading"].filter((s) => s in result.sectionScores);
+  const total = result.totalScaledScore != null ? num(result.totalScaledScore) : 0;
+  const shownTotal = useCountUp(total, celebrate && result.totalScaledScore != null);
 
   return (
     <div className="flex flex-col gap-5">
@@ -15,11 +44,15 @@ export function ExamResult({ result, sessionId }: { result: AttemptResult; sessi
             <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-ink-subtle">
               Skor prediksi TOEFL
             </p>
-            <p className="text-[52px] font-extrabold leading-none tracking-tight text-primary">
-              {num(result.totalScaledScore)}
+            {/* Screen readers get the final score once, not every frame of the count. */}
+            <p aria-hidden="true" className="text-[52px] font-extrabold leading-none tracking-tight tabular-nums text-primary">
+              {shownTotal}
             </p>
+            <p className="sr-only">{total}</p>
             {result.predictedBand && (
-              <p className="mt-1 text-[13.5px] font-semibold text-ink-muted">{result.predictedBand}</p>
+              <p className={"mt-1 text-[13.5px] font-semibold text-ink-muted " + (celebrate ? "exam-band" : "")}>
+                {result.predictedBand}
+              </p>
             )}
           </>
         ) : (
@@ -49,11 +82,15 @@ export function ExamResult({ result, sessionId }: { result: AttemptResult; sessi
         <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-extrabold">Rincian per bagian</h2>
           <ul className="mt-3 flex flex-col gap-2">
-            {sections.map((name) => {
+            {sections.map((name, i) => {
               const scaled = result.scaledScores?.[name];
               const raw = result.sectionScores[name];
               return (
-                <li key={name} className="flex items-center justify-between text-[13.5px]">
+                <li
+                  key={name}
+                  className={"flex items-center justify-between text-[13.5px] tabular-nums " + (celebrate ? "exam-settle" : "")}
+                  style={celebrate ? ({ "--i": i } as React.CSSProperties) : undefined}
+                >
                   <span className="text-ink-muted">{name}</span>
                   <span>
                     {scaled != null && (
