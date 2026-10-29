@@ -71,7 +71,7 @@ export default function DashboardPage() {
             }
           />
         ) : (
-          <ProgramDashboard token={accessToken} enrollment={active[0]} firstName={firstName} />
+          <ProgramDashboard token={accessToken} enrollment={active[0]} />
         )}
 
         {/* Pending payments surface here so a learner is never left wondering. */}
@@ -89,8 +89,8 @@ export default function DashboardPage() {
   );
 }
 
-/** Blocks 1–4 for one programme. ponytail: one programme exists; per-programme sections when a second one ships. */
-function ProgramDashboard({ token, enrollment, firstName }: { token: string; enrollment: Enrollment; firstName: string }) {
+/** Dashboard blocks for one programme. ponytail: one programme exists; per-programme sections when a second one ships. */
+function ProgramDashboard({ token, enrollment }: { token: string; enrollment: Enrollment }) {
   const program = useQuery({
     queryKey: ["student-program", enrollment.programId],
     queryFn: () => getStudentProgram(token, enrollment.programId),
