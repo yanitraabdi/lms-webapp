@@ -171,7 +171,7 @@ function QuestionBank() {
             </thead>
             <tbody className="text-[13.5px]">
               {questions.data.map((q) => (
-                <tr key={q.id} className="border-t border-border">
+                <tr key={q.id}>
                   <td className="max-w-[380px]">
                     <div className="truncate font-semibold">{q.prompt}</div>
                     <div className="truncate text-[11.5px] text-ink-subtle">

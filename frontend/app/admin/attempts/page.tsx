@@ -38,7 +38,7 @@ export default function AdminAttemptsPage() {
         </label>
       </div>
 
-      <div className="overflow-x-auto">
+      <div>
         {!token || attempts.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : attempts.isError ? (
@@ -65,7 +65,7 @@ export default function AdminAttemptsPage() {
               </thead>
               <tbody className="text-[13.5px]">
                 {attempts.data.items.map((a) => (
-                  <tr key={a.id} className="border-t border-border">
+                  <tr key={a.id}>
                     <td>
                       <div className="font-semibold">{a.userName}</div>
                       <div className="text-[11.5px] text-ink-subtle">{a.userEmail}</div>

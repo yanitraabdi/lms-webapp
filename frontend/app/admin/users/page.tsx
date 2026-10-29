@@ -58,7 +58,7 @@ export default function AdminUsersPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto">
+      <div>
         {!token || users.isPending ? (
           <div className="flex min-h-[160px] items-center justify-center"><Spinner size={22} /></div>
         ) : users.isError ? (
@@ -79,7 +79,7 @@ export default function AdminUsersPage() {
               </thead>
               <tbody className="text-[13.5px]">
                 {users.data.users.map((u) => (
-                  <tr key={u.id} className="border-t border-border">
+                  <tr key={u.id}>
                     <td>
                       <div className="font-semibold">{u.name}</div>
                       <div className="text-[12px] text-ink-muted">{u.email}</div>

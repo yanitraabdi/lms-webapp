@@ -96,7 +96,7 @@ export default function AdminEnrollmentsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div>
         {!token || enrollments.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : enrollments.isError ? (
@@ -121,7 +121,7 @@ export default function AdminEnrollmentsPage() {
               </thead>
               <tbody className="text-[13.5px]">
                 {enrollments.data.items.map((e) => (
-                  <tr key={e.id} className="border-t border-border">
+                  <tr key={e.id}>
                     <td>
                       <div className="font-semibold">{e.userName}</div>
                       <div className="text-[11.5px] text-ink-subtle">{e.userEmail}</div>
