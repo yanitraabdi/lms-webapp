@@ -8,16 +8,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
-import { Button, Spinner, ErrorState, EmptyState } from "@/components/ui";
+import { Button, Spinner, ErrorState, EmptyState, SheetPage, RunningHead, PageTitle, Chapter, Toc, TocItem } from "@/components/ui";
 import { ProgressHeader, nextHref } from "@/components/dashboard/ProgressHeader";
 import { FinalResultCard } from "@/components/dashboard/FinalResultCard";
 import { CertificateCards } from "@/components/dashboard/CertificateCards";
-import { listMyEnrollments, getStudentProgram, num, type Enrollment } from "@/lib/programs";
+import { listMyEnrollments, getStudentProgram, num, SESSION_TYPE_LABEL, type Enrollment, type StudentSession } from "@/lib/programs";
 import { listMyCertificates } from "@/lib/sessions";
 
 const SessionTestHistory = dynamic(() => import("@/components/dashboard/SessionTestHistory"), {
   ssr: false,
-  loading: () => <div className="h-[200px] rounded-lg border border-border bg-surface" />,
+  loading: () => <div className="mt-12 h-[200px]" aria-busy="true" />,
 });
 
 export default function DashboardPage() {
@@ -46,7 +46,9 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-bg">
       <AppHeader />
       <OnboardingFlow token={accessToken} />
-      <div className="mx-auto max-w-5xl px-4 pb-16 pt-7 sm:px-6">
+      <SheetPage>
+        {active[0] && <RunningHead>{active[0].programName}</RunningHead>}
+        <PageTitle>{`Selamat datang kembali, ${firstName}`}</PageTitle>
 
         {enrollments.isPending ? (
           <div className="flex min-h-[200px] items-center justify-center"><Spinner size={24} /></div>
@@ -74,7 +76,7 @@ export default function DashboardPage() {
 
         {/* Pending payments surface here so a learner is never left wondering. */}
         {(enrollments.data ?? []).some((e) => e.status === "PendingPayment") && (
-          <div className="mt-6 rounded-base border border-[#F5D9A8] bg-warning-soft px-5 py-4">
+          <div className="mt-8 rounded-base border border-[#F5D9A8] bg-warning-soft px-5 py-4">
             <p className="text-[13px] leading-relaxed text-ink">
               <strong>Pembayaran sedang diproses.</strong> Akses terbuka otomatis setelah pembayaran
               dikonfirmasi. Jika sudah membayar dan program belum terbuka, hubungi kami lewat{" "}
@@ -82,7 +84,7 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
-      </div>
+      </SheetPage>
     </div>
   );
 }
@@ -104,10 +106,9 @@ function ProgramDashboard({ token, enrollment, firstName }: { token: string; enr
   }
   if (program.isError) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-        <h2 className="text-lg font-extrabold">{enrollment.programName}</h2>
-        <p className="mt-1 text-[13px] text-ink-muted">Program tidak dapat dimuat saat ini.</p>
-      </div>
+      <Chapter title={enrollment.programName}>
+        <p className="mt-3 text-ink-muted">Program tidak dapat dimuat saat ini.</p>
+      </Chapter>
     );
   }
 
@@ -121,11 +122,39 @@ function ProgramDashboard({ token, enrollment, firstName }: { token: string; enr
   const next = data.sessions.find((s) => s.id === data.nextSessionId);
 
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      <div className="md:col-span-2"><ProgressHeader program={data} firstName={firstName} /></div>
+    <>
+      <ProgressHeader program={data} />
+      <Chapter title="Daftar isi">
+        <Toc label="Daftar sesi">
+          {data.sessions.map((s, i) => (
+            <TocItem
+              key={s.id}
+              n={i + 1}
+              title={s.title}
+              kind={SESSION_TYPE_LABEL[s.type]}
+              state={tocState(s, data.nextSessionId)}
+              meta={tocMeta(s, data.nextSessionId)}
+              href={s.state === "Locked" ? undefined : nextHref(s, data.programId)}
+            />
+          ))}
+        </Toc>
+      </Chapter>
       <FinalResultCard certificate={programCerts[0]} sessionsRemaining={total - completed} status={certs.status} />
       <SessionTestHistory token={token} programId={data.programId} continueHref={next ? nextHref(next, data.programId) : null} />
-      {programCerts.length > 0 && <div className="md:col-span-2"><CertificateCards certificates={programCerts} /></div>}
-    </div>
+      <CertificateCards certificates={programCerts} />
+    </>
   );
+}
+
+function tocState(s: StudentSession, nextId: string | null): "done" | "current" | "open" | "locked" {
+  if (s.state === "Completed") return "done";
+  if (s.state === "Locked") return "locked";
+  return s.id === nextId ? "current" : "open";
+}
+
+// Per-test scores are not on the programme DTO, so a finished video session reads "Selesai".
+function tocMeta(s: StudentSession, nextId: string | null): string {
+  if (s.state === "Locked") return "Terkunci";
+  if (s.state === "Completed") return s.type === "Live" ? "Hadir" : "Selesai";
+  return s.id === nextId ? "Berikutnya" : "Terbuka";
 }

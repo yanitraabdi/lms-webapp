@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Chapter } from "@/components/ui";
 import { listMySessionResults, num, type SessionAttempt } from "@/lib/programs";
 import { useCssVar, usePrefersReducedMotion } from "@/lib/useCssVar";
 
@@ -16,13 +17,13 @@ export default function SessionTestHistory({
   const reduced = usePrefersReducedMotion();
 
   if (q.isPending) {
-    return <section className="min-h-[200px] rounded-lg border border-border bg-surface shadow-sm" aria-busy="true" />;
+    return <Chapter title="Riwayat tes sesi"><div className="mt-4 min-h-[120px]" aria-busy="true" /></Chapter>;
   }
   if (q.isError) {
     return (
-      <section className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-        <p className="text-[13px] text-ink-muted">Riwayat tes sesi tidak dapat dimuat.</p>
-      </section>
+      <Chapter title="Riwayat tes sesi">
+        <p className="mt-3 text-ink-muted">Riwayat tes sesi tidak dapat dimuat.</p>
+      </Chapter>
     );
   }
 
@@ -35,16 +36,15 @@ export default function SessionTestHistory({
     num(x[0].sessionOrderIndex) - num(y[0].sessionOrderIndex) || num(x[0].partOrderIndex) - num(y[0].partOrderIndex));
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h2 className="text-lg font-extrabold">Riwayat tes sesi</h2>
+    <Chapter title="Riwayat tes sesi" className="flex flex-col gap-4">
       {ordered.length === 0 ? (
         <div className="flex flex-col gap-2">
-          <p className="text-[13px] leading-relaxed text-ink-muted">
+          <p className="max-w-[60ch] text-ink-muted">
             Tes sesi membuka bagian atau sesi berikutnya. Hasilnya akan tampil di sini.
           </p>
           {continueHref && (
-            <Link href={continueHref} className="self-start text-[13px] font-bold text-primary hover:underline">
-              Mulai belajar →
+            <Link href={continueHref} className="self-start text-[14px] font-bold text-primary underline underline-offset-2">
+              Mulai belajar
             </Link>
           )}
         </div>
@@ -59,7 +59,7 @@ export default function SessionTestHistory({
           });
           return (
             <div key={first.partId} className="flex flex-col gap-1">
-              <h3 className="text-[13px] font-bold text-ink">
+              <h3 className="text-[14px] font-bold text-ink">
                 {first.sessionTitle} · {first.partTitle}
               </h3>
               <div aria-hidden="true">
@@ -84,7 +84,7 @@ export default function SessionTestHistory({
                   </li>
                 ))}
               </ul>
-              <p className="text-[12px] text-ink-muted">
+              <p className="text-[13px] text-ink-muted">
                 <span className={last.passed ? "font-bold text-success" : "font-bold text-ink"}>
                   {last.passed ? "Lulus" : "Belum lulus"}
                 </span>
@@ -94,6 +94,6 @@ export default function SessionTestHistory({
           );
         })
       )}
-    </section>
+    </Chapter>
   );
 }
