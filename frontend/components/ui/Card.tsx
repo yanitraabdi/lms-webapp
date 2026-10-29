@@ -6,12 +6,12 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   flush?: boolean;
 }
 
-/** Surface card: white background, hairline border, lg radius, soft shadow. */
+/** Object box: white, hairline border, lg radius. */
 export function Card({ flush = false, className, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-surface shadow-sm",
+        "rounded-lg border border-border bg-surface",
         !flush && "p-5",
         className
       )}

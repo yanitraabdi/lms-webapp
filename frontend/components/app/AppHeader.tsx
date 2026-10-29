@@ -29,7 +29,7 @@ export function AppHeader() {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border bg-surface">
       <div className="mx-auto flex h-[58px] max-w-6xl items-center justify-between gap-4 px-6">
         <div className="flex items-center gap-6">
           <Link href="/app/dashboard" className="flex items-center gap-2.5">
@@ -44,8 +44,8 @@ export function AppHeader() {
                   href={l.href}
                   data-tour={l.tour}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-[13px] font-bold transition-colors",
-                    active ? "bg-primary-soft text-primary" : "text-ink-muted hover:text-ink"
+                    "px-3 py-1.5 text-[13px] font-bold transition-colors",
+                    active ? "text-ink shadow-[inset_0_-2px_0_var(--color-primary)]" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {l.label}

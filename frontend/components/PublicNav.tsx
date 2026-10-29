@@ -30,7 +30,7 @@ export function PublicNav({ className }: { className?: string }) {
     .toUpperCase();
 
   return (
-    <header className={cn("sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur", className)}>
+    <header className={cn("sticky top-0 z-40 border-b border-border bg-surface", className)}>
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
         <Link href="/" className="flex items-center gap-2.5">
           <Logo />

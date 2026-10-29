@@ -48,7 +48,7 @@ export function Sitting({
 
   return (
     <>
-      <div className="sticky top-0 z-30 -mx-6 mb-5 border-b border-border bg-surface/95 px-6 py-3 backdrop-blur">
+      <div className="sticky top-0 z-30 -mx-6 mb-5 border-b border-border bg-surface px-6 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col">
             <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">
