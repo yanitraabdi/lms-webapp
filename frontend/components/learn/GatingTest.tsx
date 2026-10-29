@@ -122,7 +122,7 @@ export function GatingTest({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+    <div className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-extrabold">Tes sesi</h3>
         {alreadyPassed ? (
@@ -164,7 +164,7 @@ export function GatingTest({
                 start={startAudio}
                 startedAt={null}
                 autoBegin={audioKey > 0}
-                intro="Satu rekaman untuk semua soal tes ini. Audio diputar tanpa jeda dan tanpa mundur — pastikan suara perangkat Anda aktif."
+                intro="Satu rekaman untuk semua soal tes ini. Audio diputar tanpa jeda dan tanpa mundur, pastikan suara perangkat Anda aktif."
                 endedLabel="Audio tes sudah selesai diputar."
               />
               {playLimit > 1 && audio && playsLeft > 0 && (
@@ -218,7 +218,7 @@ export function GatingTest({
 
           {result && !result.passed && (
             <div className="mt-4 rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">
-              Skor Anda {result.score}/{result.maxScore}. Belum mencapai batas lulus — coba lagi.
+              Skor Anda {result.score}/{result.maxScore}. Belum mencapai batas lulus. Coba lagi.
             </div>
           )}
           {failed > 0 && (
@@ -297,7 +297,7 @@ function QuestionAudio({
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2">
       <Button size="sm" variant="neutral" onClick={load} loading={busy}>
-        ▶ Putar audio
+        Putar audio
       </Button>
       {error && <span className="text-[12px] font-semibold text-danger">{error}</span>}
     </div>

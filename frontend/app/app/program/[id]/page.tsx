@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
 import { SessionView } from "@/components/learn/SessionView";
-import { Badge, Button, Spinner, ErrorState, CheckIcon, LockIcon, PlayIcon } from "@/components/ui";
+import { Badge, Button, Spinner, ErrorState, CheckIcon, LockIcon, PlayIcon, SheetPage, RunningHead, PageTitle } from "@/components/ui";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import {
   getStudentProgram, minutesLabel, fmtDateTime, num,
@@ -37,7 +37,7 @@ export default function StudentProgramPage() {
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader />
-      <div className="mx-auto max-w-[1400px] px-6 pb-16 pt-7">
+      <SheetPage wide>
         {q.isPending ? (
           <div className="flex min-h-[240px] items-center justify-center"><Spinner size={24} /></div>
         ) : q.isError ? (
@@ -54,7 +54,7 @@ export default function StudentProgramPage() {
         ) : (
           <ProgramBody token={accessToken} programId={id} data={q.data} />
         )}
-      </div>
+      </SheetPage>
     </div>
   );
 }
@@ -123,11 +123,12 @@ function ProgramBody({
       <aside className="w-full lg:sticky lg:top-[78px] lg:w-[30%] lg:min-w-[280px]">
         <div className="mb-4 flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-[22px] font-extrabold tracking-tight">{data.name}</h1>
+            <RunningHead>{completed}/{total} sesi</RunningHead>
+            <PageTitle size="compact" className="!mt-0">{data.name}</PageTitle>
             {data.batchName && (
               <p className="text-[13px] text-ink-muted">
                 Batch {data.batchName}
-                {data.batchStartDate && ` · mulai ${fmtDateTime(data.batchStartDate)}`}
+                {data.batchStartDate && `, mulai ${fmtDateTime(data.batchStartDate)}`}
               </p>
             )}
           </div>
@@ -135,14 +136,13 @@ function ProgramBody({
             <Badge tone={data.enrollmentStatus === "Active" ? "success" : "neutral"} className="px-2.5 py-1">
               {data.enrollmentStatus === "Active" ? "Terdaftar" : data.enrollmentStatus}
             </Badge>
-            <span className="text-[12.5px] text-ink-muted">{completed}/{total} sesi</span>
           </div>
           <div className="h-[7px] overflow-hidden rounded-full bg-surface-2">
             <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
           </div>
         </div>
 
-        <ol className="flex flex-col gap-2 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1">
+        <ol className="flex flex-col lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1">
           {sessions.map((s) => (
             <SessionRow
               key={s.id}
@@ -169,7 +169,7 @@ function ProgramBody({
             onSessionChanged={() => qc.invalidateQueries({ queryKey: ["student-program", programId] })}
           />
         ) : (
-          <div className="rounded-lg border border-border bg-surface px-6 py-14 text-center">
+          <div className="px-6 py-14 text-center">
             <p className="text-[13.5px] text-ink-muted">Pilih sesi di sebelah kiri untuk mulai.</p>
           </div>
         )}
@@ -204,7 +204,7 @@ function SessionRow({
             {session.title}
           </span>
           {session.type !== "Video" && (
-            <span className="rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+            <span className="rounded-full bg-accent-soft px-2 text-[11.5px] font-bold text-accent">
               {SESSION_TYPE_LABEL[session.type] ?? session.type}
             </span>
           )}
@@ -218,12 +218,12 @@ function SessionRow({
   );
 
   const shell =
-    "flex w-full items-start gap-3 rounded-base border px-3.5 py-3 text-left transition-colors " +
+    "flex w-full items-start gap-3 border-b border-surface-2 px-2 py-[11px] text-left transition-colors " +
     (locked
-      ? "border-border opacity-70"
+      ? "opacity-70"
       : selected
-        ? "border-primary bg-primary-soft/40"
-        : "border-border bg-surface hover:bg-surface-2");
+        ? "rounded-sm border-transparent bg-primary-soft"
+        : "hover:bg-surface-2");
 
   if (locked) {
     return <li className={shell}>{inner}</li>;

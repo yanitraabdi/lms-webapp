@@ -34,7 +34,7 @@ export function RatingWidget({ token, moduleId }: { token: string; moduleId: str
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-extrabold">Nilai modul ini</span>
         {count > 0 && <span className="text-[12px] text-ink-subtle">{avg.toFixed(1)} ★ · {count} penilaian</span>}

@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
-import { Badge, Button, Spinner, ErrorState } from "@/components/ui";
+import { Badge, Button, Spinner, ErrorState, SheetPage, PageTitle, Lead, Chapter } from "@/components/ui";
 import { listMyEnrollments, updateProfile, changePassword, num, type Enrollment } from "@/lib/programs";
 
 const inputCls =
@@ -30,7 +30,7 @@ function money(v: number | string | null | undefined) {
 }
 
 function date(iso: string | null | undefined) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
@@ -97,13 +97,12 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader />
-      <main className="mx-auto max-w-3xl px-6 py-8">
-        <h1 className="text-xl font-extrabold text-ink">Profil & tagihan</h1>
-        <p className="mt-1 text-[13.5px] text-ink-muted">Kelola data akun dan lihat pembelian Anda.</p>
+      <SheetPage>
+        <PageTitle>Profil & tagihan</PageTitle>
+        <Lead>Kelola data akun dan lihat pembelian Anda.</Lead>
 
         {/* ---- profile ---- */}
-        <section className="mt-6 rounded-base border border-border bg-surface p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">Data akun</h2>
+        <Chapter title="Profil">
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label="Nama lengkap">
@@ -122,17 +121,16 @@ export default function AccountPage() {
             {nameErr && <span className="text-[12.5px] font-semibold text-danger">{nameErr}</span>}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4 text-[12.5px] text-ink-muted">
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-muted">
             <span>Status email:</span>
             {user?.emailVerified
               ? <Badge tone="success">Terverifikasi</Badge>
               : <Badge tone="warning">Belum terverifikasi</Badge>}
           </div>
-        </section>
+        </Chapter>
 
         {/* ---- password ---- */}
-        <section className="mt-5 rounded-base border border-border bg-surface p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">Ubah kata sandi</h2>
+        <Chapter title="Kata sandi">
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <Field label="Kata sandi saat ini">
@@ -157,14 +155,10 @@ export default function AccountPage() {
             {pwMsg && <span className="text-[12.5px] font-semibold text-success">{pwMsg}</span>}
             {pwErr && <span className="text-[12.5px] font-semibold text-danger">{pwErr}</span>}
           </div>
-        </section>
+        </Chapter>
 
         {/* ---- purchase ---- */}
-        <section className="mt-5 rounded-base border border-border bg-surface p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">Pembelian</h2>
-          <p className="mt-1 text-[12.5px] text-ink-muted">
-            INVERTA dibayar sekali untuk seluruh program — bukan langganan bulanan.
-          </p>
+        <Chapter title="Tagihan" intro="INVERTA dibayar sekali untuk seluruh program, bukan langganan bulanan.">
 
           {enrollments.isPending ? (
             <div className="flex min-h-[110px] items-center justify-center"><Spinner size={20} /></div>
@@ -177,34 +171,34 @@ export default function AccountPage() {
             <p className="mt-4 text-[13.5px] text-ink-muted">Belum ada pembelian.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-left text-[13px]">
-                <thead className="text-[12px] uppercase tracking-wide text-ink-subtle">
+              <table className="data-table text-[14px]">
+                <thead>
                   <tr>
-                    <th className="pb-2 pr-3 font-bold">Program</th>
-                    <th className="pb-2 pr-3 font-bold">Status</th>
-                    <th className="pb-2 pr-3 font-bold">Jumlah</th>
-                    <th className="pb-2 font-bold">Tanggal</th>
+                    <th>Program</th>
+                    <th>Status</th>
+                    <th>Jumlah</th>
+                    <th>Tanggal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(enrollments.data ?? []).map((e: Enrollment) => (
-                    <tr key={e.id} className="border-t border-border">
-                      <td className="py-2.5 pr-3 font-semibold text-ink">{e.programName}</td>
-                      <td className="py-2.5 pr-3">
+                    <tr key={e.id}>
+                      <td className="font-semibold text-ink">{e.programName}</td>
+                      <td>
                         <Badge tone={e.status === "Active" || e.status === "Completed" ? "success" : "neutral"}>
                           {e.status}
                         </Badge>
                       </td>
-                      <td className="py-2.5 pr-3 tabular-nums">{money(e.amountPaidIdr)}</td>
-                      <td className="py-2.5 text-ink-muted">{date(e.enrolledAt)}</td>
+                      <td className="tabular-nums">{money(e.amountPaidIdr)}</td>
+                      <td className="text-ink-muted">{date(e.enrolledAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
-      </main>
+        </Chapter>
+      </SheetPage>
     </div>
   );
 }

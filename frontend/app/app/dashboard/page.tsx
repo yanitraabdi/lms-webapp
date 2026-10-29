@@ -12,8 +12,9 @@ import { Button, Spinner, ErrorState, EmptyState, SheetPage, RunningHead, PageTi
 import { ProgressHeader, nextHref } from "@/components/dashboard/ProgressHeader";
 import { FinalResultCard } from "@/components/dashboard/FinalResultCard";
 import { CertificateCards } from "@/components/dashboard/CertificateCards";
-import { listMyEnrollments, getStudentProgram, num, SESSION_TYPE_LABEL, type Enrollment, type StudentSession } from "@/lib/programs";
+import { listMyEnrollments, getStudentProgram, num, SESSION_TYPE_LABEL, type Enrollment } from "@/lib/programs";
 import { listMyCertificates } from "@/lib/sessions";
+import { tocState, tocMeta } from "@/lib/toc";
 
 const SessionTestHistory = dynamic(() => import("@/components/dashboard/SessionTestHistory"), {
   ssr: false,
@@ -144,17 +145,4 @@ function ProgramDashboard({ token, enrollment }: { token: string; enrollment: En
       <CertificateCards certificates={programCerts} />
     </>
   );
-}
-
-function tocState(s: StudentSession, nextId: string | null): "done" | "current" | "open" | "locked" {
-  if (s.state === "Completed") return "done";
-  if (s.state === "Locked") return "locked";
-  return s.id === nextId ? "current" : "open";
-}
-
-// Per-test scores are not on the programme DTO, so a finished video session reads "Selesai".
-function tocMeta(s: StudentSession, nextId: string | null): string {
-  if (s.state === "Locked") return "Terkunci";
-  if (s.state === "Completed") return s.type === "Live" ? "Hadir" : "Selesai";
-  return s.id === nextId ? "Berikutnya" : "Terbuka";
 }
