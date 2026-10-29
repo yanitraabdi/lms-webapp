@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Spinner, ErrorState, ChevronRightIcon } from "@/components/ui";
+import { Chapter, PageTitle } from "@/components/ui/Page";
 import { ScoreBandPaste, type ParsedBand } from "@/components/admin/ScoreBandPaste";
 import { listScoreBands, replaceScoreBands, num } from "@/lib/sessions";
 
@@ -75,7 +76,7 @@ export default function ScoreBandsPage() {
         <Link href="/admin/programs" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-ink-muted hover:text-ink">
           <ChevronRightIcon size={15} className="rotate-180" /> Program
         </Link>
-        <h1 className="mt-1 text-xl font-extrabold tracking-tight">Tabel konversi skor</h1>
+        <PageTitle size="compact">Tabel konversi skor</PageTitle>
         <p className="mt-1 text-[13px] text-ink-muted">
           Setiap skor mentah harus dipetakan tepat satu kali. Tanpa tabel yang lengkap, sertifikat
           tidak dapat diterbitkan dan program tidak dapat diterbitkan.
@@ -83,16 +84,15 @@ export default function ScoreBandsPage() {
       </div>
 
       {error && <div className="rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div>}
-      {saved && <div className="rounded-base bg-success-soft px-4 py-3 text-sm font-semibold text-success">Tabel tersimpan ✓</div>}
+      {saved && <div className="rounded-base bg-success-soft px-4 py-3 text-sm font-semibold text-success">Tabel tersimpan</div>}
 
-      <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+      <div>
         <ScoreBandPaste onParsed={apply} />
         {busy && <p className="mt-2 text-[12.5px] text-ink-muted">Menyimpan…</p>}
       </div>
 
-      <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-extrabold">Tersimpan saat ini</h2>
+      <Chapter title="Tersimpan saat ini">
+        <div className="mb-3 mt-1 flex flex-wrap items-center justify-end gap-2">
           <div className="flex items-center gap-3">
             <span className="text-[12.5px] text-ink-muted">{q.data.length} baris</span>
             <Button variant="neutral" size="sm" onClick={download} disabled={q.data.length === 0}>
@@ -104,32 +104,32 @@ export default function ScoreBandsPage() {
         {q.data.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-muted">Belum ada tabel konversi.</p>
         ) : (
-          <div className="max-h-[320px] overflow-y-auto">
-            <table className="w-full border-collapse text-[13px]">
-              <thead className="sticky top-0 bg-surface-2">
-                <tr className="text-left text-xs font-bold text-ink-muted">
-                  <th className="px-3 py-2">Bagian</th>
-                  <th className="px-3 py-2">Min</th>
-                  <th className="px-3 py-2">Max</th>
-                  <th className="px-3 py-2">Skala</th>
-                  <th className="px-3 py-2">Label</th>
+          <div className="max-h-[320px] overflow-auto">
+            <table className="data-table">
+              <thead className="sticky top-0 bg-surface">
+                <tr>
+                  <th>Bagian</th>
+                  <th>Min</th>
+                  <th>Max</th>
+                  <th>Skala</th>
+                  <th>Label</th>
                 </tr>
               </thead>
               <tbody>
                 {q.data.map((b) => (
-                  <tr key={b.id} className="border-t border-border">
-                    <td className="px-3 py-1.5">{b.section}</td>
-                    <td className="px-3 py-1.5">{num(b.minRaw)}</td>
-                    <td className="px-3 py-1.5">{num(b.maxRaw)}</td>
-                    <td className="px-3 py-1.5 font-semibold">{num(b.scaledScore)}</td>
-                    <td className="px-3 py-1.5 text-ink-muted">{b.predictedBand ?? "—"}</td>
+                  <tr key={b.id}>
+                    <td>{b.section}</td>
+                    <td>{num(b.minRaw)}</td>
+                    <td>{num(b.maxRaw)}</td>
+                    <td className="font-semibold">{num(b.scaledScore)}</td>
+                    <td className="text-ink-muted">{b.predictedBand ?? "Tidak ada"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </Chapter>
     </div>
   );
 }

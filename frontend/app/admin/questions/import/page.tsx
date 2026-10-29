@@ -9,12 +9,12 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Spinner } from "@/components/ui";
+import { Chapter, PageTitle } from "@/components/ui/Page";
 import {
   downloadImportTemplate, previewQuestionImport, commitQuestionImport, uploadAudioBulk,
   QUESTION_BANKS, BANK_LABEL, type ImportResult, type BulkAudioResult, type QuestionBankName,
 } from "@/lib/sessions";
 
-const card = "rounded-lg border border-border bg-surface p-5 shadow-sm";
 
 export default function QuestionImportPage() {
   const token = useAuth().accessToken;
@@ -78,13 +78,14 @@ export default function QuestionImportPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">
-          Impor banyak soal sekaligus dari berkas Excel. Isi bank soal — tes akhir tetap disusun di halaman Program.
-        </p>
+      <div>
         <Link href="/admin/questions" className="text-[12.5px] font-bold text-primary hover:underline">
-          ← Kembali ke bank soal
+          Kembali ke bank soal
         </Link>
+        <PageTitle size="compact">Impor soal</PageTitle>
+        <p className="mt-2 text-sm text-ink-muted">
+          Impor banyak soal sekaligus dari berkas Excel. Isi bank soal, tes akhir tetap disusun di halaman Program.
+        </p>
       </div>
 
       {error && (
@@ -92,8 +93,7 @@ export default function QuestionImportPage() {
       )}
 
       {/* ---- 1. template ---- */}
-      <section className={card}>
-        <h2 className="text-[15px] font-extrabold text-ink">1. Unduh template</h2>
+      <Chapter title="1. Unduh template">
         <p className="mt-1 text-[13px] text-ink-muted">
           Template berisi contoh soal untuk setiap bagian dan sheet petunjuk pengisian.
         </p>
@@ -106,11 +106,10 @@ export default function QuestionImportPage() {
         >
           Unduh template (.xlsx)
         </Button>
-      </section>
+      </Chapter>
 
       {/* ---- 2. sheet ---- */}
-      <section className={card}>
-        <h2 className="text-[15px] font-extrabold text-ink">2. Unggah berkas soal</h2>
+      <Chapter title="2. Unggah berkas soal">
         <p className="mt-1 text-[13px] text-ink-muted">
           Berkas diperiksa seluruhnya dulu. Jika ada satu kesalahan, tidak ada soal yang tersimpan.
         </p>
@@ -169,20 +168,20 @@ export default function QuestionImportPage() {
               {errors.length} kesalahan. Perbaiki di Excel lalu unggah ulang berkas yang sama.
             </p>
             <div className="mt-2 max-h-[320px] overflow-auto rounded-sm border border-border">
-              <table className="w-full border-collapse text-[13px]">
-                <thead className="sticky top-0 bg-surface-2 text-left text-[11.5px] font-bold text-ink-muted">
+              <table className="data-table">
+                <thead className="sticky top-0 bg-surface">
                   <tr>
-                    <th className="px-3 py-2">Baris</th>
-                    <th className="px-3 py-2">Kolom</th>
-                    <th className="px-3 py-2">Masalah</th>
+                    <th>Baris</th>
+                    <th>Kolom</th>
+                    <th>Masalah</th>
                   </tr>
                 </thead>
                 <tbody>
                   {errors.map((e, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-3 py-2 tabular-nums font-semibold">{e.row}</td>
-                      <td className="px-3 py-2 font-mono text-[12px]">{e.column}</td>
-                      <td className="px-3 py-2">{e.message}</td>
+                    <tr key={i}>
+                      <td className="tabular-nums font-semibold">{e.row}</td>
+                      <td className="font-mono text-[12px]">{e.column}</td>
+                      <td>{e.message}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -205,23 +204,23 @@ export default function QuestionImportPage() {
               ))}
             </div>
             <div className="mt-2 max-h-[320px] overflow-auto rounded-sm border border-border">
-              <table className="w-full border-collapse text-[13px]">
-                <thead className="sticky top-0 bg-surface-2 text-left text-[11.5px] font-bold text-ink-muted">
+              <table className="data-table">
+                <thead className="sticky top-0 bg-surface">
                   <tr>
-                    <th className="px-3 py-2">Id</th>
-                    <th className="px-3 py-2">Bagian</th>
-                    <th className="px-3 py-2">Pertanyaan</th>
-                    <th className="px-3 py-2">Aksi</th>
+                    <th>Id</th>
+                    <th>Bagian</th>
+                    <th>Pertanyaan</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(result.items ?? []).map((item) => (
-                    <tr key={item.externalId} className="border-t border-border">
-                      <td className="px-3 py-2 font-mono text-[12px] font-semibold">{item.externalId}</td>
-                      <td className="px-3 py-2">{item.section}</td>
-                      <td className="max-w-[420px] truncate px-3 py-2">{item.prompt}</td>
-                      <td className="px-3 py-2">
-                        {/* An id reused by mistake shows up HERE as "Perbarui" — the one place a
+                    <tr key={item.externalId}>
+                      <td className="font-mono text-[12px] font-semibold">{item.externalId}</td>
+                      <td>{item.section}</td>
+                      <td className="max-w-[420px] truncate">{item.prompt}</td>
+                      <td>
+                        {/* An id reused by mistake shows up HERE as "Perbarui", the one place a
                             human can catch it before an existing question is overwritten. */}
                         <Badge tone={item.isUpdate ? "warning" : "success"}>
                           {item.isUpdate ? "Perbarui" : "Baru"}
@@ -234,14 +233,13 @@ export default function QuestionImportPage() {
             </div>
           </div>
         )}
-      </section>
+      </Chapter>
 
       {/* ---- 3. audio ---- */}
-      <section className={card}>
-        <h2 className="text-[15px] font-extrabold text-ink">3. Unggah audio listening</h2>
+      <Chapter title="3. Unggah audio listening">
         <p className="mt-1 text-[13px] text-ink-muted">
           Nama berkas harus sama dengan kolom <code className="font-mono">audio_file</code> di sheet, misalnya L01.mp3.
-          Urutannya bebas — impor dulu atau unggah audio dulu.
+          Urutannya bebas, impor dulu atau unggah audio dulu.
         </p>
 
         <input
@@ -266,7 +264,7 @@ export default function QuestionImportPage() {
             ))}
           </ul>
         )}
-      </section>
+      </Chapter>
     </div>
   );
 }

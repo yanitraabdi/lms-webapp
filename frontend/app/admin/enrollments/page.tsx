@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageTitle } from "@/components/ui/Page";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState, SearchIcon } from "@/components/ui";
 import {
@@ -69,6 +70,7 @@ export default function AdminEnrollmentsPage() {
 
   return (
     <div className="flex flex-col gap-3">
+      <PageTitle size="compact">Pendaftaran</PageTitle>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-ink-subtle">
           Pendaftaran peserta. Mencabut akses tidak menghapus progres, percobaan, atau sertifikat.
@@ -94,7 +96,7 @@ export default function AdminEnrollmentsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="overflow-x-auto">
         {!token || enrollments.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : enrollments.isError ? (
@@ -106,26 +108,26 @@ export default function AdminEnrollmentsPage() {
           <p className="px-6 py-8 text-center text-sm text-ink-muted">Tidak ada pendaftaran.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse">
+            <table className="data-table min-w-[720px]">
               <thead>
-                <tr className="bg-surface-2 text-left text-xs font-bold text-ink-muted">
-                  <th className="px-5 py-3">Peserta</th>
-                  <th className="px-3 py-3">Program</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Progres</th>
-                  <th className="px-3 py-3">Dibayar</th>
-                  <th className="px-5 py-3 text-right">Aksi</th>
+                <tr>
+                  <th>Peserta</th>
+                  <th>Program</th>
+                  <th>Status</th>
+                  <th>Progres</th>
+                  <th>Dibayar</th>
+                  <th className="num">Aksi</th>
                 </tr>
               </thead>
               <tbody className="text-[13.5px]">
                 {enrollments.data.items.map((e) => (
                   <tr key={e.id} className="border-t border-border">
-                    <td className="px-5 py-3.5">
+                    <td>
                       <div className="font-semibold">{e.userName}</div>
                       <div className="text-[11.5px] text-ink-subtle">{e.userEmail}</div>
                     </td>
-                    <td className="px-3 py-3.5">{e.programName}</td>
-                    <td className="px-3 py-3.5">
+                    <td>{e.programName}</td>
+                    <td>
                       <Badge
                         tone={e.status === "Active" || e.status === "Completed" ? "success"
                             : e.status === "Revoked" ? "danger" : "neutral"}
@@ -134,14 +136,14 @@ export default function AdminEnrollmentsPage() {
                         {STATUS_LABEL[e.status] ?? e.status}
                       </Badge>
                     </td>
-                    <td className="px-3 py-3.5">
+                    <td>
                       {num(e.completedSessions)}/{num(e.totalSessions)} sesi
                     </td>
-                    <td className="px-3 py-3.5">
-                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-subtle">—</span>}
+                    <td>
+                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-subtle">Tidak ada</span>}
                       {e.enrolledAt && <div className="text-[11px] text-ink-subtle">{fmtDateTime(e.enrolledAt)}</div>}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td>
                       <div className="flex justify-end">
                         {e.status === "Revoked" ? (
                           <Button variant="neutral" size="sm" onClick={() => restore(e)}>Pulihkan</Button>

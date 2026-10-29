@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageTitle } from "@/components/ui/Page";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState, SearchIcon } from "@/components/ui";
 import {
@@ -39,6 +40,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-3">
+      <PageTitle size="compact">Pengguna</PageTitle>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
@@ -56,7 +58,7 @@ export default function AdminUsersPage() {
         </select>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="overflow-x-auto">
         {!token || users.isPending ? (
           <div className="flex min-h-[160px] items-center justify-center"><Spinner size={22} /></div>
         ) : users.isError ? (
@@ -65,31 +67,31 @@ export default function AdminUsersPage() {
           <p className="px-6 py-8 text-center text-sm text-ink-muted">Tidak ada pengguna.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse">
+            <table className="data-table min-w-[640px]">
               <thead>
-                <tr className="bg-surface-2 text-left text-xs font-bold text-ink-muted">
-                  <th className="px-5 py-3">Pengguna</th>
-                  <th className="px-3 py-3">Peran</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Paket</th>
-                  <th className="px-5 py-3 text-right">Aksi</th>
+                <tr>
+                  <th>Pengguna</th>
+                  <th>Peran</th>
+                  <th>Status</th>
+                  <th>Paket</th>
+                  <th className="num">Aksi</th>
                 </tr>
               </thead>
               <tbody className="text-[13.5px]">
                 {users.data.users.map((u) => (
                   <tr key={u.id} className="border-t border-border">
-                    <td className="px-5 py-3">
+                    <td>
                       <div className="font-semibold">{u.name}</div>
                       <div className="text-[12px] text-ink-muted">{u.email}</div>
                     </td>
-                    <td className="px-3 py-3">{u.role}</td>
-                    <td className="px-3 py-3">
+                    <td>{u.role}</td>
+                    <td>
                       <Badge tone={u.status === "Active" ? "success" : "warning"} className="px-2.5 py-0.5 text-[11.5px]">
                         {u.status === "Active" ? "Aktif" : "Ditangguhkan"}
                       </Badge>
                     </td>
-                    <td className="px-3 py-3 text-ink-muted">{u.activeTier == null ? "Gratis" : TIER_NAME[num(u.activeTier)]}</td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="text-ink-muted">{u.activeTier == null ? "Gratis" : TIER_NAME[num(u.activeTier)]}</td>
+                    <td className="num">
                       <button type="button" onClick={() => setSelected(u.id)} className="text-[12.5px] font-bold text-primary hover:underline">Kelola</button>
                     </td>
                   </tr>
@@ -149,7 +151,7 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
             <Fact label="Peran" value={d.role} />
             <Fact label="Status" value={d.status === "Active" ? "Aktif" : "Ditangguhkan"} />
             <Fact label="Paket" value={d.planName ?? "Gratis"} />
-            <Fact label="Langganan" value={d.subscriptionStatus ?? "—"} />
+            <Fact label="Langganan" value={d.subscriptionStatus ?? "Tidak ada"} />
             <Fact label="Modul selesai" value={String(num(d.completedModules))} />
             <Fact label="Sertifikat" value={String(num(d.certificateCount))} />
           </div>

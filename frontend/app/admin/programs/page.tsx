@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PageTitle } from "@/components/ui/Page";
 import { Badge, Button, Spinner, ErrorState } from "@/components/ui";
 import { ProgramForm } from "@/components/admin/ProgramForm";
 import { SessionManager } from "@/components/admin/SessionManager";
@@ -28,15 +29,16 @@ export default function AdminProgramsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">
+    <div>
+      <PageTitle size="compact">Program</PageTitle>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="text-sm text-ink-muted">
           Kelola program, sesi, dan urutannya. Urutan sesi menentukan penguncian bertahap.
         </p>
         <Button size="sm" onClick={() => setCreating(true)}>+ Program baru</Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="mt-6 overflow-x-auto">
         {!token || programs.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : programs.isError ? (
@@ -47,34 +49,34 @@ export default function AdminProgramsPage() {
         ) : programs.data.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-ink-muted">Belum ada program.</p>
         ) : (
-          <table className="w-full min-w-[640px] border-collapse">
+          <table className="data-table min-w-[640px]">
             <thead>
-              <tr className="bg-surface-2 text-left text-xs font-bold text-ink-muted">
-                <th className="px-5 py-3">Program</th>
-                <th className="px-3 py-3">Harga</th>
-                <th className="px-3 py-3">Sesi</th>
-                <th className="px-3 py-3">Peserta</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3">Kesiapan</th>
-                <th className="px-5 py-3 text-right">Aksi</th>
+              <tr>
+                <th>Program</th>
+                <th>Harga</th>
+                <th>Sesi</th>
+                <th>Peserta</th>
+                <th>Status</th>
+                <th>Kesiapan</th>
+                <th className="num">Aksi</th>
               </tr>
             </thead>
             <tbody className="text-[13.5px]">
               {programs.data.map((p) => (
-                <tr key={p.id} className="border-t border-border">
-                  <td className="px-5 py-3.5">
+                <tr key={p.id}>
+                  <td>
                     <div className="font-semibold">{p.name}</div>
                     <div className="text-[11.5px] text-ink-subtle">/{p.slug}</div>
                   </td>
-                  <td className="px-3 py-3.5">{formatIdr(p.priceIdr)}</td>
-                  <td className="px-3 py-3.5">{num(p.sessionCount)}</td>
-                  <td className="px-3 py-3.5">{num(p.enrollmentCount)}</td>
-                  <td className="px-3 py-3.5">
+                  <td>{formatIdr(p.priceIdr)}</td>
+                  <td>{num(p.sessionCount)}</td>
+                  <td>{num(p.enrollmentCount)}</td>
+                  <td>
                     <Badge tone={p.status === "Published" ? "success" : "neutral"} className="px-2.5 py-0.5 text-[11.5px]">
                       {p.status === "Published" ? "Terbit" : p.status === "Draft" ? "Draf" : "Arsip"}
                     </Badge>
                   </td>
-                  <td className="px-3 py-3.5">
+                  <td>
                     <button
                       type="button"
                       onClick={() => setReadinessFor(p)}
@@ -83,7 +85,7 @@ export default function AdminProgramsPage() {
                       Periksa
                     </button>
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td>
                     <div className="flex justify-end gap-2">
                       <Button variant="neutral" size="sm" onClick={() => setSessionsFor(p)}>Sesi</Button>
                       <Button variant="neutral" size="sm" onClick={() => setEditing(p)}>Edit</Button>
