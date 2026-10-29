@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Upload } from "tus-js-client";
-import { Button, Spinner } from "@/components/ui";
+import { Button, CheckIcon, Spinner } from "@/components/ui";
 import { inputBlockCls } from "@/components/admin/fields";
 import {
   listVideoLibrary, minutesLabel, num, renewVideoUpload, startVideoUpload,
@@ -168,7 +168,7 @@ function VideoRow({
         }
       >
         <span className="min-w-0 truncate">{video.title || video.id}</span>
-        <span className="shrink-0 text-[11.5px] text-ink-subtle">{selected ? "Terpilih ✓" : note}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-ink-subtle">{selected ? <><CheckIcon size={12} />Terpilih</> : note}</span>
       </button>
     </li>
   );

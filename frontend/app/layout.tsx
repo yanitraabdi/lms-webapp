@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   // Was "LMS Akademi" — the archived product's name, shown in every browser tab beside the
   // INVERTA favicon. The template lets a page set its own title without repeating the brand.
   title: {
-    default: "INVERTA — Persiapan TOEFL",
-    template: "%s — INVERTA",
+    default: "INVERTA | Persiapan TOEFL",
+    template: "%s | INVERTA",
   },
   description:
     "Program persiapan TOEFL terstruktur dalam Bahasa Indonesia: video, tes per sesi, sesi live, " +

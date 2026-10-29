@@ -159,7 +159,7 @@ export function SessionPartsEditor({
         <div className="flex flex-col gap-3">
           <div>
             <Button variant="ghost" size="sm" onClick={() => setEditingTestRow(null)}>
-              ← Kembali ke daftar bagian
+              Kembali ke daftar bagian
             </Button>
           </div>
           <GatingTestEditor

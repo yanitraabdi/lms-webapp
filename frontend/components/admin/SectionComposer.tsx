@@ -21,7 +21,7 @@ export function SectionComposer({
   const complete = selected.length === required;
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+    <section className="rounded-lg border border-border bg-surface p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-extrabold">{section}</h2>
         <span
