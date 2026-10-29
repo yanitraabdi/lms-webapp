@@ -43,7 +43,7 @@ export function parseBands(text: string): { rows: ParsedBand[]; errors: string[]
       return;
     }
     if (cells.length > 5) {
-      errors.push(`Baris ${lineNo}: terlalu banyak kolom (maks. 5 — bagian, min, max, skala, label).`);
+      errors.push(`Baris ${lineNo}: terlalu banyak kolom (maks. 5: bagian, min, max, skala, label).`);
       return;
     }
 
@@ -121,7 +121,7 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1">
         <span className="text-[12px] font-bold text-ink-muted">
-          Tempel tabel dari spreadsheet — kolom: bagian, min, max, skala, label (opsional)
+          Tempel tabel dari spreadsheet. Kolom: bagian, min, max, skala, label (opsional)
         </span>
         <textarea
           value={text}
@@ -134,7 +134,7 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
 
       {parsed && parsed.errors.length > 0 && (
         <div className="rounded-base bg-danger-soft px-4 py-3 text-[13px] text-danger">
-          <p className="font-bold">{parsed.errors.length} baris bermasalah — tidak ada yang disimpan:</p>
+          <p className="font-bold">{parsed.errors.length} baris bermasalah, tidak ada yang disimpan:</p>
           <ul className="mt-1 list-inside list-disc">
             {parsed.errors.slice(0, 8).map((e) => <li key={e}>{e}</li>)}
           </ul>
@@ -183,7 +183,7 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
                       <td className="px-2 py-1">{r.minRaw}</td>
                       <td className="px-2 py-1">{r.maxRaw}</td>
                       <td className="px-2 py-1 font-semibold">{r.scaledScore}</td>
-                      <td className="px-2 py-1 text-ink-muted">{r.predictedBand ?? "—"}</td>
+                      <td className="px-2 py-1 text-ink-muted">{r.predictedBand ?? "-"}</td>
                     </tr>
                   ))}
                 </tbody>

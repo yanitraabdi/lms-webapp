@@ -222,7 +222,7 @@ function SessionRow({
     (locked
       ? "border-b border-surface-2 opacity-70"
       : selected
-        ? "rounded-sm bg-primary-soft"
+        ? "rounded-sm border-b border-transparent bg-primary-soft"
         : "border-b border-surface-2 hover:bg-surface-2");
 
   if (locked) {

@@ -15,7 +15,7 @@ function Panel({ icon, title, message, action, iconClass, className }: StatePane
   return (
     <div
       className={cn(
-        "flex min-h-[172px] flex-col items-center justify-center gap-2.5 rounded-base border border-border p-4 text-center",
+        "flex min-h-[172px] flex-col items-center justify-center gap-2.5 p-4 text-center",
         className
       )}
     >

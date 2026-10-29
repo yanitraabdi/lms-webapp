@@ -116,7 +116,7 @@ export function TocItem({ n, title, kind, meta, note, state, href }: TocItemProp
       aria-current={current ? "step" : undefined}
       className={cn(
         "grid grid-cols-[2.2em_minmax(0,1fr)_auto] items-baseline gap-2.5 py-[11px]",
-        current ? "-mx-3 rounded-sm bg-primary-soft px-3" : "border-b border-surface-2"
+        current ? "-mx-3 rounded-sm border-b border-transparent bg-primary-soft px-3" : "border-b border-surface-2"
       )}
     >
       <span

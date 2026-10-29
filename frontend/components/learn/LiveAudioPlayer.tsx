@@ -20,7 +20,7 @@ import { clock } from "@/lib/sessions";
  */
 export function LiveAudioPlayer({
   start, startedAt, autoBegin = false, endedLabel = "Audio bagian ini sudah selesai diputar.",
-  intro = "Satu rekaman untuk seluruh bagian ini. Audio diputar satu kali tanpa jeda dan tidak dapat diulang — pastikan suara perangkat Anda aktif.",
+  intro = "Satu rekaman untuk seluruh bagian ini. Audio diputar satu kali tanpa jeda dan tidak dapat diulang. Pastikan suara perangkat Anda aktif.",
 }: {
   start: () => Promise<{ url: string; startedAt: string; serverNow: string }>;
   startedAt: string | null;

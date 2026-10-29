@@ -49,7 +49,7 @@ export function GatingTestEditor({
 }) {
   const isFinal = kind === "Final";
   const [loading, setLoading] = useState(!!assessmentId);
-  const [title, setTitle] = useState(isFinal ? "Simulasi TOEFL ITP — Tes Akhir" : "Tes sesi");
+  const [title, setTitle] = useState(isFinal ? "Simulasi TOEFL ITP: Tes Akhir" : "Tes sesi");
   const [passThreshold, setPassThreshold] = useState(1);
   const [retakeCap, setRetakeCap] = useState(isFinal ? "1" : "");   // blank = unlimited
   const [selected, setSelected] = useState<string[]>([]);

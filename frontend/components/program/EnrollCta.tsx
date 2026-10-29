@@ -16,10 +16,10 @@ const BENEFITS = [
 ];
 
 /**
- * Enrollment CTA. Sends the learner to the hosted invoice — it NEVER grants access;
- * only the verified payment webhook does that (GR-2).
+ * Enrollment CTA. Sends the learner to the hosted invoice; it NEVER grants access;
+ * only the verified payment webhook does that (GR-2). With `priceIdr` it renders the
+ * price/enrol box; without, just the button (closing paragraph).
  */
-/** With `priceIdr` it renders the price/enrol box; without, just the button (closing paragraph). */
 export function EnrollCta({ programId, priceIdr, className }: { programId: string; priceIdr?: number | string; className?: string }) {
   const { status, user, accessToken } = useAuth();
   const router = useRouter();

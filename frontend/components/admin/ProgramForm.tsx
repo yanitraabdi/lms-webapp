@@ -39,7 +39,7 @@ export function ProgramForm({ token, program, onClose }: { token: string; progra
     <Modal
       open
       onClose={onClose}
-      title={program ? `Edit — ${program.name}` : "Program baru"}
+      title={program ? `Edit: ${program.name}` : "Program baru"}
       className="max-w-xl"
       footer={
         <div className="flex w-full justify-end gap-2">
