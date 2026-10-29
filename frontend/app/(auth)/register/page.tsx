@@ -8,7 +8,7 @@ import { AuthCard, AuthDivider, AuthError } from "@/components/auth/AuthCard";
 import { Logo } from "@/components/Logo";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, PageTitle } from "@/components/ui";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function RegisterPage() {
     <AuthCard>
       <div className="flex flex-col items-center gap-2 text-center">
         <Logo height="h-9" />
-        <h1 className="text-[22px] font-extrabold tracking-tight">Buat akun gratis</h1>
+        <PageTitle size="compact">Buat akun gratis</PageTitle>
         <p className="text-[13.5px] text-ink-muted">Mulai belajar AI dalam hitungan menit.</p>
       </div>
 

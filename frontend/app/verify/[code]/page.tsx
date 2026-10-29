@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangleIcon, CheckCircleIcon } from "@/components/ui";
+import { Footnote, PageTitle, RunningHead } from "@/components/ui";
 import { verifyCertificate, num, type CertificateVerification } from "@/lib/sessions";
 import { fmtDateTime } from "@/lib/programs";
 import { Logo } from "@/components/Logo";
 
-// Public certificate verification — SSR per request (live validity).
+// Public certificate verification: SSR per request (live validity).
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
@@ -37,86 +37,68 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
         </div>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-6 py-12">
-        <div className="w-full max-w-md">
+      <main className="flex-1 px-3 py-4 sm:px-7 sm:py-8">
+        <div className="mx-auto w-full max-w-[760px] rounded-lg bg-surface px-5 py-8 shadow-[0_1px_0_var(--color-border),0_10px_30px_-18px_rgba(17,37,63,0.2)] sm:px-11 sm:py-10">
+          <RunningHead>Verifikasi sertifikat</RunningHead>
           {valid && result ? (
-            <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
-              <div className="flex flex-col items-center gap-4 px-6 py-8 text-center">
-                <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-success-soft text-success">
-                  <CheckCircleIcon size={30} strokeWidth={2.2} />
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[13px] font-bold text-success">Sertifikat terverifikasi ✓</span>
-                  <span className="text-[22px] font-extrabold tracking-tight">{result.recipientName}</span>
-                  <span className="text-[14px] text-ink-muted">{result.programName}</span>
-                </div>
+            <>
+              <PageTitle>{result.recipientName}</PageTitle>
+              <p className="mt-2 text-ink-muted">{result.programName}</p>
+              <p className="mt-1 text-[13.5px] font-bold text-success">Sertifikat terverifikasi</p>
 
-                {result.totalScore != null && (
-                  <div className="mt-1 flex flex-col items-center">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">
-                      Skor prediksi TOEFL
-                    </span>
-                    <span className="text-[44px] font-extrabold leading-none tracking-tight text-primary">
-                      {num(result.totalScore)}
-                    </span>
-                    {result.predictedBand && (
-                      <span className="mt-1 text-[13px] text-ink-muted">{result.predictedBand}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {sections.length > 0 && (
-                <div className="border-t border-border px-6 py-4">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">
-                    Rincian per bagian
-                  </span>
-                  <ul className="mt-2 flex flex-col gap-1.5">
-                    {sections.map(([name, value]) => (
-                      <li key={name} className="flex items-center justify-between text-[13px]">
-                        <span className="text-ink-muted">{name}</span>
-                        <span className="font-bold text-ink">{num(value)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="border-t border-border px-6 py-4 text-[12.5px] text-ink-muted">
-                <div className="flex justify-between gap-3">
-                  <span>Kode verifikasi</span>
-                  <span className="font-bold text-ink">{result.code}</span>
-                </div>
-                {result.issuedAt && (
-                  <div className="mt-1.5 flex justify-between gap-3">
-                    <span>Tanggal terbit</span>
-                    <span className="text-ink">{fmtDateTime(result.issuedAt)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+              <table className="data-table mt-6">
+                <thead>
+                  <tr>
+                    <th>Rincian</th>
+                    <th className="num">Hasil</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.totalScore != null && (
+                    <tr>
+                      <td>Skor prediksi TOEFL</td>
+                      <td className="num text-[20px] font-extrabold text-primary">
+                        {num(result.totalScore)}
+                        {result.predictedBand && (
+                          <span className="ml-2 text-[13px] font-normal text-ink-muted">{result.predictedBand}</span>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  {sections.map(([name, value]) => (
+                    <tr key={name}>
+                      <td>{name}</td>
+                      <td className="num font-bold">{num(value)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td>Kode verifikasi</td>
+                    <td className="num font-bold">{result.code}</td>
+                  </tr>
+                  {result.issuedAt && (
+                    <tr>
+                      <td>Tanggal terbit</td>
+                      <td className="num">{fmtDateTime(result.issuedAt)}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
           ) : (
-            <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-surface px-6 py-10 text-center shadow-sm">
-              <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-danger-soft text-danger">
-                <AlertTriangleIcon size={30} strokeWidth={2.2} />
-              </span>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[15px] font-extrabold">Sertifikat tidak ditemukan</span>
-                <span className="text-[13.5px] text-ink-muted">
-                  Kode <strong className="text-ink">{code}</strong> tidak cocok dengan sertifikat mana pun.
-                  Periksa kembali penulisannya.
-                </span>
-              </div>
-            </div>
+            <>
+              <PageTitle>Sertifikat tidak ditemukan</PageTitle>
+              <p className="mt-3 max-w-[60ch] text-ink-muted">
+                Kode <strong className="text-ink">{code}</strong> tidak cocok dengan sertifikat mana pun.
+                Periksa kembali penulisannya.
+              </p>
+            </>
           )}
 
           {/* Mandatory on every certificate surface (GR-14). */}
-          <div className="mt-5 rounded-base border border-border bg-surface-2 px-5 py-4">
-            <p className="text-[12px] leading-relaxed text-ink-muted">
-              {result?.disclaimer ??
-                "Skor ini adalah PREDIKSI yang diterbitkan INVERTA berdasarkan simulasi internal. Ini BUKAN skor TOEFL resmi dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik Educational Testing Service (ETS)."}
-            </p>
-          </div>
+          <Footnote>
+            {result?.disclaimer ??
+              "Skor ini adalah PREDIKSI yang diterbitkan INVERTA berdasarkan simulasi internal. Ini BUKAN skor TOEFL resmi dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik Educational Testing Service (ETS)."}
+          </Footnote>
         </div>
       </main>
     </div>

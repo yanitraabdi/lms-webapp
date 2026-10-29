@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AuthCard, AuthError } from "@/components/auth/AuthCard";
-import { Button, CheckCircleIcon, Input } from "@/components/ui";
+import { Button, CheckCircleIcon, Input, PageTitle } from "@/components/ui";
 import { postJson, problemMessage } from "@/lib/auth/client";
 
 export default function ForgotPasswordPage() {
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthCard>
-      <h1 className="text-xl font-extrabold tracking-tight">Reset kata sandi</h1>
+      <PageTitle size="compact">Reset kata sandi</PageTitle>
       <p className="text-[13.5px] leading-relaxed text-ink-muted">
         Masukkan email Anda. Kami akan mengirim tautan untuk membuat sandi baru.
       </p>

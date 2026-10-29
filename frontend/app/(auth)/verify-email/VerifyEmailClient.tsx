@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { AlertCircleIcon, Button, CheckCircleIcon, Spinner } from "@/components/ui";
+import { AlertCircleIcon, Button, CheckCircleIcon, Spinner, PageTitle } from "@/components/ui";
 import { postJson, problemMessage } from "@/lib/auth/client";
 
 type State = "checking" | "verified" | "invalid" | "prompt";
@@ -60,7 +60,7 @@ export function VerifyEmailClient() {
         <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-success-soft text-success">
           <CheckCircleIcon size={28} />
         </span>
-        <h1 className="text-[22px] font-extrabold tracking-tight">Email terverifikasi</h1>
+        <PageTitle size="compact">Email terverifikasi</PageTitle>
         <p className="text-sm leading-relaxed text-ink-muted">
           Akun Anda sudah aktif. Anda kini dapat mendaftar program dan mulai belajar.
         </p>
@@ -77,7 +77,7 @@ export function VerifyEmailClient() {
         <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-danger-soft text-danger">
           <AlertCircleIcon size={28} />
         </span>
-        <h1 className="text-[22px] font-extrabold tracking-tight">Tautan tidak valid</h1>
+        <PageTitle size="compact">Tautan tidak valid</PageTitle>
         <p className="text-sm leading-relaxed text-ink-muted">
           Tautan verifikasi tidak valid atau sudah kedaluwarsa. Masuk untuk meminta tautan baru.
         </p>
@@ -97,7 +97,7 @@ export function VerifyEmailClient() {
           <path d="m3 7 9 6 9-6" />
         </svg>
       </span>
-      <h1 className="text-[22px] font-extrabold tracking-tight">Cek email Anda</h1>
+      <PageTitle size="compact">Cek email Anda</PageTitle>
       <p className="text-sm leading-relaxed text-ink-muted">
         Kami mengirim tautan verifikasi{email ? " ke " : "."}
         {email && <strong className="text-ink">{email}</strong>}. Klik tautan tersebut untuk mengaktifkan akun.

@@ -4,7 +4,7 @@ import { SuccessClient } from "./SuccessClient";
 
 export const dynamic = "force-dynamic";
 
-// Informational only — entitlement is granted by the verified webhook, never here (GR-2).
+// Informational only: entitlement is granted by the verified webhook, never here (GR-2).
 export const metadata: Metadata = { title: "Status pembayaran" };
 
 export default function CheckoutSuccessPage() {

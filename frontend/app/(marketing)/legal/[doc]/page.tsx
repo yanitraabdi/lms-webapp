@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/PublicShell";
-import { AlertTriangleIcon } from "@/components/ui";
+import { AlertTriangleIcon, Chapter, Lead, PageTitle, RunningHead } from "@/components/ui";
 
 export const dynamic = "force-static";
 
@@ -13,7 +13,7 @@ interface LegalDoc {
   sections: { heading: string; body: string }[];
 }
 
-// PLACEHOLDER content — structure is real, copy must be replaced with lawyer-reviewed
+// PLACEHOLDER content: structure is real, copy must be replaced with lawyer-reviewed
 // text before launch (see the banner). Bahasa Indonesia, UU PDP-aware.
 const DOCS: Record<string, LegalDoc> = {
   terms: {
@@ -23,10 +23,10 @@ const DOCS: Record<string, LegalDoc> = {
     sections: [
       { heading: "1. Penerimaan ketentuan", body: "Dengan membuat akun atau mendaftar program, Anda menyetujui ketentuan ini. Jika tidak setuju, mohon untuk tidak menggunakan layanan." },
       { heading: "2. Akun Anda", body: "Anda bertanggung jawab menjaga kerahasiaan kredensial dan seluruh aktivitas pada akun Anda. Verifikasi email diperlukan sebelum melakukan pendaftaran berbayar." },
-      { heading: "3. Pendaftaran & pembayaran", body: "Program dibeli SEKALI BAYAR untuk satu kali pendaftaran — bukan langganan berulang. Pembayaran diproses melalui Xendit. Akses program terbuka setelah pembayaran terverifikasi." },
+      { heading: "3. Pendaftaran & pembayaran", body: "Program dibeli SEKALI BAYAR untuk satu kali pendaftaran, bukan langganan berulang. Pembayaran diproses melalui Xendit. Akses program terbuka setelah pembayaran terverifikasi." },
       { heading: "4. Struktur program", body: "Program bersifat berurutan: setiap sesi terbuka setelah sesi sebelumnya diselesaikan (menonton video dan lulus tes sesi, kehadiran sesi live ditandai admin, atau tes akhir dikirim). Penyelesaian tidak dapat dilewati." },
       { heading: "5. Tes akhir & pengawasan", body: "Tes akhir berwaktu dan diawasi secara lunak: sistem mendeteksi jika Anda meninggalkan halaman tes. Pelanggaran pertama diberi peringatan; pelanggaran kedua membuat tes dikirim otomatis dan ditandai untuk ditinjau. Anda dapat mengajukan peninjauan bila terjadi salah deteksi." },
-      { heading: "6. Skor & sertifikat — bukan skor resmi ETS", body: "Skor dan sertifikat yang diterbitkan adalah PREDIKSI internal INVERTA berdasarkan simulasi, BUKAN skor TOEFL resmi dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik Educational Testing Service (ETS). Sertifikat prediksi tidak dapat digunakan sebagai pengganti hasil tes resmi untuk keperluan akademik atau imigrasi." },
+      { heading: "6. Skor & sertifikat: bukan skor resmi ETS", body: "Skor dan sertifikat yang diterbitkan adalah PREDIKSI internal INVERTA berdasarkan simulasi, BUKAN skor TOEFL resmi dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik Educational Testing Service (ETS). Sertifikat prediksi tidak dapat digunakan sebagai pengganti hasil tes resmi untuk keperluan akademik atau imigrasi." },
       { heading: "7. Konten & hak cipta", body: "Materi pembelajaran, soal, dan audio dilindungi hak cipta. Dilarang merekam, menyalin, menyebarluaskan, atau memperjualbelikan materi tanpa izin tertulis." },
       { heading: "8. Sertifikat bersifat permanen", body: "Sertifikat yang telah terbit tidak diubah. Jika kesempatan mengulang diberikan, sertifikat BARU akan diterbitkan tanpa membatalkan yang lama." },
     ],
@@ -49,10 +49,10 @@ const DOCS: Record<string, LegalDoc> = {
     updated: "14 Agustus 2026",
     intro: "Program INVERTA dibeli sekali bayar. Ketentuan berikut mengatur pengembalian dana untuk pembelian satu kali tersebut.",
     sections: [
-      { heading: "1. Sifat pembelian", body: "Pendaftaran adalah pembelian SATU KALI untuk keseluruhan program — bukan langganan. Tidak ada penagihan berulang dan tidak ada perpanjangan otomatis." },
-      { heading: "2. Masa tenggang (cooling-off)", body: "[PLACEHOLDER — perlu keputusan bisnis] Usulan: permintaan pengembalian penuh dapat diajukan dalam 7 hari sejak pembayaran SELAMA Anda belum menyelesaikan sesi pertama." },
-      { heading: "3. Setelah program dimulai", body: "[PLACEHOLDER — perlu keputusan bisnis] Usulan: setelah sesi pertama diselesaikan, pengembalian bersifat prorata atau tidak tersedia, mengingat materi sudah dapat diakses." },
-      { heading: "4. Tidak memenuhi syarat", body: "[PLACEHOLDER — perlu keputusan bisnis] Usulan: pengembalian tidak tersedia setelah tes akhir dikerjakan atau sertifikat prediksi diterbitkan." },
+      { heading: "1. Sifat pembelian", body: "Pendaftaran adalah pembelian SATU KALI untuk keseluruhan program, bukan langganan. Tidak ada penagihan berulang dan tidak ada perpanjangan otomatis." },
+      { heading: "2. Masa tenggang (cooling-off)", body: "[PLACEHOLDER: perlu keputusan bisnis] Usulan: permintaan pengembalian penuh dapat diajukan dalam 7 hari sejak pembayaran SELAMA Anda belum menyelesaikan sesi pertama." },
+      { heading: "3. Setelah program dimulai", body: "[PLACEHOLDER: perlu keputusan bisnis] Usulan: setelah sesi pertama diselesaikan, pengembalian bersifat prorata atau tidak tersedia, mengingat materi sudah dapat diakses." },
+      { heading: "4. Tidak memenuhi syarat", body: "[PLACEHOLDER: perlu keputusan bisnis] Usulan: pengembalian tidak tersedia setelah tes akhir dikerjakan atau sertifikat prediksi diterbitkan." },
       { heading: "5. Cara mengajukan", body: "Hubungi tim dukungan melalui halaman Kontak dengan menyertakan email akun dan bukti pembayaran. Kami akan menanggapi dalam 3 hari kerja." },
       { heading: "6. Proses & tenggat", body: "Pengembalian yang disetujui diproses dalam 7–14 hari kerja ke metode pembayaran asal. Akses program dicabut saat pengembalian disetujui; progres belajar Anda tetap tersimpan." },
     ],
@@ -97,47 +97,37 @@ export default async function LegalDocPage({ params }: { params: Promise<{ doc: 
 
   return (
     <PublicShell>
-      <div className="mx-auto max-w-4xl px-6 py-12">
-        <div className="mb-6 flex items-start gap-3 rounded-base border border-warning/30 bg-warning-soft px-4 py-3 text-[13px] text-ink">
-          <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning" />
-          <span>Konten contoh — perlu tinjauan hukum sebelum peluncuran, khususnya penamaan/klaim terkait TOEFL (merek dagang ETS) dan bagian bertanda [PLACEHOLDER] pada Kebijakan Pengembalian Dana.</span>
-        </div>
+      <div className="mb-6 flex items-start gap-3 rounded-sm bg-warning-soft px-4 py-3 text-[13px] text-ink">
+        <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning" />
+        <span>Konten contoh. Perlu tinjauan hukum sebelum peluncuran, khususnya penamaan/klaim terkait TOEFL (merek dagang ETS) dan bagian bertanda [PLACEHOLDER] pada Kebijakan Pengembalian Dana.</span>
+      </div>
 
-        <h1 className="text-3xl font-extrabold tracking-tight">{d.title}</h1>
-        <p className="mt-1 text-[13px] text-ink-subtle">Terakhir diperbarui: {d.updated}</p>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink-muted">{d.intro}</p>
+      <RunningHead>Terakhir diperbarui: {d.updated}</RunningHead>
+      <PageTitle>{d.title}</PageTitle>
+      <Lead>{d.intro}</Lead>
 
-        <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
-          <aside className="hidden md:block">
-            <nav className="sticky top-20 flex flex-col gap-2 text-[13px]">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">Daftar isi</span>
-              {d.sections.map((s, i) => (
-                <a key={i} href={`#sec-${i}`} className="text-ink-muted hover:text-primary">{s.heading}</a>
-              ))}
-            </nav>
-          </aside>
+      <nav aria-label="Daftar isi" className="mt-6 flex flex-col gap-1.5 text-[13.5px]">
+        {d.sections.map((s, i) => (
+          <a key={i} href={`#sec-${i}`} className="rounded-sm text-ink-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{s.heading}</a>
+        ))}
+      </nav>
 
-          <article className="flex flex-col gap-6">
-            {d.sections.map((s, i) => (
-              <section key={i} id={`sec-${i}`} className="flex flex-col gap-2">
-                <h2 className="text-lg font-extrabold">{s.heading}</h2>
-                <p className="text-[14.5px] leading-relaxed text-ink-muted">{s.body}</p>
-              </section>
-            ))}
-          </article>
-        </div>
+      {d.sections.map((s, i) => (
+        <Chapter key={i} id={`sec-${i}`} title={s.heading}>
+          <p className="mt-3 max-w-[65ch] leading-relaxed text-ink-muted">{s.body}</p>
+        </Chapter>
+      ))}
 
-        <div className="mt-10 flex flex-wrap gap-2 border-t border-border pt-6 text-[13px]">
-          {Object.entries(DOCS).map(([slug, dd]) => (
-            <Link
-              key={slug}
-              href={`/legal/${slug}`}
-              className={"rounded-sm px-3 py-1.5 font-semibold " + (slug === doc ? "bg-primary-soft text-primary" : "text-ink-muted hover:bg-surface-2")}
-            >
-              {dd.title}
-            </Link>
-          ))}
-        </div>
+      <div className="mt-12 flex flex-wrap gap-2 border-t border-ink pt-4 text-[13px]">
+        {Object.entries(DOCS).map(([slug, dd]) => (
+          <Link
+            key={slug}
+            href={`/legal/${slug}`}
+            className={"rounded-sm px-3 py-1.5 font-semibold " + (slug === doc ? "bg-primary-soft text-primary" : "text-ink-muted hover:bg-surface-2")}
+          >
+            {dd.title}
+          </Link>
+        ))}
       </div>
     </PublicShell>
   );

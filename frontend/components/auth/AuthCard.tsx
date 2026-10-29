@@ -4,7 +4,7 @@ import { AlertCircleIcon } from "@/components/ui";
 
 export function AuthCard({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col gap-[18px] rounded-lg bg-surface p-[30px] shadow-sm", className)}>
+    <div className={cn("flex flex-col gap-[18px]", className)}>
       {children}
     </div>
   );
