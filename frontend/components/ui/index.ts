@@ -17,6 +17,6 @@ export { Skeleton, type SkeletonProps } from "./Skeleton";
 export { EmptyState, ErrorState, type StatePanelProps } from "./States";
 export * from "./icons";
 export {
-  SheetPage, RunningHead, PageTitle, Lead, Chapter, Footnote, Toc, TocItem,
+  SHEET_CLASSES, SheetPage, RunningHead, PageTitle, Lead, Chapter, Footnote, Toc, TocItem,
   type PageTitleProps, type TocItemProps,
 } from "./Page";

@@ -2,13 +2,17 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
+export const SHEET_CLASSES =
+  "rounded-lg bg-surface px-5 py-8 sm:px-11 sm:py-10 shadow-[0_1px_0_var(--color-border),0_10px_30px_-18px_rgba(17,37,63,0.2)]";
+
 /** Course-book page: a white sheet on the tinted background. No overflow clipping (sticky children). */
 export function SheetPage({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <div className="min-h-[calc(100vh-58px)] bg-bg px-3 py-4 sm:px-7 sm:py-8">
       <div
         className={cn(
-          "mx-auto w-full rounded-lg bg-surface px-5 py-8 sm:px-11 sm:py-10 shadow-[0_1px_0_var(--color-border),0_10px_30px_-18px_rgba(17,37,63,0.2)]",
+          "mx-auto w-full",
+          SHEET_CLASSES,
           wide ? "max-w-6xl" : "max-w-[760px]"
         )}
       >

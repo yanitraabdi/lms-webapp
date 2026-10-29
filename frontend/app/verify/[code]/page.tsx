@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Footnote, PageTitle, RunningHead } from "@/components/ui";
+import { Footnote, SHEET_CLASSES, PageTitle, RunningHead } from "@/components/ui";
 import { verifyCertificate, num, type CertificateVerification } from "@/lib/sessions";
 import { fmtDateTime } from "@/lib/programs";
 import { Logo } from "@/components/Logo";
@@ -38,7 +38,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
       </header>
 
       <main className="flex-1 px-3 py-4 sm:px-7 sm:py-8">
-        <div className="mx-auto w-full max-w-[760px] rounded-lg bg-surface px-5 py-8 shadow-[0_1px_0_var(--color-border),0_10px_30px_-18px_rgba(17,37,63,0.2)] sm:px-11 sm:py-10">
+        <div className={`mx-auto w-full max-w-[760px] ${SHEET_CLASSES}`}>
           <RunningHead>Verifikasi sertifikat</RunningHead>
           {valid && result ? (
             <>

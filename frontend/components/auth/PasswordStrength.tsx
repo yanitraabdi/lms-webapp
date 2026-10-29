@@ -11,7 +11,7 @@ function score(pw: string): number {
   return s; // 0..4
 }
 
-const labels = ["Terlalu lemah", "Lemah", "Cukup", "Kuat", "Kuat — bagus!"];
+const labels = ["Terlalu lemah", "Lemah", "Cukup", "Kuat", "Kuat, bagus!"];
 
 export function PasswordStrength({ value }: { value: string }) {
   if (!value) return null;

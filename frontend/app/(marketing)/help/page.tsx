@@ -30,8 +30,7 @@ export default async function HelpPage() {
         Temukan jawaban cepat. Tidak menemukan yang Anda cari? <Link href="/contact" className="font-bold text-primary hover:underline">Hubungi kami</Link>.
       </Lead>
 
-      <Chapter title="Topik">
-        <dl className="mt-4 flex flex-col gap-3">
+      <dl className="mt-8 flex flex-col gap-3">
           {categories.map((c) => (
             <div key={c.title}>
               <dt className="font-bold text-ink">{c.title}</dt>
@@ -39,7 +38,6 @@ export default async function HelpPage() {
             </div>
           ))}
         </dl>
-      </Chapter>
 
       <Chapter title="Pertanyaan umum">
         <div className="mt-4">

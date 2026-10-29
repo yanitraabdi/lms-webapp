@@ -27,8 +27,7 @@ export default function AboutPage() {
         tanpa jargon, langsung bisa dipraktikkan, dan diakhiri sertifikat yang bisa diverifikasi.
       </Lead>
 
-      <Chapter title="Sekilas">
-        <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+      <dl className="mt-8 grid gap-4 sm:grid-cols-3">
           {stats.map((s) => (
             <div key={s.label}>
               <dt className="text-sm text-ink-muted">{s.label}</dt>
@@ -36,7 +35,6 @@ export default function AboutPage() {
             </div>
           ))}
         </dl>
-      </Chapter>
 
       <Chapter title="Misi kami">
         <div className="mt-4 flex max-w-[62ch] flex-col gap-4 leading-relaxed text-ink-muted">

@@ -31,7 +31,7 @@ const columns: Array<{ heading: string; links: Array<{ label: string; href: stri
 export function SiteFooter() {
   return (
     <footer className="bg-bg pb-7 pt-6 text-ink-muted">
-      <div className="mx-auto grid max-w-[760px] gap-8 px-5 text-[13px] sm:grid-cols-[1.4fr_1fr_1fr_1fr] sm:px-0">
+      <div className="mx-auto grid max-w-[760px] gap-8 px-5 text-[13px] sm:px-7 md:grid-cols-[1.4fr_1fr_1fr_1fr] min-[820px]:px-0">
         <div className="flex flex-col gap-3">
           <Logo />
           <p className="max-w-[280px] leading-relaxed">
@@ -50,7 +50,7 @@ export function SiteFooter() {
           </div>
         ))}
       </div>
-      <div className="mx-auto mt-8 flex max-w-[760px] flex-wrap justify-between gap-3 border-t border-border px-5 pt-5 text-[13px] sm:px-0">
+      <div className="mx-auto mt-8 flex max-w-[760px] flex-wrap justify-between gap-3 border-t border-border px-5 pt-5 text-[13px] sm:px-7 min-[820px]:px-0">
         <span>© 2026 INVERTA. Hak cipta dilindungi.</span>
         <span>Dibuat di Indonesia</span>
       </div>
