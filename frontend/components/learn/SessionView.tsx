@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Spinner, ErrorState, ChevronRightIcon, SheetPage, RunningHead, PageTitle, Lead } from "@/components/ui";
-import { AppHeader } from "@/components/app/AppHeader";
 import { VideoPlayer } from "@/components/learn/VideoPlayer";
 import { GatingTest } from "@/components/learn/GatingTest";
 import {
@@ -59,7 +58,6 @@ export function SessionView({
   if (ctx.isError) {
     return (
       <div className={embedded ? "py-10" : "min-h-screen bg-bg"}>
-        {!embedded && <AppHeader />}
         <Wrap embedded={embedded}>
         <ErrorState
           title="Sesi terkunci"
@@ -127,14 +125,18 @@ export function SessionView({
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader />
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex h-[58px] max-w-4xl items-center justify-between gap-3 px-6">
+          <Link
+            href={`/app/program/${s.programId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-muted hover:text-ink"
+          >
+            <ChevronRightIcon size={16} className="rotate-180" /> {s.programName}
+          </Link>
+          <span className="text-[12.5px] text-ink-subtle">Sesi {num(s.orderIndex)}</span>
+        </div>
+      </header>
       <SheetPage>
-        <Link
-          href={`/app/program/${s.programId}`}
-          className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-muted hover:text-ink"
-        >
-          <ChevronRightIcon size={16} className="rotate-180" /> {s.programName}
-        </Link>
         <div className="flex flex-col gap-5">{body}</div>
       </SheetPage>
     </div>
@@ -145,7 +147,7 @@ function Wrap({ embedded, children }: { embedded: boolean; children: React.React
   return embedded ? <>{children}</> : <SheetPage>{children}</SheetPage>;
 }
 
-function Mark({ state }: { state: "done" | "open" | "locked" }) {
+function Mark({ state }: { state: "done" | "half" | "none" }) {
   return (
     <span
       aria-hidden="true"
@@ -153,7 +155,7 @@ function Mark({ state }: { state: "done" | "open" | "locked" }) {
         "mt-0.5 h-[18px] w-[18px] shrink-0 rounded-full " +
         (state === "done"
           ? "bg-success"
-          : state === "open"
+          : state === "half"
             ? "border-2 border-primary bg-[linear-gradient(90deg,var(--color-primary)_50%,transparent_50%)]"
             : "border-2 border-border")
       }
@@ -200,13 +202,13 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
           const isActive = active?.id === p.id;
           const inner = (
             <>
-              <Mark state={p.status === "Done" ? "done" : p.status === "Locked" ? "locked" : "open"} />
+              <Mark state={p.status === "Done" ? "done" : p.status !== "Locked" && num(p.percentComplete) > 0 ? "half" : "none"} />
               <span className="min-w-0 flex-1">
                 <b className={p.status === "Locked" ? "block font-bold text-ink-muted" : "block font-bold text-ink"}>{name}</b>
                 <small className="block text-[13px] text-ink-muted">
                   {p.title}
                   {p.title && ", "}
-                  {p.status === "Done" ? "selesai" : p.status === "Locked" ? "terkunci" : "tersedia"}
+                  {p.status === "Done" ? "selesai" : p.status === "Locked" ? "terkunci" : (num(p.percentComplete) > 0 ? `${Math.round(num(p.percentComplete))}% ditonton` : "tersedia")}
                 </small>
               </span>
               {p.status === "Locked" ? <Badge status="locked" /> : p.status === "Done" ? <Badge status="completed" /> : <span className="shrink-0 text-[13px] font-bold text-primary">Buka</span>}
@@ -224,8 +226,8 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
                   onClick={() => setActiveId(p.id)}
                   aria-current={isActive ? "step" : undefined}
                   className={
-                    "flex w-full items-start gap-3 py-[11px] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary " +
-                    (isActive ? "-mx-3 w-[calc(100%+1.5rem)] rounded-sm bg-primary-soft px-3" : "hover:bg-surface-2")
+                    "flex items-start gap-3 py-[11px] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary " +
+                    (isActive ? "-mx-3 w-[calc(100%+1.5rem)] rounded-sm bg-primary-soft px-3" : "w-full hover:bg-surface-2")
                   }
                 >
                   {inner}

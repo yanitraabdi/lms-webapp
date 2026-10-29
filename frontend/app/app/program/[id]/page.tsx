@@ -218,12 +218,12 @@ function SessionRow({
   );
 
   const shell =
-    "flex w-full items-start gap-3 border-b border-surface-2 px-2 py-[11px] text-left transition-colors " +
+    "flex w-full items-start gap-3 px-2 py-[11px] text-left transition-colors " +
     (locked
-      ? "opacity-70"
+      ? "border-b border-surface-2 opacity-70"
       : selected
-        ? "rounded-sm border-transparent bg-primary-soft"
-        : "hover:bg-surface-2");
+        ? "rounded-sm bg-primary-soft"
+        : "border-b border-surface-2 hover:bg-surface-2");
 
   if (locked) {
     return <li className={shell}>{inner}</li>;

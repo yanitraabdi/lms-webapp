@@ -124,7 +124,7 @@ export function GatingTest({
   return (
     <div className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base font-extrabold">Tes sesi</h3>
+        <h2 className="text-base font-extrabold">Tes sesi</h2>
         {alreadyPassed ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-[12px] font-bold text-success">
             <CheckIcon size={13} strokeWidth={3} /> Lulus

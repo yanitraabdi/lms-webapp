@@ -84,7 +84,7 @@ function NotificationList({ token }: { token: string }) {
               type="button"
               onClick={() => markOne(n)}
               className={
-                "flex w-full items-start gap-3 border-b border-surface-2 py-3.5 text-left last:border-0 hover:bg-surface-2 " +
+                "-mx-3 flex w-[calc(100%+1.5rem)] items-start gap-3 border-b border-surface-2 px-3 py-3.5 text-left last:border-0 hover:bg-surface-2 " +
                 (n.read ? "" : "bg-primary-soft/40")
               }
             >
