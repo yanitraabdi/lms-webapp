@@ -72,7 +72,7 @@ export function Chapter({
   const headingId = id ? `${id}-heading` : undefined;
   return (
     <section id={id} aria-labelledby={headingId} className={cn("mt-12 border-t border-ink pt-4", className)}>
-      <h2 id={headingId} className="text-[24px] font-extrabold tracking-[-0.015em] text-ink">
+      <h2 id={headingId} className="text-[26px] font-extrabold tracking-[-0.015em] text-ink">
         {title}
       </h2>
       {intro && <p className="mt-2 max-w-[60ch] text-ink-muted">{intro}</p>}
@@ -105,7 +105,7 @@ export interface TocItemProps {
 export function TocItem({ n, title, kind, meta, state, href }: TocItemProps) {
   const locked = state === "locked";
   const current = state === "current";
-  const titleCls = cn("min-w-0 break-words font-bold text-ink", locked && "font-semibold text-ink-muted");
+  const titleCls = cn("min-w-0 break-words", locked ? "font-semibold text-ink-muted" : "font-bold text-ink");
   return (
     <li
       aria-current={current ? "step" : undefined}
