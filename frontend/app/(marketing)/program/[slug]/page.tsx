@@ -95,6 +95,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                       title={s.title}
                       state="open"
                       kind={s.type === "Live" ? "Live" : s.type === "FinalAssessment" ? "Tes akhir" : undefined}
+                      note={s.description || undefined}
                       meta={<SessionMeta session={s} />}
                     />
                   ))}

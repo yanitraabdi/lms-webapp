@@ -98,11 +98,12 @@ export interface TocItemProps {
   title: string;
   kind?: string;
   meta: ReactNode;
+  note?: ReactNode;
   state: "done" | "current" | "open" | "locked";
   href?: string;
 }
 
-export function TocItem({ n, title, kind, meta, state, href }: TocItemProps) {
+export function TocItem({ n, title, kind, meta, note, state, href }: TocItemProps) {
   const locked = state === "locked";
   const current = state === "current";
   const titleCls = cn("min-w-0 break-words", locked ? "font-semibold text-ink-muted" : "font-bold text-ink");
@@ -137,6 +138,7 @@ export function TocItem({ n, title, kind, meta, state, href }: TocItemProps) {
         {kind && (
           <span className="ml-2 rounded-full bg-accent-soft px-2 text-[11.5px] font-bold text-accent">{kind}</span>
         )}
+        {note && <span className="mt-0.5 block text-[13px] font-medium text-ink-muted">{note}</span>}
       </span>
       <span className="text-[13px] tabular-nums text-ink-muted">{meta}</span>
     </li>

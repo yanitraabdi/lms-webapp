@@ -7,10 +7,6 @@ import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { enroll, formatIdr } from "@/lib/programs";
 
-/**
- * Enrollment CTA. Sends the learner to the hosted invoice — it NEVER grants access;
- * only the verified payment webhook does that (GR-2).
- */
 const BENEFITS = [
   "Akses seluruh sesi video",
   "Tes singkat di setiap sesi",
@@ -19,6 +15,10 @@ const BENEFITS = [
   "Sertifikat yang dapat diverifikasi",
 ];
 
+/**
+ * Enrollment CTA. Sends the learner to the hosted invoice — it NEVER grants access;
+ * only the verified payment webhook does that (GR-2).
+ */
 /** With `priceIdr` it renders the price/enrol box; without, just the button (closing paragraph). */
 export function EnrollCta({ programId, priceIdr, className }: { programId: string; priceIdr?: number | string; className?: string }) {
   const { status, user, accessToken } = useAuth();
@@ -84,9 +84,6 @@ export function EnrollCta({ programId, priceIdr, className }: { programId: strin
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-[12px] leading-snug text-ink-subtle">
-        Pembayaran diproses aman. Akses terbuka otomatis setelah pembayaran terkonfirmasi.
-      </p>
     </div>
   );
 }
