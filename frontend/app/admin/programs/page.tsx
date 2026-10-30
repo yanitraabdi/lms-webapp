@@ -66,7 +66,7 @@ export default function AdminProgramsPage() {
                 <tr key={p.id}>
                   <td>
                     <div className="font-semibold">{p.name}</div>
-                    <div className="text-[11.5px] text-ink-subtle">/{p.slug}</div>
+                    <div className="text-[11.5px] text-ink-muted">/{p.slug}</div>
                   </td>
                   <td>{formatIdr(p.priceIdr)}</td>
                   <td>{num(p.sessionCount)}</td>

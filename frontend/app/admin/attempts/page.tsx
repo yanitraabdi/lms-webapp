@@ -24,7 +24,7 @@ export default function AdminAttemptsPage() {
     <div className="flex flex-col gap-3">
       <PageTitle size="compact">Percobaan</PageTitle>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">
+        <p className="text-xs text-ink-muted">
           Percobaan tes. Tinjau kasus yang ditandai pengawasan dan pulihkan jika terjadi salah deteksi.
         </p>
         <label className="flex items-center gap-2 text-[13px] font-semibold">

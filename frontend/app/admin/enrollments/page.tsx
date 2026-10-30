@@ -72,7 +72,7 @@ export default function AdminEnrollmentsPage() {
     <div className="flex flex-col gap-3">
       <PageTitle size="compact">Pendaftaran</PageTitle>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">
+        <p className="text-xs text-ink-muted">
           Pendaftaran peserta. Mencabut akses tidak menghapus progres, percobaan, atau sertifikat.
         </p>
         <div className="flex flex-wrap items-center gap-2">
