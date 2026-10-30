@@ -38,7 +38,7 @@ export function AccountMenu({ initials }: { initials: string }) {
         aria-label="Menu akun"
         className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
-        {initials}
+        <span aria-hidden="true">{initials}</span>
       </button>
 
       {open && (
