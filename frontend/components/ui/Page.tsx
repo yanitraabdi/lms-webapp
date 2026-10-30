@@ -116,7 +116,7 @@ export function TocItem({ n, title, kind, meta, note, state, href }: TocItemProp
     <li
       aria-current={current ? "step" : undefined}
       className={cn(
-        "grid grid-cols-[2.2em_minmax(0,1fr)_auto] items-baseline gap-2.5 py-[11px]",
+        "grid grid-cols-[2.2em_minmax(0,1fr)_fit-content(40%)] items-baseline gap-2.5 py-[11px]",
         current ? "-mx-3 rounded-sm border-b border-transparent bg-primary-soft px-3" : "border-b border-surface-2"
       )}
     >
@@ -145,7 +145,7 @@ export function TocItem({ n, title, kind, meta, note, state, href }: TocItemProp
         )}
         {note && <span className="mt-0.5 block text-[13px] font-medium text-ink-muted">{note}</span>}
       </span>
-      <span className="max-w-[40%] text-right text-[13px] tabular-nums text-ink-muted">{meta}</span>
+      <span className="text-right text-[13px] tabular-nums text-ink-muted">{meta}</span>
     </li>
   );
 }

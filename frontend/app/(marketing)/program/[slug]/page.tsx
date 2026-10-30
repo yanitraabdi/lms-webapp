@@ -66,7 +66,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
               <RunningHead>Program persiapan TOEFL ITP</RunningHead>
               <PageTitle>{program.name}</PageTitle>
               {program.summary && <Lead>{program.summary}</Lead>}
-              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 min-[560px]:grid-cols-4">
+              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 min-[560px]:grid-cols-4 min-[860px]:grid-cols-2">
                 {facts.map((f) => (
                   <div key={f.dt}>
                     <dt className="text-[12.5px] text-ink-muted">{f.dt}</dt>
