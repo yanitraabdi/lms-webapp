@@ -5,6 +5,7 @@ const base = () => `${process.env.BASE_URL ?? "http://localhost:3100"}/api`;
 export async function api(
   path: string,
   { method = "GET", token, body }: { method?: string; token?: string; body?: unknown } = {},
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper: callers read whatever the endpoint returns
 ): Promise<any> {
   const res = await fetch(`${base()}${path}`, {
     method,

@@ -7,7 +7,7 @@
     "prebuild": "node scripts/check-icons.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint --dir app --dir components --dir lib --dir e2e",
     "generate:api": "openapi-typescript http://localhost:8080/openapi/v1.json -o api-client/schema.ts",
     "e2e:up": "docker compose -p inverta-e2e --env-file ../e2e.env -f ../docker-compose.yml -f ../docker-compose.e2e.yml down -v && docker compose -p inverta-e2e --env-file ../e2e.env -f ../docker-compose.yml -f ../docker-compose.e2e.yml up -d --build",
     "e2e:down": "docker compose -p inverta-e2e --env-file ../e2e.env -f ../docker-compose.yml -f ../docker-compose.e2e.yml down -v",

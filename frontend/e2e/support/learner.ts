@@ -30,11 +30,11 @@ export async function signIn(page: Page, email: string, password: string) {
 
 /** Pre-sets cookie consent so the fixed banner never covers buttons or skews axe. */
 export const test = base.extend({
-  page: async ({ page }, use) => {
+  page: async ({ page }, provide) => {
     await page.addInitScript(() =>
       localStorage.setItem("academy_cookie_consent", JSON.stringify({ essential: true, analytics: false, marketing: false, ts: 0 })),
     );
-    await use(page);
+    await provide(page);
   },
 });
 export { expect };

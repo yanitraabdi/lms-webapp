@@ -1,4 +1,7 @@
 import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+const root = path.resolve(__dirname, "../../.."); // repo root, whatever the cwd
 
 const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
@@ -6,7 +9,7 @@ const lit = (s: string) => `'${s.replace(/'/g, "''")}'`;
 export function psql(sql: string): string {
   return execFileSync(
     "docker",
-    ["compose", "-p", "inverta-e2e", "--env-file", "../e2e.env", "-f", "../docker-compose.yml", "-f", "../docker-compose.e2e.yml",
+    ["compose", "-p", "inverta-e2e", "--env-file", `${root}/e2e.env`, "-f", `${root}/docker-compose.yml`, "-f", `${root}/docker-compose.e2e.yml`,
       "exec", "-T", "postgres", "sh", "-c", 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -c "$0"', sql],
     { encoding: "utf8" },
   ).trim();

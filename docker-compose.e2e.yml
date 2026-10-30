@@ -3,7 +3,7 @@
 services:
   postgres:
     ports: !override
-      - "5532:5432"
+      - "127.0.0.1:5532:5432"
   api:
     environment:
       Email__Provider: "dev"            # belt and braces: e2e never sends real email

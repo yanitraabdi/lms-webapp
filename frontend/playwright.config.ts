@@ -6,6 +6,7 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 60_000,
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI, // a retry may rescue infra hiccups, never hide a flaky assertion
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   globalSetup: "./e2e/support/stack.ts",
   use: {
