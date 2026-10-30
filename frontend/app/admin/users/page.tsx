@@ -206,7 +206,7 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] text-ink-subtle">{label}</div>
+      <div className="text-[11px] text-ink-muted">{label}</div>
       <div className="font-bold text-ink">{value}</div>
     </div>
   );

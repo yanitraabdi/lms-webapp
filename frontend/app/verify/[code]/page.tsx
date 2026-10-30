@@ -44,7 +44,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
             <>
               <PageTitle>{result.recipientName}</PageTitle>
               <p className="mt-2 text-ink-muted">{result.programName}</p>
-              <p className="mt-1 text-[13.5px] font-bold text-success">Sertifikat terverifikasi</p>
+              <p className="mt-1 text-[13.5px] font-bold text-[#166534]">Sertifikat terverifikasi</p>
 
               <table className="data-table mt-6">
                 <thead>

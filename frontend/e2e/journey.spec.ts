@@ -1,4 +1,5 @@
 import { api, ADMIN, login } from "./support/api";
+import { expectNoSeriousA11y } from "./support/axe";
 import { correctAnswers, psql } from "./support/db";
 import { expect, gotoReady, newLearner, signIn, test } from "./support/learner";
 import type { Page } from "@playwright/test";
@@ -60,7 +61,8 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
   await test.step("3 watching alone does not complete; no answer key served (GR-11)", async () => {
     const [lesson1] = part(ids[0], "LessonVideo");
     const [testPart1, assessment1] = part(ids[0], "Test");
-    await api(`/sessions/${ids[0]}/parts/${lesson1}/progress`, { method: "PUT", token, body: { positionSeconds: 60, percent: 100 } });
+    const progress = await api(`/sessions/${ids[0]}/parts/${lesson1}/progress`, { method: "PUT", token, body: { positionSeconds: 60, percent: 100 } });
+    expect(progress).toMatchObject({ done: true, sessionCompleted: false });
     await expectToc(page, 0, 1);
     const body = await api(`/sessions/${ids[0]}/parts/${testPart1}/assessment`, { token });
     expect(body.id).toBe(assessment1);
@@ -130,11 +132,13 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     code = (await page.getByText(/^Kode: /).innerText()).replace("Kode: ", "").trim();
     expect(code).toBeTruthy();
     await expect(page.getByText(NOT_OFFICIAL).first()).toBeVisible();
+    await expectNoSeriousA11y(page); // the smoke learner has no certificate, so only this run sees the card
 
     await page.goto(`/verify/${code}`);
     await expect(page.getByText("Sertifikat terverifikasi")).toBeVisible();
     await expect(page.getByRole("heading", { name: learner.name })).toBeVisible();
     await expect(page.getByText(NOT_OFFICIAL).first()).toBeVisible();
+    await expectNoSeriousA11y(page); // smoke only reaches the invalid-code state
 
     await page.goto("/verify/NOPE-0000");
     await expect(page.getByRole("heading", { name: "Sertifikat tidak ditemukan" })).toBeVisible();
