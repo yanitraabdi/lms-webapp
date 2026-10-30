@@ -48,10 +48,10 @@ export function Sitting({
 
   return (
     <>
-      <div className="sticky top-0 z-30 -mx-6 mb-5 border-b border-border bg-surface/95 px-6 py-3 backdrop-blur">
+      <div className="sticky top-0 z-30 -mx-5 mb-5 border-b border-border bg-surface px-5 py-3 sm:-mx-11 sm:px-11">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">
+            <span className="text-[13.5px] font-semibold tabular-nums text-ink-muted">
               Bagian {num(state.sectionIndex) + 1} dari {num(state.sectionCount)}
             </span>
             <span ref={sectionTitle} tabIndex={-1} className="text-[15px] font-extrabold focus:outline-none">
@@ -150,7 +150,7 @@ export function Sitting({
           )}
         </span>
         <Button onClick={onNext} loading={busy}>
-          {isLast ? "Selesaikan tes" : "Bagian berikutnya →"}
+          {isLast ? "Selesaikan tes" : "Bagian berikutnya"}
         </Button>
       </div>
       <p className="mt-3 text-[11.5px] text-ink-subtle">

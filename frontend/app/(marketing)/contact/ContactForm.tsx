@@ -28,18 +28,18 @@ export function ContactForm() {
 
   if (done) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-8 text-center shadow-sm">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
-          <CheckCircleIcon size={30} strokeWidth={2.2} />
-        </span>
+      <div className="flex items-start gap-3 border-l-[3px] border-l-success pl-4">
+        <CheckCircleIcon size={22} strokeWidth={2.2} className="mt-0.5 shrink-0 text-success" />
+        <div>
         <h2 className="text-lg font-extrabold">Pesan terkirim</h2>
         <p className="text-sm text-ink-muted">Terima kasih. Tim kami akan menghubungi Anda secepatnya.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {error && <p className="rounded-base border border-danger/30 bg-danger-soft px-4 py-2.5 text-sm text-danger">{error}</p>}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="name" className="text-[13px] font-semibold">Nama</label>

@@ -52,7 +52,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
     <Modal
       open
       onClose={onClose}
-      title={`Sesi — ${program.name}`}
+      title={`Sesi: ${program.name}`}
       className="max-w-2xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
@@ -62,7 +62,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
               href={`/admin/programs/${program.id}/score-bands`}
               className="text-[12.5px] font-bold text-primary hover:underline"
             >
-              Tabel konversi skor →
+              Tabel konversi skor
             </Link>
           </div>
           <Button size="sm" onClick={onClose}>Selesai</Button>

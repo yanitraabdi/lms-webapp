@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Button, Spinner, ErrorState, AlertTriangleIcon, CheckIcon } from "@/components/ui";
+import { Button, Spinner, ErrorState, AlertTriangleIcon, SheetPage, RunningHead, PageTitle, Footnote } from "@/components/ui";
 import { getSessionAssessment, startAttempt, num, type StudentAssessment } from "@/lib/sessions";
 
 export default function AssessmentPage() {
@@ -59,21 +59,19 @@ function IntroPage({ token, sessionId }: { token: string; sessionId: string }) {
   }
   if (meta.isError || !meta.data) {
     return (
-      <div className="mx-auto max-w-md px-6 py-20">
+      <SheetPage>
         <ErrorState
           title="Tes tidak tersedia"
           message="Selesaikan sesi sebelumnya terlebih dahulu."
           action={<Link href="/app/dashboard" className="text-sm font-bold text-primary hover:underline">Ke dasbor</Link>}
         />
-      </div>
+      </SheetPage>
     );
   }
   return (
-    <div className="min-h-screen bg-bg">
-      <div className="mx-auto max-w-3xl px-6 py-8">
-        <Intro test={meta.data} onBegin={begin} busy={busy} error={error} />
-      </div>
-    </div>
+    <SheetPage>
+      <Intro test={meta.data} onBegin={begin} busy={busy} error={error} />
+    </SheetPage>
   );
 }
 
@@ -81,27 +79,30 @@ function Intro({
   test, onBegin, busy, error,
 }: { test: StudentAssessment; onBegin: () => void; busy: boolean; error: string | null }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
-      <h1 className="text-[23px] font-extrabold tracking-tight">{test.title}</h1>
-      <p className="mt-2 text-[14px] leading-relaxed text-ink-muted">
+    <>
+      <RunningHead>Tes akhir</RunningHead>
+      <PageTitle>{test.title}</PageTitle>
+      <p className="mt-4 max-w-[60ch] leading-relaxed text-ink-muted">
         Tes ini terdiri dari beberapa bagian berwaktu. Waktu setiap bagian berjalan di server dan
         tidak dapat dijeda. Setelah sebuah bagian selesai, Anda <strong className="text-ink">tidak
         dapat kembali</strong> ke bagian tersebut.
       </p>
 
-      <ul className="mt-4 flex flex-col gap-2 text-[13.5px] text-ink-muted">
-        <li className="flex gap-2.5"><CheckIcon size={17} className="mt-0.5 shrink-0 text-success" /> Jumlah soal: {num(test.questionCount)}</li>
-        {test.timeLimitMinutes != null && (
-          <li className="flex gap-2.5"><CheckIcon size={17} className="mt-0.5 shrink-0 text-success" /> Total waktu: {num(test.timeLimitMinutes)} menit</li>
-        )}
-        <li className="flex gap-2.5">
-          <CheckIcon size={17} className="mt-0.5 shrink-0 text-success" />
-          Kesempatan: {test.retakeCap == null ? "tidak dibatasi" : `${num(test.retakeCap)}× (terpakai ${num(test.attemptsUsed)})`}
-        </li>
-      </ul>
+      <table className="data-table mt-6">
+        <tbody>
+          <tr><td className="text-ink-muted">Jumlah soal</td><td className="font-bold">{num(test.questionCount)}</td></tr>
+          {test.timeLimitMinutes != null && (
+            <tr><td className="text-ink-muted">Total waktu</td><td className="font-bold">{num(test.timeLimitMinutes)} menit</td></tr>
+          )}
+          <tr>
+            <td className="text-ink-muted">Kesempatan</td>
+            <td className="font-bold">{test.retakeCap == null ? "tidak dibatasi" : `${num(test.retakeCap)}× (terpakai ${num(test.attemptsUsed)})`}</td>
+          </tr>
+        </tbody>
+      </table>
 
       {test.proctoringEnabled && (
-        <div className="mt-5 rounded-base border border-[#F5D9A8] bg-warning-soft px-4 py-3.5">
+        <div className="mt-6 rounded-sm bg-warning-soft px-4 py-3.5">
           <div className="flex items-start gap-2.5">
             <AlertTriangleIcon size={18} className="mt-0.5 shrink-0 text-warning" />
             <div className="text-[13px] leading-relaxed text-ink">
@@ -117,10 +118,10 @@ function Intro({
         </div>
       )}
 
-      <p className="mt-5 text-[12px] leading-relaxed text-ink-subtle">
-        Skor yang dihasilkan adalah <strong className="text-ink-muted">prediksi INVERTA</strong>,
+      <Footnote>
+        Skor yang dihasilkan adalah <strong className="text-ink">prediksi INVERTA</strong>,
         bukan skor TOEFL resmi dan tidak diterbitkan oleh ETS.
-      </p>
+      </Footnote>
 
       {error && (
         <div className="mt-4 rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div>
@@ -129,6 +130,6 @@ function Intro({
       <Button className="mt-5" fullWidth onClick={onBegin} loading={busy} disabled={!test.canAttempt}>
         {test.canAttempt ? "Mulai tes" : "Batas percobaan tercapai"}
       </Button>
-    </div>
+    </>
   );
 }

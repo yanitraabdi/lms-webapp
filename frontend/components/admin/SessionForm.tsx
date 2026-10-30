@@ -118,7 +118,7 @@ export function SessionForm({
         <Field label="Tipe sesi">
           {editing ? (
             <p className="rounded-sm bg-surface-2 px-3 py-2 text-[13.5px] text-ink-muted">
-              {TYPE_LABEL[type]} — tipe tidak dapat diubah setelah sesi dibuat.
+              {TYPE_LABEL[type]}: tipe tidak dapat diubah setelah sesi dibuat.
             </p>
           ) : (
             <select value={type} onChange={(e) => setType(e.target.value as SessionKind)} className={inputBlockCls}>

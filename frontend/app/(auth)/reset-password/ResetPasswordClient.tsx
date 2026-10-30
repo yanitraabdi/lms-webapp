@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AuthCard, AuthError } from "@/components/auth/AuthCard";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
-import { Button, CheckCircleIcon, Input } from "@/components/ui";
+import { Button, CheckCircleIcon, Input, PageTitle } from "@/components/ui";
 import { postJson, problemMessage } from "@/lib/auth/client";
 
 export function ResetPasswordClient() {
@@ -31,7 +31,7 @@ export function ResetPasswordClient() {
   if (!token) {
     return (
       <AuthCard className="items-center text-center">
-        <h1 className="text-xl font-extrabold tracking-tight">Tautan tidak valid</h1>
+        <PageTitle size="compact">Tautan tidak valid</PageTitle>
         <p className="text-sm leading-relaxed text-ink-muted">Tautan reset tidak lengkap. Mulai ulang dari halaman lupa sandi.</p>
         <Link href="/forgot-password" className="w-full"><Button variant="secondary" fullWidth>Minta tautan baru</Button></Link>
       </AuthCard>
@@ -44,7 +44,7 @@ export function ResetPasswordClient() {
         <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-success-soft text-success">
           <CheckCircleIcon size={28} />
         </span>
-        <h1 className="text-[22px] font-extrabold tracking-tight">Sandi diperbarui</h1>
+        <PageTitle size="compact">Sandi diperbarui</PageTitle>
         <p className="text-sm leading-relaxed text-ink-muted">Silakan masuk dengan kata sandi baru Anda.</p>
         <Link href="/login" className="w-full"><Button fullWidth>Masuk</Button></Link>
       </AuthCard>
@@ -53,7 +53,7 @@ export function ResetPasswordClient() {
 
   return (
     <AuthCard>
-      <h1 className="text-xl font-extrabold tracking-tight">Buat sandi baru</h1>
+      <PageTitle size="compact">Buat sandi baru</PageTitle>
       {error && <AuthError message={error} />}
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">

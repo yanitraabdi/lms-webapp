@@ -110,7 +110,7 @@ export function AttendanceModal({
 
           <p className="text-[11.5px] leading-relaxed text-ink-subtle">
             Menandai hadir akan menyelesaikan sesi ini dan membuka sesi berikutnya. Membatalkan
-            tanda hanya menghapus status kehadiran — progres yang sudah diperoleh tidak dicabut.
+            tanda hanya menghapus status kehadiran; progres yang sudah diperoleh tidak dicabut.
           </p>
         </div>
       )}

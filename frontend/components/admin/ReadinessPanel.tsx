@@ -29,7 +29,7 @@ export function ReadinessPanel({
     <Modal
       open
       onClose={onClose}
-      title={`Kesiapan — ${program.name}`}
+      title={`Kesiapan: ${program.name}`}
       className="max-w-lg"
       footer={<div className="flex w-full justify-end"><Button size="sm" onClick={onClose}>Tutup</Button></div>}
     >
@@ -66,7 +66,7 @@ export function ReadinessPanel({
                     {c.detail && <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-muted">{c.detail}</span>}
                     {fix && (
                       <Link href={fix.href} className="mt-1 inline-block text-[12.5px] font-bold text-primary hover:underline">
-                        {fix.label} →
+                        {fix.label}
                       </Link>
                     )}
                   </span>

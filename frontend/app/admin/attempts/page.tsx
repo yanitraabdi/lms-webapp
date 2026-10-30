@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageTitle } from "@/components/ui/Page";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState } from "@/components/ui";
 import { listAdminAttempts, getAdminAttempt, fmtDateTime, num } from "@/lib/programs";
@@ -21,6 +22,7 @@ export default function AdminAttemptsPage() {
 
   return (
     <div className="flex flex-col gap-3">
+      <PageTitle size="compact">Percobaan</PageTitle>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-ink-subtle">
           Percobaan tes. Tinjau kasus yang ditandai pengawasan dan pulihkan jika terjadi salah deteksi.
@@ -36,7 +38,7 @@ export default function AdminAttemptsPage() {
         </label>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div>
         {!token || attempts.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : attempts.isError ? (
@@ -50,37 +52,37 @@ export default function AdminAttemptsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse">
+            <table className="data-table min-w-[760px]">
               <thead>
-                <tr className="bg-surface-2 text-left text-xs font-bold text-ink-muted">
-                  <th className="px-5 py-3">Peserta</th>
-                  <th className="px-3 py-3">Tes</th>
-                  <th className="px-3 py-3">Skor</th>
-                  <th className="px-3 py-3">Prediksi</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Aksi</th>
+                <tr>
+                  <th>Peserta</th>
+                  <th>Tes</th>
+                  <th>Skor</th>
+                  <th>Prediksi</th>
+                  <th>Status</th>
+                  <th className="num">Aksi</th>
                 </tr>
               </thead>
               <tbody className="text-[13.5px]">
                 {attempts.data.items.map((a) => (
-                  <tr key={a.id} className="border-t border-border">
-                    <td className="px-5 py-3.5">
+                  <tr key={a.id}>
+                    <td>
                       <div className="font-semibold">{a.userName}</div>
                       <div className="text-[11.5px] text-ink-subtle">{a.userEmail}</div>
                     </td>
-                    <td className="px-3 py-3.5">
+                    <td>
                       <div>{a.assessmentTitle}</div>
                       <div className="text-[11.5px] text-ink-subtle">
                         {a.kind === "Final" ? "Tes akhir" : "Tes sesi"} · {fmtDateTime(a.startedAt)}
                       </div>
                     </td>
-                    <td className="px-3 py-3.5">{num(a.totalScore)}/{num(a.maxScore)}</td>
-                    <td className="px-3 py-3.5">
+                    <td>{num(a.totalScore)}/{num(a.maxScore)}</td>
+                    <td>
                       {a.totalScaledScore != null
                         ? <span className="font-bold text-primary">{num(a.totalScaledScore)}</span>
-                        : <span className="text-ink-subtle">—</span>}
+                        : <span className="text-ink-subtle">Tidak ada</span>}
                     </td>
-                    <td className="px-3 py-3.5">
+                    <td>
                       <div className="flex flex-wrap gap-1.5">
                         {a.submittedAt == null && (
                           <Badge tone="neutral" className="px-2 py-0.5 text-[10.5px]">Berjalan</Badge>
@@ -99,7 +101,7 @@ export default function AdminAttemptsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td>
                       <div className="flex justify-end">
                         <Button variant="neutral" size="sm" onClick={() => setOpenId(a.id)}>Tinjau</Button>
                       </div>
@@ -173,12 +175,12 @@ function AttemptDetail({
             <Row label="Mulai" value={fmtDateTime(a.startedAt)} />
             <Row label="Dikirim" value={a.submittedAt ? fmtDateTime(a.submittedAt) : "Belum"} />
             <Row label="Skor mentah" value={`${num(a.totalScore)}/${num(a.maxScore)}`} />
-            <Row label="Skor prediksi" value={a.totalScaledScore != null ? String(num(a.totalScaledScore)) : "—"} />
+            <Row label="Skor prediksi" value={a.totalScaledScore != null ? String(num(a.totalScaledScore)) : "Tidak ada"} />
           </div>
 
           {sections.length > 0 && (
             <div>
-              <h3 className="text-[12px] font-bold uppercase tracking-wide text-ink-subtle">Skor per bagian</h3>
+              <h3 className="text-[13.5px] font-semibold text-ink-muted">Skor per bagian</h3>
               <ul className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1">
                 {sections.map(([name, value]) => (
                   <li key={name} className="text-[13px] text-ink-muted">
@@ -190,11 +192,11 @@ function AttemptDetail({
           )}
 
           <div>
-            <h3 className="text-[12px] font-bold uppercase tracking-wide text-ink-subtle">
+            <h3 className="text-[13.5px] font-semibold text-ink-muted">
               Jejak pengawasan ({q.data!.events.length})
             </h3>
             <p className="mt-1 text-[11.5px] text-ink-subtle">
-              Termasuk kejadian yang diabaikan (di bawah 2 detik) — jejak lengkap sengaja
+              Termasuk kejadian yang diabaikan (di bawah 2 detik), jejak lengkap sengaja
               dipertahankan untuk peninjauan sengketa.
             </p>
             {q.data!.events.length === 0 ? (
@@ -230,7 +232,7 @@ function AttemptDetail({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">{label}</span>
+      <span className="text-[13.5px] font-semibold text-ink-muted">{label}</span>
       <span className="text-ink">{value}</span>
     </div>
   );

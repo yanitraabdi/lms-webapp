@@ -1,78 +1,88 @@
 "use client";
-import dynamic from "next/dynamic";
 import Link from "next/link";
+import { Chapter, Footnote } from "@/components/ui";
 import { num } from "@/lib/programs";
 import type { ProgramCertificate } from "@/lib/sessions";
 
-const FinalResultChart = dynamic(() => import("./FinalResultChart"), {
-  ssr: false,
-  loading: () => <div className="h-[160px]" />,
-});
-
 const SECTIONS = ["Listening", "Structure", "Reading"];
 
-/** Block 2: the final exam's predicted score, or what the final exam is when it is not done yet. */
+/** Final exam score report, or what the final exam is when it is not done yet. */
 export function FinalResultCard({
   certificate, sessionsRemaining, status = "success",
 }: { certificate?: ProgramCertificate; sessionsRemaining: number; status?: "pending" | "error" | "success" }) {
   if (status === "pending") {
-    return <section className="min-h-[200px] rounded-lg border border-border bg-surface shadow-sm" aria-busy="true" />;
+    return <Chapter title="Hasil tes akhir"><div className="mt-4 min-h-[120px]" aria-busy="true" /></Chapter>;
   }
   if (status === "error") {
     return (
-      <section className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-        <p className="text-[13px] text-ink-muted">Hasil tes akhir tidak dapat dimuat.</p>
-      </section>
+      <Chapter title="Hasil tes akhir">
+        <p className="mt-3 text-ink-muted">Hasil tes akhir tidak dapat dimuat.</p>
+      </Chapter>
     );
   }
   if (!certificate) {
     return (
-      <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-5 shadow-sm">
-        <h2 className="text-lg font-extrabold">Tes akhir</h2>
-        <p className="text-[13px] leading-relaxed text-ink-muted">
+      <Chapter title="Hasil tes akhir">
+        {sessionsRemaining > 0 && <p className="mt-3 max-w-[60ch] text-ink-muted">Belum ada hasil tes akhir.</p>}
+        <p className="mt-2 max-w-[60ch] text-ink-muted">
           Simulasi TOEFL ITP (Listening, Structure, Reading) dengan durasi 115 menit. Terbuka setelah semua sesi selesai.
         </p>
         {sessionsRemaining > 0 && (
-          <p className="text-[13px] font-bold text-ink">
+          <p className="mt-2 font-bold text-ink">
             {sessionsRemaining > 1 ? `Sisa ${sessionsRemaining} sesi lagi.` : "Tinggal tes akhir."}
           </p>
         )}
         {sessionsRemaining === 0 && (
-          <p className="text-[13px] font-bold text-ink">
-            Tes akhir sudah dikerjakan. Sertifikat sedang diproses — jika belum muncul, hubungi kami lewat{" "}
-            <Link href="/contact" className="text-primary hover:underline">halaman kontak</Link>.
+          <p className="mt-2 font-bold text-ink">
+            Tes akhir sudah dikerjakan. Sertifikat sedang diproses, jika belum muncul, hubungi kami lewat{" "}
+            <Link href="/contact" className="text-primary underline underline-offset-2">halaman kontak</Link>.
           </p>
         )}
-      </section>
+      </Chapter>
     );
   }
 
-  const scores: Record<string, number> = {};
-  for (const [k, v] of Object.entries(certificate.scaledScores ?? {})) scores[k] = num(v);
+  const scaled = certificate.scaledScores ?? {};
+  const raw = certificate.sectionScores ?? {};
+  const rows = SECTIONS.filter((s) => scaled[s] != null || raw[s] != null);
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h2 className="text-lg font-extrabold">Hasil tes akhir</h2>
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-baseline gap-2">
-          {certificate.totalScore != null && (
-            <span className="text-[40px] font-extrabold leading-none text-primary">{num(certificate.totalScore)}</span>
-          )}
-          {certificate.predictedBand && (
-            <span className="text-[13px] font-bold text-ink-muted">{certificate.predictedBand}</span>
-          )}
-        </div>
-        <p className="text-[12px] text-ink-muted">Skor prediksi INVERTA, bukan skor resmi TOEFL dari ETS.</p>
+    <Chapter title="Hasil tes akhir">
+      <div className="mt-4">
+        {certificate.totalScore != null && (
+          <>
+            <p className="text-[60px] font-extrabold leading-none tabular-nums text-primary">{num(certificate.totalScore)}</p>
+            <p className="mt-2 text-[13.5px] font-semibold text-ink-muted">
+              Skor prediksi<sup>1</sup>
+              {certificate.predictedBand && <span>{`, ${certificate.predictedBand}`}</span>}
+            </p>
+          </>
+        )}
       </div>
-
-      <FinalResultChart scores={scores} />
-      <ul className="sr-only">
-        {SECTIONS.filter((s) => scores[s] != null).map((s) => <li key={s}>{s}: {scores[s]}</li>)}
-      </ul>
-
-      <Link href="/app/certificates" className="self-start text-[13px] font-bold text-primary hover:underline">
-        Lihat sertifikat →
+      {rows.length > 0 && (
+        <table className="data-table mt-5">
+          <thead>
+            <tr>
+              <th scope="col">Bagian</th>
+              <th scope="col" className="num">Benar</th>
+              <th scope="col" className="num">Skor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((s) => (
+              <tr key={s}>
+                <td className="font-bold">{s}</td>
+                <td className="num">{raw[s] != null ? num(raw[s]) : ""}</td>
+                <td className="num font-bold">{scaled[s] != null ? num(scaled[s]) : ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <Footnote><sup>1</sup> Skor prediksi INVERTA, bukan skor TOEFL resmi dari ETS.</Footnote>
+      <Link href="/app/certificates" className="mt-3 inline-block text-[14px] font-bold text-primary underline underline-offset-2">
+        Lihat sertifikat
       </Link>
-    </section>
+    </Chapter>
   );
 }

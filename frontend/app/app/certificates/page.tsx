@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app/AppHeader";
-import { Button, Spinner, ErrorState, EmptyState } from "@/components/ui";
+import { Button, Spinner, ErrorState, EmptyState, SheetPage, PageTitle, Lead, Footnote } from "@/components/ui";
 import { listMyCertificates, downloadCertificate, num, type ProgramCertificate } from "@/lib/sessions";
 import { fmtDateTime } from "@/lib/programs";
 
@@ -31,11 +31,9 @@ export default function CertificatesPage() {
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader />
-      <div className="mx-auto max-w-3xl px-6 pb-16 pt-7">
-        <h1 className="mb-1 text-[24px] font-extrabold tracking-tight">Sertifikat</h1>
-        <p className="mb-6 text-sm text-ink-muted">
-          Sertifikat prediksi TOEFL Anda. Setiap sertifikat dapat diverifikasi secara publik.
-        </p>
+      <SheetPage>
+        <PageTitle>Sertifikat</PageTitle>
+        <Lead>Sertifikat prediksi TOEFL Anda. Setiap sertifikat dapat diverifikasi secara publik.</Lead>
 
         {q.isPending ? (
           <div className="flex min-h-[180px] items-center justify-center"><Spinner size={24} /></div>
@@ -49,20 +47,18 @@ export default function CertificatesPage() {
             action={<Link href="/app/dashboard" className="text-sm font-bold text-primary hover:underline">Ke dasbor</Link>}
           />
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="mt-8 flex flex-col gap-4">
             {q.data.map((c) => <CertificateCard key={c.id} cert={c} token={accessToken} />)}
           </div>
         )}
 
-        <div className="mt-8 rounded-base border border-border bg-surface-2 px-5 py-4">
-          <p className="text-[12px] leading-relaxed text-ink-muted">
-            <strong className="text-ink">Penting.</strong> Skor pada sertifikat ini adalah{" "}
-            <strong className="text-ink">prediksi INVERTA</strong> berdasarkan simulasi internal —{" "}
-            <strong className="text-ink">bukan skor TOEFL resmi</strong> dan tidak diterbitkan oleh ETS.
-            TOEFL adalah merek dagang terdaftar milik ETS.
-          </p>
-        </div>
-      </div>
+        <Footnote>
+          <strong className="text-ink">Penting.</strong> Skor pada sertifikat ini adalah{" "}
+          <strong className="text-ink">prediksi INVERTA</strong> berdasarkan simulasi internal,{" "}
+          <strong className="text-ink">bukan skor TOEFL resmi</strong> dan tidak diterbitkan oleh ETS.
+          TOEFL adalah merek dagang terdaftar milik ETS.
+        </Footnote>
+      </SheetPage>
     </div>
   );
 }
@@ -83,16 +79,16 @@ function CertificateCard({ cert, token }: { cert: ProgramCertificate; token: str
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+    <div className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">Sertifikat prediksi</span>
+          <span className="text-[13.5px] font-semibold text-ink-muted">Sertifikat prediksi</span>
           <h2 className="text-lg font-extrabold">{cert.programName}</h2>
           <span className="text-[12.5px] text-ink-muted">Terbit {fmtDateTime(cert.issuedAt)}</span>
         </div>
         {cert.totalScore != null && (
           <div className="text-right">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-ink-subtle">Skor prediksi</div>
+            <div className="text-[13.5px] font-semibold text-ink-muted">Skor prediksi</div>
             <div className="text-[34px] font-extrabold leading-none text-primary">{num(cert.totalScore)}</div>
             {cert.predictedBand && <div className="text-[12px] text-ink-muted">{cert.predictedBand}</div>}
           </div>
@@ -115,7 +111,7 @@ function CertificateCard({ cert, token }: { cert: ProgramCertificate; token: str
           href={`/verify/${cert.verificationCode}`}
           className="text-[12.5px] font-bold text-primary hover:underline"
         >
-          Halaman verifikasi →
+          Halaman verifikasi
         </Link>
         <span className="text-[11.5px] text-ink-subtle">Kode: {cert.verificationCode}</span>
       </div>

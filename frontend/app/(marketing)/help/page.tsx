@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { getFaq } from "@/lib/content";
+import { Chapter, Lead, PageTitle, RunningHead } from "@/components/ui";
 import { FaqAccordion } from "@/components/FaqAccordion";
 
-// ISR — FAQ is admin-editable later; revalidate keeps it fresh.
+// ISR: FAQ is admin-editable later; revalidate keeps it fresh.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -23,33 +24,26 @@ export default async function HelpPage() {
 
   return (
     <PublicShell>
-      <section className="px-6 pb-8 pt-14">
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-primary">Bantuan</span>
-          <h1 className="text-4xl font-extrabold tracking-tight">Pusat bantuan &amp; FAQ</h1>
-          <p className="max-w-2xl text-[16.5px] leading-relaxed text-ink-muted">
-            Temukan jawaban cepat. Tidak menemukan yang Anda cari? <Link href="/contact" className="font-bold text-primary hover:underline">Hubungi kami</Link>.
-          </p>
-        </div>
-      </section>
+      <RunningHead>Bantuan</RunningHead>
+      <PageTitle>Pusat bantuan &amp; FAQ</PageTitle>
+      <Lead>
+        Temukan jawaban cepat. Tidak menemukan yang Anda cari? <Link href="/contact" className="font-bold text-primary hover:underline">Hubungi kami</Link>.
+      </Lead>
 
-      <section className="px-6 pb-10">
-        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
+      <dl className="mt-8 flex flex-col gap-3">
           {categories.map((c) => (
-            <div key={c.title} className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface p-5 shadow-sm">
-              <h3 className="text-[15px] font-extrabold">{c.title}</h3>
-              <p className="text-[13px] leading-relaxed text-ink-muted">{c.body}</p>
+            <div key={c.title}>
+              <dt className="font-bold text-ink">{c.title}</dt>
+              <dd className="max-w-[60ch] text-ink-muted">{c.body}</dd>
             </div>
           ))}
-        </div>
-      </section>
+        </dl>
 
-      <section className="px-6 pb-16">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="mb-4 text-2xl font-extrabold tracking-tight">Pertanyaan umum</h2>
+      <Chapter title="Pertanyaan umum">
+        <div className="mt-4">
           <FaqAccordion items={faq} />
         </div>
-      </section>
+      </Chapter>
     </PublicShell>
   );
 }

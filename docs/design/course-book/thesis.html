@@ -1,0 +1,334 @@
+<title>INVERTA Course Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: proposal notes in a narrow column, then three surfaces mocked full width, each "after" in the course-book direction. */
+:root {
+  color-scheme: light; /* the app is light-only; this page commits to the same single look */
+  --bg: #f4f7fb; --surface: #ffffff; --surface-2: #eef3f9; --border: #dce5ef;
+  --ink: #11253f; --ink-muted: #51607a; --ink-subtle: #8a99ae;
+  --primary: #7F00FF; --primary-hover: #6D00D9; --primary-soft: #F1E5FF;
+  --accent: #c2710c; --accent-soft: #fef1d2;
+  --success: #0e8a4f; --success-soft: #dcfae9;
+  --r-sm: 6px; --r: 10px; --r-lg: 14px;
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* proposed type scale */
+  --t-display: clamp(32px, 5vw, 46px); --t-h2: 26px; --t-h3: 17px; --t-body: 16px; --t-small: 13.5px;
+}
+* { box-sizing: border-box; }
+body { background: var(--surface-2); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.55; }
+h1, h2, h3, p, ol, ul, dl, dd, table { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* proposal frame */
+.memo { max-width: 72ch; display: grid; gap: 14px; }
+.memo h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.015em; }
+.memo .lead { color: var(--ink-muted); }
+.thesis { background: var(--surface); border-radius: var(--r-lg); padding: 18px 20px; display: grid; gap: 10px; border: 1px solid var(--border); }
+.thesis b { color: var(--primary); }
+.memo ul { padding-left: 20px; color: var(--ink-muted); display: grid; gap: 4px; }
+.memo ul strong { color: var(--ink); }
+.surface-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.surface-label h2 { font-size: 20px; font-weight: 800; }
+.surface-label span { font-size: 13px; color: var(--ink-muted); }
+.changes { font-size: 13.5px; color: var(--ink-muted); padding-left: 20px; display: grid; gap: 3px; max-width: 80ch; }
+
+/* ---------- the mock app, course-book direction ---------- */
+.screen { background: var(--surface); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border); box-shadow: 0 18px 40px -24px rgba(17,37,63,.25); }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { font-weight: 800; font-size: 19px; color: var(--primary); letter-spacing: -0.02em; }
+.nav nav { display: flex; gap: 22px; font-size: 14px; font-weight: 600; color: var(--ink-muted); flex-wrap: wrap; }
+.nav nav a { color: inherit; text-decoration: none; }
+.nav nav a[aria-current] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--primary); padding-bottom: 4px; }
+.page { padding: 44px 28px 52px; }
+.col { max-width: 680px; }
+.with-aside { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 56px; align-items: start; }
+@media (max-width: 860px) { .with-aside { grid-template-columns: minmax(0, 1fr); gap: 32px; } .page { padding: 32px 18px 40px; } .nav { padding: 12px 18px; } }
+
+.running { font-size: 13.5px; font-weight: 600; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.display { font-size: var(--t-display); line-height: 1.08; font-weight: 800; letter-spacing: -0.025em; margin-top: 10px; }
+.lead2 { font-size: 18px; line-height: 1.6; color: var(--ink-muted); margin-top: 16px; max-width: 58ch; }
+.chapter { margin-top: 52px; padding-top: 18px; border-top: 1px solid var(--ink); }
+.chapter h2 { font-size: var(--t-h2); font-weight: 800; letter-spacing: -0.015em; }
+.chapter > p { margin-top: 8px; color: var(--ink-muted); max-width: 60ch; font-size: var(--t-body); }
+
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, auto)); justify-content: start; column-gap: 36px; row-gap: 12px; margin-top: 26px; }
+@media (max-width: 560px) { .facts { grid-template-columns: repeat(2, minmax(0, auto)); } }
+.facts dt { font-size: 12.5px; color: var(--ink-muted); font-weight: 600; }
+.facts dd { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* the one box on the page: what you act on */
+.buy { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; display: grid; gap: 14px; position: sticky; top: 20px; }
+.buy .price { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.buy .price small { display: block; font-size: 13px; font-weight: 600; color: var(--ink-muted); letter-spacing: 0; }
+.btn { display: inline-flex; justify-content: center; align-items: center; font: inherit; font-weight: 700; font-size: 15px; color: #fff; background: var(--primary); border: 0; border-radius: var(--r-sm); padding: 12px 18px; cursor: pointer; text-decoration: none; }
+.btn:hover { background: var(--primary-hover); }
+.btn.ghost { background: transparent; color: var(--primary); padding-inline: 0; }
+.buy ul { list-style: none; padding: 0; display: grid; gap: 7px; font-size: 14px; color: var(--ink-muted); }
+.buy ul li::before { content: "✓"; color: var(--success); font-weight: 800; margin-right: 8px; }
+.buy .fine { font-size: 12.5px; color: var(--ink-muted); }
+
+/* table of contents with dot leaders */
+.toc { list-style: none; padding: 0; margin-top: 20px; display: grid; }
+.toc li { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding-block: 11px; border-bottom: 1px solid var(--surface-2); }
+.toc .n { font-weight: 800; color: var(--ink-subtle); font-variant-numeric: tabular-nums; }
+.toc .t { font-weight: 700; font-size: 15.5px; min-width: 0; }
+.toc .t small { display: block; font-weight: 500; font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+.toc .m { font-size: 13.5px; color: var(--ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.toc li.done .n { color: var(--success); }
+.toc li.now { background: var(--primary-soft); margin-inline: -12px; padding-inline: 12px; border-radius: var(--r-sm); border-bottom-color: transparent; }
+.toc li.now .n { color: var(--primary); }
+.toc li.locked .t { color: var(--ink-muted); }
+.kind { font-size: 11.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+
+/* real table instead of three equal cards */
+table.spec { width: 100%; border-collapse: collapse; margin-top: 20px; font-variant-numeric: tabular-nums; font-size: 15px; }
+.spec th { text-align: left; font-size: 12.5px; color: var(--ink-muted); font-weight: 600; padding: 0 12px 8px 0; border-bottom: 1px solid var(--ink); }
+.spec td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--surface-2); }
+.spec td:first-child { font-weight: 700; }
+.spec .num { text-align: right; }
+.spec tfoot td { font-weight: 800; border-bottom: 0; border-top: 1px solid var(--ink); }
+.table-scroll { overflow-x: auto; }
+
+.steps { margin-top: 18px; padding-left: 1.4em; display: grid; gap: 12px; max-width: 62ch; font-size: var(--t-body); }
+.steps li::marker { font-weight: 800; color: var(--primary); }
+.steps strong { display: block; }
+.steps span { color: var(--ink-muted); }
+
+.footnote { margin-top: 18px; font-size: 13px; color: var(--ink-muted); max-width: 66ch; }
+.footnote sup { color: var(--primary); font-weight: 800; }
+
+/* dashboard */
+.next { margin-top: 30px; display: grid; gap: 8px; }
+.next .label { font-size: 13.5px; font-weight: 600; color: var(--ink-muted); }
+.next h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.next p { color: var(--ink-muted); }
+.next .row { display: flex; gap: 18px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.meter { display: flex; gap: 4px; margin-top: 4px; }
+.meter i { width: 26px; height: 6px; border-radius: 3px; background: var(--border); }
+.meter i.on { background: var(--primary); }
+.report { margin-top: 18px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 560px) { .report { grid-template-columns: minmax(0, 1fr); } }
+.big { font-size: 60px; line-height: .95; font-weight: 800; letter-spacing: -0.03em; color: var(--primary); font-variant-numeric: tabular-nums; }
+.big + small { display: block; margin-top: 6px; font-size: 13px; color: var(--ink-muted); }
+.cert { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; display: grid; gap: 6px; margin-top: 18px; max-width: 420px; }
+.cert .code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; color: var(--ink-muted); }
+.links { display: flex; gap: 20px; font-size: 14px; font-weight: 700; }
+.links a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+
+/* session */
+.video { aspect-ratio: 16 / 9; max-width: 100%; background: var(--ink); border-radius: var(--r); margin-top: 26px; display: grid; place-items: center; color: #c9d4e2; font-size: 14px; }
+.parts { list-style: none; padding: 0; margin-top: 20px; display: grid; gap: 0; }
+.parts li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding-block: 12px; border-bottom: 1px solid var(--surface-2); }
+.parts .mark { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); align-self: center; }
+.parts .mark.ok { border-color: var(--success); background: var(--success); }
+.parts .mark.half { border-color: var(--primary); background: linear-gradient(90deg, var(--primary) 50%, transparent 50%); }
+.parts b { font-weight: 700; }
+.parts small { display: block; color: var(--ink-muted); font-size: 13px; }
+.pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 14px; flex-wrap: wrap; }
+.pager span { color: var(--ink-muted); }
+.pager b { display: block; color: var(--ink); }
+
+.ask { font-weight: 700; font-size: 16px; }
+.rules { display: grid; gap: 6px; }
+.rules h2 { font-size: 18px; font-weight: 800; }
+</style>
+
+<div class="wrap">
+  <section class="memo">
+    <h1>INVERTA as a course book</h1>
+    <p class="lead">A proposal for the whole site, public pages and learner app, in the same colours. This page is the proposal, not the build: nothing in the app has changed. Content shown is the real syllabus; the placeholder session descriptions are left out.</p>
+    <div class="thesis">
+      <p><b>Visual thesis:</b> INVERTA reads like a well-set course book: one reading column, the syllabus as its table of contents, chapters marked by type and white space instead of boxes. A box appears only around something you act on or keep: the price, a certificate, a result.</p>
+      <p><b>Allowed patterns:</b> a dark hairline rule above each chapter heading; a running head (“Sesi 3 dari 8”); session numbers, because the program is strictly linear; tabular numerals for scores, times and prices.</p>
+    </div>
+    <ul>
+      <li><strong>Type does the work.</strong> Plus Jakarta Sans stays as the only face. Titles get much bigger (46px) and tighter; body text goes to 16px at a 60–65 character measure.</li>
+      <li><strong>The page is the paper.</strong> Content sits on white, not as white cards on blue-grey. The blue-grey moves to quiet areas (code, notes, the app frame).</li>
+      <li><strong>Removed everywhere:</strong> 👋 and other emoji, “→” arrow links, small purple uppercase eyebrows, blurred sticky headers, em dashes in our own copy, equal-card rows, numbered circles.</li>
+      <li><strong>Kept:</strong> every colour token, Plus Jakarta Sans, the exam motion we just shipped, and the GR-14 wording on every score.</li>
+    </ul>
+  </section>
+
+  <!-- 1. Program page -->
+  <section style="display:grid;gap:14px" aria-labelledby="s1">
+    <div class="surface-label"><h2 id="s1">Program page</h2><span>/program/toefl-preparation</span></div>
+    <ul class="changes">
+      <li>Before: SaaS hero (title, bold stat row, price card with checkmarks), four numbered circles, three equal format cards, boxed FAQ.</li>
+      <li>After: a title page, the syllabus as a table of contents, and the ITP format as a real table. The price is the only box.</li>
+    </ul>
+    <div class="screen">
+      <div class="nav"><span class="logo">inverta</span><nav aria-label="Contoh navigasi"><a href="#s1" aria-current="page">Program</a><a href="#s1">Cara kerja</a><a href="#s1">Tentang</a><a href="#s1">Bantuan</a></nav><a class="btn ghost" href="#s1">Masuk</a></div>
+      <div class="page with-aside">
+        <div class="col">
+          <p class="running">Program persiapan TOEFL ITP</p>
+          <h1 class="display">Persiapan TOEFL ITP, satu sesi pada satu waktu</h1>
+          <p class="lead2">Enam video pelajaran dengan tes singkat di setiap sesi, satu kelas live bersama pengajar, lalu simulasi tes akhir dengan skor prediksi dan sertifikat.</p>
+          <dl class="facts">
+            <div><dt>Sesi</dt><dd>8</dd></div>
+            <div><dt>Materi video</dt><dd>1 j 20 m</dd></div>
+            <div><dt>Kelas live</dt><dd>1</dd></div>
+            <div><dt>Tes akhir</dt><dd>115 menit</dd></div>
+          </dl>
+
+          <section class="chapter">
+            <h2>Daftar isi</h2>
+            <p>Sesi terbuka berurutan. Sesi berikutnya terbuka setelah Anda lulus tes di sesi sebelumnya.</p>
+            <ol class="toc">
+              <li><span class="n">1</span><span class="t">Tanya jawab &amp; strategi tes <span class="kind">Live</span><small>10 September, 13.00 WIB</small></span><span class="m">Kelas live</span></li>
+              <li><span class="n">2</span><span class="t">Mengenal format &amp; strategi TOEFL</span><span class="m">9 menit + tes</span></li>
+              <li><span class="n">3</span><span class="t">Listening: short conversations</span><span class="m">9 menit + tes</span></li>
+              <li><span class="n">4</span><span class="t">Listening: longer talks</span><span class="m">15 menit + tes</span></li>
+              <li><span class="n">5</span><span class="t">Structure: sentence completion</span><span class="m">15 menit + tes</span></li>
+              <li><span class="n">6</span><span class="t">Written expression: error identification</span><span class="m">15 menit + tes</span></li>
+              <li><span class="n">7</span><span class="t">Reading: skimming, scanning &amp; vocabulary</span><span class="m">15 menit + tes</span></li>
+              <li><span class="n">8</span><span class="t">Simulasi TOEFL ITP <span class="kind">Tes akhir</span></span><span class="m">140 soal, 115 menit</span></li>
+            </ol>
+          </section>
+
+          <section class="chapter">
+            <h2>Format tes akhir</h2>
+            <p>Mengikuti susunan TOEFL ITP Level 1.</p>
+            <div class="table-scroll">
+              <table class="spec">
+                <thead><tr><th>Bagian</th><th class="num">Soal</th><th class="num">Waktu</th><th class="num">Skor skala</th></tr></thead>
+                <tbody>
+                  <tr><td>Listening Comprehension</td><td class="num">50</td><td class="num">35 menit</td><td class="num">31–68</td></tr>
+                  <tr><td>Structure &amp; Written Expression</td><td class="num">40</td><td class="num">25 menit</td><td class="num">31–68</td></tr>
+                  <tr><td>Reading Comprehension</td><td class="num">50</td><td class="num">55 menit</td><td class="num">31–67</td></tr>
+                </tbody>
+                <tfoot><tr><td>Total</td><td class="num">140</td><td class="num">115 menit</td><td class="num">310–677</td></tr></tfoot>
+              </table>
+            </div>
+            <p class="footnote"><sup>1</sup> Skor yang dihasilkan adalah prediksi INVERTA, bukan skor TOEFL resmi, dan tidak diterbitkan oleh ETS.</p>
+          </section>
+
+          <section class="chapter">
+            <h2>Cara kerja</h2>
+            <ol class="steps">
+              <li><strong>Buat akun dan verifikasi email</strong><span>Verifikasi diperlukan sebelum pembayaran.</span></li>
+              <li><strong>Bayar sekali</strong><span>Akses aktif otomatis setelah pembayaran terkonfirmasi.</span></li>
+              <li><strong>Belajar berurutan</strong><span>Tonton video, lulus tes singkat, lalu sesi berikutnya terbuka.</span></li>
+              <li><strong>Ikuti tes akhir</strong><span>Skor prediksi langsung muncul, sertifikat dikirim ke email.</span></li>
+            </ol>
+          </section>
+        </div>
+
+        <aside class="buy" aria-label="Biaya program">
+          <p class="price">Rp 1.500.000<small>sekali bayar, bukan langganan</small></p>
+          <a class="btn" href="#s1">Daftar sekarang</a>
+          <ul>
+            <li>Semua sesi video dan tesnya</li>
+            <li>Kelas live bersama pengajar</li>
+            <li>Simulasi tes akhir dan skor prediksi</li>
+            <li>Sertifikat yang dapat diverifikasi</li>
+          </ul>
+          <p class="fine">Pembayaran diproses oleh Xendit.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Dashboard -->
+  <section style="display:grid;gap:14px" aria-labelledby="s2">
+    <div class="surface-label"><h2 id="s2">Dasbor</h2><span>/app/dashboard</span></div>
+    <ul class="changes">
+      <li>Before: a grid of identical cards (progress ring, chart, empty history, certificate), “Halo, QA 👋”.</li>
+      <li>After: one question answered first (what do I do next?), then progress as the same table of contents, then the score report. Only the certificate is a box.</li>
+    </ul>
+    <div class="screen">
+      <div class="nav"><span class="logo">inverta</span><nav aria-label="Contoh navigasi aplikasi"><a href="#s2" aria-current="page">Dasbor</a><a href="#s2">Sertifikat</a><a href="#s2">Profil &amp; tagihan</a><a href="#s2">Bantuan</a></nav><span class="running">QA Learner</span></div>
+      <div class="page"><div class="col">
+        <p class="running">Persiapan TOEFL ITP</p>
+        <h1 class="display">Selamat datang kembali, QA</h1>
+
+        <div class="next">
+          <span class="label">Berikutnya, sesi 4 dari 8</span>
+          <h2>Listening: longer talks</h2>
+          <p>Video 15 menit, lalu tes singkat. Lulus untuk membuka sesi 5.</p>
+          <div class="meter" aria-label="3 dari 8 sesi selesai"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="row"><a class="btn" href="#s2">Lanjutkan sesi 4</a><span class="running">3 dari 8 sesi selesai</span></div>
+        </div>
+
+        <section class="chapter">
+          <h2>Daftar isi</h2>
+          <ol class="toc">
+            <li class="done"><span class="n">✓</span><span class="t">Tanya jawab &amp; strategi tes</span><span class="m">Hadir</span></li>
+            <li class="done"><span class="n">✓</span><span class="t">Mengenal format &amp; strategi TOEFL</span><span class="m">Lulus, 9/10</span></li>
+            <li class="done"><span class="n">✓</span><span class="t">Listening: short conversations</span><span class="m">Lulus, 8/10</span></li>
+            <li class="now"><span class="n">4</span><span class="t">Listening: longer talks</span><span class="m">Berikutnya</span></li>
+            <li class="locked"><span class="n">5</span><span class="t">Structure: sentence completion</span><span class="m">Terkunci</span></li>
+            <li class="locked"><span class="n">8</span><span class="t">Simulasi TOEFL ITP</span><span class="m">Terkunci</span></li>
+          </ol>
+        </section>
+
+        <section class="chapter">
+          <h2>Hasil tes akhir</h2>
+          <div class="report">
+            <div><p class="big">497</p><small>Skor prediksi<sup>1</sup>, 29 Oktober 2026</small></div>
+            <div class="table-scroll"><table class="spec" style="margin-top:0">
+              <thead><tr><th>Bagian</th><th class="num">Benar</th><th class="num">Skor</th></tr></thead>
+              <tbody>
+                <tr><td>Listening</td><td class="num">32 / 50</td><td class="num">50</td></tr>
+                <tr><td>Structure</td><td class="num">24 / 40</td><td class="num">48</td></tr>
+                <tr><td>Reading</td><td class="num">32 / 50</td><td class="num">51</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="cert">
+            <strong>Sertifikat prediksi TOEFL ITP</strong>
+            <span class="running">497, diterbitkan 29 Oktober 2026</span>
+            <span class="code">INV-FAAK72GH</span>
+            <div class="links"><a href="#s2">Unduh PDF</a><a href="#s2">Halaman verifikasi</a></div>
+          </div>
+          <p class="footnote"><sup>1</sup> Skor prediksi INVERTA, bukan skor TOEFL resmi dari ETS. Contoh angka.</p>
+        </section>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 3. Session page -->
+  <section style="display:grid;gap:14px" aria-labelledby="s3">
+    <div class="surface-label"><h2 id="s3">Halaman sesi</h2><span>/app/session/{id}</span></div>
+    <ul class="changes">
+      <li>Before: a back link, a small title, and the content in a card.</li>
+      <li>After: a chapter page. Running head, big title, the video, then the parts of the session as a checklist, and a pager to the neighbouring sessions.</li>
+    </ul>
+    <div class="screen">
+      <div class="nav"><span class="logo">inverta</span><nav aria-label="Contoh navigasi sesi"><a href="#s3" aria-current="page">Dasbor</a><a href="#s3">Sertifikat</a></nav><span class="running">QA Learner</span></div>
+      <div class="page"><div class="col">
+        <p class="running">Sesi 4 dari 8</p>
+        <h1 class="display">Listening: longer talks</h1>
+        <p class="lead2">Strategi mendengarkan ceramah dan diskusi panjang: menangkap topik utama, detail, dan sikap pembicara.</p>
+        <div class="video" role="img" aria-label="Tempat pemutar video">Pemutar video</div>
+        <ol class="parts">
+          <li><span class="mark ok" aria-hidden="true"></span><span><b>Video pelajaran</b><small>Ditonton 100%</small></span><span class="running">15 menit</span></li>
+          <li><span class="mark half" aria-hidden="true"></span><span><b>Tes sesi</b><small>Perlu skor 70 untuk lulus. Percobaan 1 dari 3.</small></span><a class="btn" href="#s3" style="padding:8px 14px;font-size:14px">Mulai tes</a></li>
+          <li><span class="mark" aria-hidden="true"></span><span><b>Video pembahasan</b><small>Terbuka setelah Anda lulus tes</small></span><span class="running">10 menit</span></li>
+        </ol>
+        <nav class="pager" aria-label="Sesi sebelumnya dan berikutnya">
+          <a href="#s3" style="text-decoration:none"><span>Sebelumnya, sesi 3</span><b>Listening: short conversations</b></a>
+          <span style="text-align:right"><span>Berikutnya, sesi 5</span><b style="color:var(--ink-muted)">Terkunci</b></span>
+        </nav>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="rules">
+    <h2>How the rest of the site follows</h2>
+    <ul class="changes">
+      <li>Auth pages: a plain title page on white, no floating card.</li>
+      <li>About, how it works, FAQ: reading column with chapter rules; FAQ as questions in bold with answers below, not boxed accordions.</li>
+      <li>Certificates, verify page, exam result: keep their box, since they are objects you keep.</li>
+      <li>Admin: same type scale and white pages; tables stay tables.</li>
+      <li>Copy pass: our own sentences lose em dashes and arrows. Session titles stored in the database are content and stay as entered.</li>
+    </ul>
+  </section>
+
+  <p class="ask">Does this thesis fit what you want? If yes, I'll move on to variants; if not, tell me which surface feels wrong.</p>
+</div>

@@ -29,7 +29,7 @@ export function DevPayClient() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-7 shadow-lg">
+      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-7">
         <div className="mb-1 flex items-center gap-2">
           <Logo />
           <span className="text-sm font-bold">Pembayaran (Simulasi Dev)</span>
@@ -40,7 +40,7 @@ export function DevPayClient() {
 
         <div className="mb-6 flex flex-col gap-2.5 rounded-base border border-border bg-bg p-4 text-sm">
           <Row label="Jumlah" value={formatIdr(Number(amount))} strong />
-          <Row label="Jenis" value={kind === "ProrationUpgrade" ? "Upgrade (prorata)" : "Langganan"} />
+          <Row label="Jenis" value={kind === "ProrationUpgrade" ? "Upgrade (prorata)" : kind === "ProgramPurchase" ? "Program" : "Langganan"} />
         </div>
 
         <div className="flex flex-col gap-2.5">

@@ -30,22 +30,22 @@ export function FaqAccordion({ items, searchable = true }: { items: FaqItem[]; s
       {filtered.length === 0 ? (
         <p className="text-sm text-ink-muted">Tidak ada pertanyaan yang cocok.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div>
           {filtered.map((item) => {
             const open = openId === item.id;
             return (
-              <div key={item.id} className="border-b border-border last:border-0">
+              <div key={item.id} className="border-b border-surface-2">
                 <button
                   type="button"
                   aria-expanded={open}
                   aria-controls={`faq-${item.id}`}
                   onClick={() => setOpenId(open ? null : item.id)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-[14.5px] font-bold text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                  className="flex w-full items-center justify-between gap-4 py-4 text-left text-[16px] font-bold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {item.question}
                   <span className={"shrink-0 text-ink-subtle transition-transform " + (open ? "rotate-90" : "")}>›</span>
                 </button>
-                <p id={`faq-${item.id}`} hidden={!open} className="whitespace-pre-line px-5 pb-4 text-[14px] leading-relaxed text-ink-muted">{item.answer}</p>
+                <p id={`faq-${item.id}`} hidden={!open} className="max-w-[65ch] whitespace-pre-line pb-4 leading-relaxed text-ink-muted">{item.answer}</p>
               </div>
             );
           })}

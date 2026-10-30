@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Spinner, ErrorState, Button, Badge } from "@/components/ui";
+import { Chapter, PageTitle } from "@/components/ui/Page";
 import { getAnalytics, getEmailStatus, sendTestEmail, num } from "@/lib/admin";
 
 // Enrollment status is the INVERTA lifecycle. Replaces a plan-tier map that named the archived
@@ -31,23 +32,23 @@ export default function AdminAnalyticsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+    <div>
+      <PageTitle size="compact">Analitik</PageTitle>
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((k) => (
-          <div key={k.label} className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-5 shadow-sm">
+          <div key={k.label} className="flex flex-col gap-1">
             <span className="text-[28px] font-extrabold tracking-tight text-ink">{k.value.toLocaleString("id-ID")}</span>
             <span className="text-[12.5px] text-ink-muted">{k.label}</span>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-extrabold">Pendaftaran per status</h2>
+      <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-2">
+        <Chapter title="Pendaftaran per status">
           {a.enrollmentsByStatus.length === 0 ? (
-            <p className="text-sm text-ink-muted">Belum ada pendaftaran.</p>
+            <p className="mt-3 text-sm text-ink-muted">Belum ada pendaftaran.</p>
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul className="mt-3 flex flex-col gap-2">
               {a.enrollmentsByStatus.map((e) => (
                 <li key={e.status} className="flex items-center justify-between text-sm">
                   <span className="text-ink-muted">{ENROLLMENT_STATUS_LABEL[e.status] ?? e.status}</span>
@@ -56,14 +57,13 @@ export default function AdminAnalyticsPage() {
               ))}
             </ul>
           )}
-        </div>
+        </Chapter>
 
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-extrabold">Sesi paling banyak ditonton</h2>
+        <Chapter title="Sesi paling banyak ditonton">
           {a.mostWatched.length === 0 ? (
-            <p className="text-sm text-ink-muted">Belum ada data tontonan.</p>
+            <p className="mt-3 text-sm text-ink-muted">Belum ada data tontonan.</p>
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul className="mt-3 flex flex-col gap-2">
               {a.mostWatched.map((m, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 text-sm">
                   <span className="truncate text-ink-muted">{m.title}</span>
@@ -72,7 +72,7 @@ export default function AdminAnalyticsPage() {
               ))}
             </ul>
           )}
-        </div>
+        </Chapter>
       </div>
 
       <EmailCard />
@@ -94,11 +94,8 @@ function EmailCard() {
     : [];
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-extrabold">Email</h2>
-        {status.data && <Badge tone={isSmtp ? "neutral" : "warning"}>{isSmtp ? "SMTP" : "Dev — hanya log"}</Badge>}
-      </div>
+    <Chapter title="Email" className="flex flex-col gap-3">
+      {status.data && <div><Badge tone={isSmtp ? "neutral" : "warning"}>{isSmtp ? "SMTP" : "Dev, hanya log"}</Badge></div>}
       {status.isPending && <Spinner size={18} />}
       {status.isError && <p className="text-sm text-danger">Gagal memuat status email.</p>}
       {status.data && (
@@ -122,6 +119,6 @@ function EmailCard() {
         {test.isError ? test.error.message : test.data?.message}
       </p>
       <p className="text-xs text-ink-muted">Pengaturan email ada di .env server (EMAIL_PROVIDER, SMTP_*). Setelah mengubahnya, restart API.</p>
-    </div>
+    </Chapter>
   );
 }

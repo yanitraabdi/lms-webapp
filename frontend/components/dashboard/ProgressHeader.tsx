@@ -1,73 +1,63 @@
 import Link from "next/link";
-import { num, type StudentProgram, type StudentSession } from "@/lib/programs";
+import { cn } from "@/lib/cn";
+import { RunningHead } from "@/components/ui";
+import { num, SESSION_TYPE_LABEL, type StudentProgram, type StudentSession } from "@/lib/programs";
 
-const R = 42;
-const C = 2 * Math.PI * R;
+const LINK_BTN =
+  "mt-5 inline-flex h-11 items-center justify-center rounded-sm bg-primary px-5 text-[14px] font-bold text-primary-ink hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
-/** Block 1: greeting, overall progress ring, and where to pick up. */
-export function ProgressHeader({ program, firstName }: { program: StudentProgram; firstName: string }) {
+const UNLOCKS: Record<string, string> = {
+  Video: "Selesaikan video dan tes singkatnya untuk membuka sesi berikutnya.",
+  Live: "Hadiri sesi live ini untuk membuka sesi berikutnya.",
+  FinalAssessment: "Kerjakan tes akhir untuk mendapatkan skor prediksi dan sertifikat Anda.",
+};
+
+/** Next-up block: where to pick up, and a segmented meter of the whole programme. */
+export function ProgressHeader({ program }: { program: StudentProgram }) {
   const completed = num(program.completedCount);
   const total = num(program.sessionCount);
-  const ratio = total > 0 ? completed / total : 0;
-  const next = program.sessions.find((s) => s.id === program.nextSessionId);
+  const index = program.sessions.findIndex((s) => s.id === program.nextSessionId);
+  const next = index >= 0 ? program.sessions[index] : undefined;
   const partsDone = program.nextSessionPartsDone == null ? null : num(program.nextSessionPartsDone);
   const partCount = program.nextSessionPartCount == null ? null : num(program.nextSessionPartCount);
 
   return (
-    <section
-      className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-5 shadow-sm sm:flex-row sm:items-center"
-      data-tour="overall-progress"
-    >
-      <svg
-        viewBox="0 0 100 100"
-        className="h-28 w-28 shrink-0 self-center"
+    <section className="mt-8" data-tour="overall-progress">
+      {next ? (
+        <>
+          <RunningHead>{`Berikutnya, sesi ${index + 1} dari ${total}`}</RunningHead>
+          <p className="mt-1 break-words text-[30px] font-extrabold leading-tight tracking-[-0.015em] text-ink">{next.title}</p>
+          <p className="mt-2 max-w-[60ch] text-ink-muted">
+            {UNLOCKS[next.type] ?? SESSION_TYPE_LABEL[next.type] ?? ""}
+            {partsDone != null && partCount != null && partCount > 0 &&
+              ` Bagian ${Math.min(partsDone + 1, partCount)} dari ${partCount}.`}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-[30px] font-extrabold leading-tight tracking-[-0.015em] text-ink">Semua sesi selesai</p>
+          <p className="mt-2 max-w-[60ch] text-ink-muted">Sertifikat Anda tersedia di halaman Sertifikat.</p>
+        </>
+      )}
+      <div
         role="img"
         aria-label={`${completed} dari ${total} sesi selesai`}
+        className="mt-5 flex flex-wrap gap-1"
       >
-        <circle cx="50" cy="50" r={R} fill="none" strokeWidth="9" className="stroke-surface-2" />
-        <circle
-          cx="50" cy="50" r={R} fill="none" strokeWidth="9" strokeLinecap={ratio > 0 ? "round" : "butt"}
-          className="stroke-primary"
-          strokeDasharray={`${C * ratio} ${C}`}
-          transform="rotate(-90 50 50)"
-        />
-        <text x="50" y="50" textAnchor="middle" className="fill-ink text-[20px] font-extrabold">
-          {completed}/{total}
-        </text>
-        <text x="50" y="66" textAnchor="middle" className="fill-ink-muted text-[9px] font-semibold">
-          sesi selesai
-        </text>
-      </svg>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[24px] font-extrabold tracking-tight">Halo, {firstName} 👋</h1>
-          <p className="text-sm text-ink-muted">Lanjutkan persiapan TOEFL Anda.</p>
-        </div>
-
-        {next ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-base border border-primary bg-primary-soft/50 px-4 py-3">
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate text-[13.5px] font-bold text-ink">{next.title}</span>
-              {partsDone != null && partCount != null && partCount > 0 && (
-                <span className="text-[12px] text-ink-muted">
-                  {`bagian ${Math.min(partsDone + 1, partCount)} dari ${partCount}`}
-                </span>
-              )}
-            </div>
-            <Link
-              href={nextHref(next, program.programId)}
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-primary px-3.5 text-[13px] font-bold text-primary-ink hover:bg-primary-hover"
-            >
-              Buka →
-            </Link>
-          </div>
-        ) : (
-          <p className="rounded-base bg-success-soft px-4 py-3 text-[13px] font-semibold text-success">
-            Semua sesi selesai. Sertifikat Anda tersedia di halaman Sertifikat.
-          </p>
-        )}
+        {program.sessions.map((s) => (
+          <span
+            key={s.id}
+            className={cn("h-1.5 w-[26px] rounded-[3px]", s.state === "Completed" ? "bg-primary" : "bg-border")}
+          />
+        ))}
       </div>
+      {next ? (
+        <Link href={nextHref(next, program.programId)} className={LINK_BTN}>
+          {`Lanjutkan sesi ${index + 1}`}
+        </Link>
+      ) : (
+        <Link href="/app/certificates" className={LINK_BTN}>Lihat sertifikat</Link>
+      )}
     </section>
   );
 }

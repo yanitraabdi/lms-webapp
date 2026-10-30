@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Spinner, ErrorState, ChevronRightIcon } from "@/components/ui";
+import { PageTitle } from "@/components/ui/Page";
 import { SectionComposer } from "@/components/admin/SectionComposer";
 import { getAssessment, setAssessmentQuestions, updateAssessment, num } from "@/lib/sessions";
 
@@ -91,14 +92,14 @@ export default function AssessmentComposerPage() {
           <Link href="/admin/programs" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-ink-muted hover:text-ink">
             <ChevronRightIcon size={15} className="rotate-180" /> Program
           </Link>
-          <h1 className="text-xl font-extrabold tracking-tight">{q.data.title}</h1>
+          <PageTitle size="compact">{q.data.title}</PageTitle>
           <p className="text-[12.5px] text-ink-subtle">
             {totalSelected} dari {totalRequired} soal tersusun
             {num(q.data.attemptCount) > 0 && ` · ${num(q.data.attemptCount)} percobaan tercatat`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {saved && <span className="text-[13px] font-bold text-success">Tersimpan ✓</span>}
+          {saved && <span className="text-[13px] font-bold text-success">Tersimpan</span>}
           <Button onClick={save} loading={busy}>Simpan susunan</Button>
         </div>
       </div>
@@ -113,7 +114,7 @@ export default function AssessmentComposerPage() {
       {error && <div className="rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div>}
 
       {sections.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface px-5 py-8 text-center text-sm text-ink-muted">
+        <p className="py-8 text-center text-sm text-ink-muted">
           Tes ini belum memiliki konfigurasi bagian.
         </p>
       ) : (

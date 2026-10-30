@@ -35,7 +35,7 @@ export function NotesPanel({ token, moduleId, getPosition }: { token: string; mo
   const notes = q.data ?? [];
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="border-b border-border px-[18px] py-4">
         <span className="text-sm font-extrabold">Catatan & penanda</span>
       </div>
@@ -50,7 +50,7 @@ export function NotesPanel({ token, moduleId, getPosition }: { token: string; mo
         />
         <div className="mt-2 flex flex-wrap gap-2">
           <Button size="sm" onClick={() => add("Note")} loading={busy} disabled={!text.trim()}>Simpan catatan</Button>
-          <Button size="sm" variant="neutral" onClick={() => add("Bookmark")} loading={busy}>★ Tandai posisi</Button>
+          <Button size="sm" variant="neutral" onClick={() => add("Bookmark")} loading={busy}>Tandai posisi</Button>
         </div>
 
         {q.isPending ? (

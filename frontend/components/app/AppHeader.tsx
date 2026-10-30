@@ -29,13 +29,13 @@ export function AppHeader() {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex h-[58px] max-w-6xl items-center justify-between gap-4 px-6">
-        <div className="flex items-center gap-6">
-          <Link href="/app/dashboard" className="flex items-center gap-2.5">
+    <header className="sticky top-0 z-40 border-b border-border bg-surface">
+      <div className="mx-auto flex h-[58px] max-w-6xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+          <Link href="/app/dashboard" className="flex shrink-0 items-center gap-2.5">
             <Logo />
           </Link>
-          <nav className="flex items-center gap-1">
+          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {links.map((l) => {
               const active = path === l.href || (l.href !== "/catalog" && path.startsWith(l.href));
               return (
@@ -44,8 +44,8 @@ export function AppHeader() {
                   href={l.href}
                   data-tour={l.tour}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-[13px] font-bold transition-colors",
-                    active ? "bg-primary-soft text-primary" : "text-ink-muted hover:text-ink"
+                    "whitespace-nowrap px-3 py-1.5 text-[13px] font-bold transition-colors",
+                    active ? "text-ink shadow-[inset_0_-2px_0_var(--color-primary)]" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {l.label}
@@ -56,7 +56,7 @@ export function AppHeader() {
               <Link
                 href="/admin"
                 className={cn(
-                  "ml-1 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-bold transition-colors",
+                  "ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-bold transition-colors",
                   path.startsWith("/admin")
                     ? "bg-ink text-white"
                     : "bg-ink/5 text-ink hover:bg-ink/10"
@@ -67,7 +67,7 @@ export function AppHeader() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           <NotificationBell />
           <AccountMenu initials={initials} />
         </div>

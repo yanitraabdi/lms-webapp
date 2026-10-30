@@ -7,7 +7,7 @@ import { prefersReducedMotion } from "@/lib/useCssVar";
 
 const COUNT_MS = 1200;
 
-/** Counts 0 → target once, fast then settling (ease-out-expo), so the last digits read clearly. */
+/** Counts from 0 to target once, fast then settling (ease-out-expo), so the last digits read clearly. */
 function useCountUp(target: number, run: boolean): number {
   const animate = run && !prefersReducedMotion();
   const [value, setValue] = useState(animate ? 0 : target);
@@ -36,12 +36,12 @@ export function ExamResult({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-lg border border-border bg-surface p-6 text-center shadow-sm">
+      <div className="rounded-lg border border-border bg-surface p-6 text-center">
         <h1 id="exam-result-title" tabIndex={-1} className="text-xl font-extrabold focus:outline-none">Tes selesai</h1>
 
         {result.totalScaledScore != null ? (
           <>
-            <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-ink-subtle">
+            <p className="mt-4 text-[13.5px] font-semibold text-ink-muted">
               Skor prediksi TOEFL
             </p>
             {/* Screen readers get the final score once, not every frame of the count. */}
@@ -79,7 +79,7 @@ export function ExamResult({
       </div>
 
       {sections.length > 0 && (
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+        <div className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-sm font-extrabold">Rincian per bagian</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {sections.map((name, i) => {
@@ -113,7 +113,7 @@ export function ExamResult({
       <div className="rounded-base border border-border bg-surface-2 px-5 py-4">
         <p className="text-[12px] leading-relaxed text-ink-muted">
           <strong className="text-ink">Penting.</strong> Skor ini adalah <strong className="text-ink">prediksi
-          INVERTA</strong> berdasarkan simulasi internal — <strong className="text-ink">bukan skor TOEFL
+          INVERTA</strong> berdasarkan simulasi internal, <strong className="text-ink">bukan skor TOEFL
           resmi</strong> dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik ETS.
         </p>
       </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Button, Spinner, ErrorState } from "@/components/ui";
+import { Button, Spinner, ErrorState, SheetPage } from "@/components/ui";
 import { ProctorWatcher } from "@/components/learn/ProctorWatcher";
 import { Sitting, WarningOverlay } from "@/components/exam/Sitting";
 import { ExamResult } from "@/components/exam/ExamResult";
@@ -146,7 +146,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
   if (load.isError) {
     // The server clock keeps running, so a failed reload must be retryable in place.
     return (
-      <div className="mx-auto max-w-md px-6 py-20">
+      <SheetPage>
         <ErrorState
           title="Tes tidak tersedia"
           message={loadMessage(load.error, "Gagal memuat tes.")}
@@ -157,7 +157,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
             </div>
           }
         />
-      </div>
+      </SheetPage>
     );
   }
   if (load.data === null) notFound();
@@ -173,7 +173,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
         <WarningOverlay strikes={num(warning.strikes)} limit={num(warning.strikeLimit)} onClose={() => setWarning(null)} />
       )}
 
-      <div className="mx-auto max-w-3xl px-6 py-8">
+      <SheetPage>
         {running ? (
           <Sitting
             token={token}
@@ -209,7 +209,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
         ) : (
           <div className="flex justify-center py-20"><Spinner size={24} /></div>
         )}
-      </div>
+      </SheetPage>
     </div>
   );
 }

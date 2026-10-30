@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Spinner } from "@/components/ui";
 import { isAdminRole } from "@/lib/admin";
 import { cn } from "@/lib/cn";
+import { SHEET_CLASSES } from "@/components/ui/Page";
 import { Logo } from "@/components/Logo";
 
 // INVERTA nav. Curriculum/Modules/Pricing belong to the archived catalog product and stay
@@ -76,12 +77,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </button>
       </aside>
 
-      <div className="flex flex-col">
+      <div className="flex min-w-0 flex-col">
         <header className="flex h-[58px] items-center justify-between border-b border-border bg-surface px-6">
           <span className="text-base font-extrabold">{active.label}</span>
-          <Link href="/" className="text-[12.5px] font-bold text-ink-muted hover:text-ink">Lihat situs →</Link>
+          <Link href="/" className="text-[12.5px] font-bold text-ink-muted hover:text-ink">Lihat situs</Link>
         </header>
-        <div className="p-6">{children}</div>
+        <div className="p-3 sm:p-6">
+          <div className={cn("mx-auto w-full max-w-6xl", SHEET_CLASSES)}>{children}</div>
+        </div>
       </div>
     </div>
   );

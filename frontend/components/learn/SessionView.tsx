@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Spinner, ErrorState, ChevronRightIcon, LockIcon } from "@/components/ui";
+import { Badge, Button, Spinner, ErrorState, ChevronRightIcon, SheetPage, RunningHead, PageTitle, Lead } from "@/components/ui";
 import { VideoPlayer } from "@/components/learn/VideoPlayer";
 import { GatingTest } from "@/components/learn/GatingTest";
 import {
@@ -57,7 +57,8 @@ export function SessionView({
   }
   if (ctx.isError) {
     return (
-      <div className={embedded ? "py-10" : "mx-auto max-w-md px-6 py-20"}>
+      <div className={embedded ? "py-10" : "min-h-screen bg-bg"}>
+        <Wrap embedded={embedded}>
         <ErrorState
           title="Sesi terkunci"
           message="Selesaikan sesi sebelumnya terlebih dahulu, atau pastikan pendaftaran Anda aktif."
@@ -69,6 +70,7 @@ export function SessionView({
             )
           }
         />
+        </Wrap>
       </div>
     );
   }
@@ -81,12 +83,13 @@ export function SessionView({
 
   const body = (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[23px] font-extrabold tracking-tight">{s.title}</h1>
-          {s.description && <p className="text-[14px] text-ink-muted">{s.description}</p>}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <RunningHead>Sesi {num(s.orderIndex)}</RunningHead>
+          {s.completed && <Badge status="completed" className="px-2.5 py-0.5" />}
         </div>
-        {s.completed && <Badge status="completed" className="px-2.5 py-0.5" />}
+        <PageTitle as={embedded ? "h2" : "h1"} size={embedded ? "compact" : "page"}>{s.title}</PageTitle>
+        {s.description && <Lead>{s.description}</Lead>}
       </div>
 
       {s.type === "Video" ? (
@@ -100,7 +103,7 @@ export function SessionView({
       {/* Embedded, the list is right there — a "next session" button would be a second way to do
           the same thing, and the one that goes stale. The sentence still earns its place. */}
       {s.nextSessionId && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
           <span className="text-[13.5px] text-ink-muted">
             {s.nextSessionUnlocked ? "Sesi berikutnya sudah terbuka." : "Selesaikan sesi ini untuk membuka sesi berikutnya."}
           </span>
@@ -110,7 +113,7 @@ export function SessionView({
               disabled={!s.nextSessionUnlocked}
               onClick={() => router.push(`/app/session/${s.nextSessionId}`)}
             >
-              Sesi berikutnya →
+              Sesi berikutnya
             </Button>
           )}
         </div>
@@ -133,8 +136,30 @@ export function SessionView({
           <span className="text-[12.5px] text-ink-subtle">Sesi {num(s.orderIndex)}</span>
         </div>
       </header>
-      <main className="mx-auto flex max-w-4xl flex-col gap-5 px-6 py-6">{body}</main>
+      <SheetPage>
+        <div className="flex flex-col gap-5">{body}</div>
+      </SheetPage>
     </div>
+  );
+}
+
+function Wrap({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
+  return embedded ? <>{children}</> : <SheetPage>{children}</SheetPage>;
+}
+
+function Mark({ state }: { state: "done" | "half" | "none" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={
+        "mt-0.5 h-[18px] w-[18px] shrink-0 rounded-full " +
+        (state === "done"
+          ? "bg-success"
+          : state === "half"
+            ? "border-2 border-primary bg-[linear-gradient(90deg,var(--color-primary)_50%,transparent_50%)]"
+            : "border-2 border-border")
+      }
+    />
   );
 }
 
@@ -163,7 +188,7 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
   if (parts.length === 0) {
     // Not an error: the admin has not added content yet.
     return (
-      <div className="rounded-lg border border-border bg-surface p-5 text-[13.5px] text-ink-muted">
+      <div className="text-[13.5px] text-ink-muted">
         Materi sesi ini sedang disiapkan.
       </div>
     );
@@ -171,30 +196,41 @@ function PartsSection({ token, session, onChanged }: { token: string; session: S
 
   return (
     <div className="flex flex-col gap-4">
-      <ol className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+      <ol className="flex flex-col">
         {parts.map((p, i) => {
-          const label = `${i + 1}. ${PART_LABEL[p.kind] ?? p.kind} — ${p.title}`;
-          // Locked rows are plain text at full contrast with a lock and the Badge's locked style —
-          // never a faded control (WCAG AA). Open/Done rows are buttons.
+          const name = `${i + 1}. ${PART_LABEL[p.kind] ?? p.kind}`;
+          const isActive = active?.id === p.id;
+          const inner = (
+            <>
+              <Mark state={p.status === "Done" ? "done" : p.status !== "Locked" && num(p.percentComplete) > 0 ? "half" : "none"} />
+              <span className="min-w-0 flex-1">
+                <b className={p.status === "Locked" ? "block font-bold text-ink-muted" : "block font-bold text-ink"}>{name}</b>
+                <small className="block text-[13px] text-ink-muted">
+                  {p.title}
+                  {p.title && ", "}
+                  {p.status === "Done" ? "selesai" : p.status === "Locked" ? "terkunci" : (num(p.percentComplete) > 0 ? `${Math.round(num(p.percentComplete))}% ditonton` : "tersedia")}
+                </small>
+              </span>
+              {p.status === "Locked" ? <Badge status="locked" /> : p.status === "Done" ? <Badge status="completed" /> : <span className="shrink-0 text-[13px] font-bold text-primary">Buka</span>}
+            </>
+          );
+          // Locked rows are plain text at full contrast with the Badge's locked style, never a
+          // faded control (WCAG AA). Open/Done rows are buttons.
           return (
-            <li key={p.id}>
+            <li key={p.id} className="border-b border-surface-2">
               {p.status === "Locked" ? (
-                <div className="flex items-center justify-between gap-3 px-4 py-3 text-[13.5px] text-ink-muted">
-                  <span className="flex min-w-0 items-center gap-2"><LockIcon size={14} className="shrink-0" /><span className="truncate">{label}</span></span>
-                  <Badge status="locked" />
-                </div>
+                <div className="flex items-start gap-3 py-[11px]">{inner}</div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setActiveId(p.id)}
-                  aria-current={active?.id === p.id ? "step" : undefined}
+                  aria-current={isActive ? "step" : undefined}
                   className={
-                    "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[13.5px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary " +
-                    (active?.id === p.id ? "bg-primary-soft/60 font-bold" : "hover:bg-surface-2")
+                    "flex items-start gap-3 py-[11px] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary " +
+                    (isActive ? "-mx-3 w-[calc(100%+1.5rem)] rounded-sm bg-primary-soft px-3" : "w-full hover:bg-surface-2")
                   }
                 >
-                  <span className="min-w-0 truncate">{label}</span>
-                  {p.status === "Done" ? <Badge status="completed" /> : <span className="shrink-0 text-[11.5px] font-bold text-primary">Tersedia</span>}
+                  {inner}
                 </button>
               )}
             </li>
@@ -242,7 +278,7 @@ function VideoPart({
   }
 
   if (ticket.isPending) {
-    return <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-border bg-surface"><Spinner size={22} /></div>;
+    return <div className="flex min-h-[220px] items-center justify-center bg-surface-2 rounded-sm"><Spinner size={22} /></div>;
   }
   if (ticket.isError) {
     return <ErrorState title="Video tidak dapat diputar" message="Coba muat ulang halaman." />;
@@ -253,7 +289,7 @@ function VideoPart({
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg shadow-sm">
+      <div className="overflow-hidden rounded-lg">
         <VideoPlayer
           src={ticket.data.url}
           captionsSrc={ticket.data.captionsUrl}
@@ -285,8 +321,8 @@ function VideoPart({
 
 function LiveSection({ session }: { session: SessionContext }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h3 className="text-base font-extrabold">Sesi live</h3>
+    <div>
+      <h2 className="text-[20px] font-extrabold tracking-[-0.015em]">Sesi live</h2>
       {session.scheduledAt && (
         <p className="mt-1 text-[13.5px] text-ink-muted">Jadwal: {fmtDateTime(session.scheduledAt)}</p>
       )}
@@ -298,7 +334,7 @@ function LiveSection({ session }: { session: SessionContext }) {
           rel="noopener noreferrer"
           className="mt-3 inline-block text-[13.5px] font-bold text-primary hover:underline"
         >
-          Buka tautan sesi live →
+          Buka tautan sesi live
         </a>
       )}
       <p className="mt-4 text-[12.5px] leading-relaxed text-ink-subtle">
@@ -311,8 +347,8 @@ function LiveSection({ session }: { session: SessionContext }) {
 
 function FinalSection({ sessionId, completed }: { sessionId: string; completed: boolean }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h3 className="text-base font-extrabold">Tes akhir</h3>
+    <div>
+      <h2 className="text-[20px] font-extrabold tracking-[-0.015em]">Tes akhir</h2>
       <p className="mt-1 text-[13.5px] leading-relaxed text-ink-muted">
         Simulasi TOEFL ITP berwaktu dengan tiga bagian (Listening, Structure, Reading) dan
         pengawasan lunak. Waktu berjalan di server dan tidak dapat dijeda.

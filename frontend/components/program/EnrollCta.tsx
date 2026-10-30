@@ -4,13 +4,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui";
-import { enroll } from "@/lib/programs";
+import { cn } from "@/lib/cn";
+import { enroll, formatIdr } from "@/lib/programs";
+
+const BENEFITS = [
+  "Akses seluruh sesi video",
+  "Tes singkat di setiap sesi",
+  "Sesi live bersama pengajar",
+  "Simulasi tes akhir + prediksi skor",
+  "Sertifikat yang dapat diverifikasi",
+];
 
 /**
- * Enrollment CTA. Sends the learner to the hosted invoice — it NEVER grants access;
- * only the verified payment webhook does that (GR-2).
+ * Enrollment CTA. Sends the learner to the hosted invoice; it NEVER grants access;
+ * only the verified payment webhook does that (GR-2). With `priceIdr` it renders the
+ * price/enrol box; without, just the button (closing paragraph).
  */
-export function EnrollCta({ programId, className }: { programId: string; className?: string }) {
+export function EnrollCta({ programId, priceIdr, className }: { programId: string; priceIdr?: number | string; className?: string }) {
   const { status, user, accessToken } = useAuth();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -44,8 +54,8 @@ export function EnrollCta({ programId, className }: { programId: string; classNa
     }
   }
 
-  return (
-    <div className={className}>
+  const action = (
+    <>
       <Button fullWidth onClick={onClick} loading={busy}>
         {status === "authenticated" ? "Daftar sekarang" : "Masuk & daftar"}
       </Button>
@@ -54,6 +64,26 @@ export function EnrollCta({ programId, className }: { programId: string; classNa
           {error}
         </p>
       )}
+    </>
+  );
+
+  if (priceIdr === undefined) return <div className={className}>{action}</div>;
+
+  // top-[81px]: PublicNav is 36px content + py-3 + 1px border = 61px, plus 20px.
+  return (
+    <div className={cn("rounded-lg border border-border bg-surface p-[22px] min-[860px]:sticky min-[860px]:top-[81px]", className)}>
+      <span className="text-[13px] text-ink-muted">Biaya program</span>
+      <p className="mt-1 text-[30px] font-extrabold leading-tight tabular-nums text-ink">{formatIdr(priceIdr)}</p>
+      <p className="mt-1 text-[13px] text-ink-muted">sekali bayar, bukan langganan</p>
+      <div className="mt-4">{action}</div>
+      <ul className="mt-5 flex flex-col gap-2 border-t border-border pt-4">
+        {BENEFITS.map((f) => (
+          <li key={f} className="flex gap-2 text-[13.5px] leading-snug text-ink-muted">
+            <span aria-hidden="true" className="font-bold text-success">✓</span>
+            {f}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

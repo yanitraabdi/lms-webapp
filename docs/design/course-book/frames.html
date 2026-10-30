@@ -1,0 +1,211 @@
+<title>INVERTA Course Book Variants</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: three page frames for the same course-book dashboard, stacked; only the frame differs. */
+:root {
+  color-scheme: light; /* the app is light-only; this page commits to the same single look */
+  --bg: #f4f7fb; --surface: #ffffff; --surface-2: #eef3f9; --border: #dce5ef;
+  --ink: #11253f; --ink-muted: #51607a; --ink-subtle: #8a99ae;
+  --primary: #7F00FF; --primary-hover: #6D00D9; --primary-soft: #F1E5FF;
+  --accent: #c2710c; --accent-soft: #fef1d2;
+  --success: #0e8a4f;
+  --r-sm: 6px; --r: 10px; --r-lg: 14px;
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--surface-2); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.55; }
+h1, h2, h3, p, ol, ul, table { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 44px; }
+.memo { max-width: 72ch; display: grid; gap: 10px; }
+.memo h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.015em; }
+.memo p { color: var(--ink-muted); }
+.v { display: grid; gap: 12px; }
+.v-head { display: grid; gap: 4px; max-width: 76ch; }
+.v-head h2 { font-size: 22px; font-weight: 800; }
+.v-head h2 small { font-size: 13px; font-weight: 600; color: var(--ink-muted); margin-left: 6px; }
+.v-head p { color: var(--ink-muted); }
+.screen { border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border); box-shadow: 0 18px 40px -24px rgba(17,37,63,.25); }
+
+/* shared course-book pieces */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.logo { font-weight: 800; font-size: 19px; color: var(--primary); letter-spacing: -0.02em; }
+.nav nav { display: flex; gap: 22px; font-size: 14px; font-weight: 600; color: var(--ink-muted); flex-wrap: wrap; }
+.nav nav span[aria-current] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--primary); padding-bottom: 4px; }
+.running { font-size: 13.5px; font-weight: 600; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.display { font-size: clamp(30px, 4.6vw, 42px); line-height: 1.08; font-weight: 800; letter-spacing: -0.025em; margin-top: 8px; }
+.next { margin-top: 26px; display: grid; gap: 8px; }
+.next h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.next p { color: var(--ink-muted); }
+.row { display: flex; gap: 18px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; font: inherit; font-weight: 700; font-size: 15px; color: #fff; background: var(--primary); border-radius: var(--r-sm); padding: 12px 18px; text-decoration: none; }
+.meter { display: flex; gap: 4px; margin-top: 4px; }
+.meter i { width: 26px; height: 6px; border-radius: 3px; background: var(--border); }
+.meter i.on { background: var(--primary); }
+.chapter { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--ink); }
+.chapter h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.015em; }
+.toc { list-style: none; padding: 0; margin-top: 14px; display: grid; }
+.toc li { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding-block: 11px; border-bottom: 1px solid var(--surface-2); }
+.toc .n { font-weight: 800; color: var(--ink-subtle); font-variant-numeric: tabular-nums; }
+.toc .t { font-weight: 700; font-size: 15.5px; min-width: 0; }
+.toc .m { font-size: 13.5px; color: var(--ink-muted); white-space: nowrap; }
+.toc li.done .n { color: var(--success); }
+.toc li.now { background: var(--primary-soft); margin-inline: -12px; padding-inline: 12px; border-radius: var(--r-sm); border-bottom-color: transparent; }
+.toc li.now .n { color: var(--primary); }
+.toc li.locked .t { color: var(--ink-muted); font-weight: 600; }
+.report { margin-top: 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 560px) { .report { grid-template-columns: minmax(0, 1fr); } }
+.big { font-size: 56px; line-height: .95; font-weight: 800; letter-spacing: -0.03em; color: var(--primary); font-variant-numeric: tabular-nums; }
+.big + small { display: block; margin-top: 6px; font-size: 13px; color: var(--ink-muted); }
+table.spec { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+.spec th { text-align: left; font-size: 12.5px; color: var(--ink-muted); font-weight: 600; padding: 0 12px 8px 0; border-bottom: 1px solid var(--ink); }
+.spec td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--surface-2); }
+.spec td:first-child { font-weight: 700; }
+.spec .num { text-align: right; }
+.footnote { margin-top: 14px; font-size: 13px; color: var(--ink-muted); }
+.scroll { overflow-x: auto; }
+
+/* A: plain page — white edge to edge, one centred-left column */
+.a .body { background: var(--surface); padding: 40px 28px 48px; }
+.a .col { max-width: 680px; }
+
+/* B: sheet on desk — blue-grey frame, the page is one white sheet */
+.b .body { background: var(--bg); padding: 28px 28px 40px; }
+.b .sheet { background: var(--surface); max-width: 760px; margin: 0 auto; border-radius: var(--r-lg); padding: 40px 44px 44px; box-shadow: 0 1px 0 var(--border), 0 10px 30px -18px rgba(17,37,63,.2); }
+@media (max-width: 640px) { .b .sheet { padding: 28px 20px; } .b .body { padding: 16px 12px 28px; } }
+
+/* C: contents in the margin — sticky session list left, reading column right */
+.c .body { background: var(--surface); display: grid; grid-template-columns: 250px minmax(0, 1fr); }
+@media (max-width: 820px) { .c .body { grid-template-columns: minmax(0, 1fr); } .c .side { display: none; } }
+.c .side { border-right: 1px solid var(--border); padding: 30px 18px; background: var(--surface); }
+.c .side p { font-size: 12.5px; font-weight: 700; color: var(--ink-muted); margin-bottom: 8px; padding-inline: 10px; }
+.c .side ol { list-style: none; padding: 0; display: grid; gap: 2px; font-size: 14px; }
+.c .side li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 6px; padding: 7px 10px; border-radius: var(--r-sm); }
+.c .side li span:first-child { font-weight: 800; color: var(--ink-subtle); font-variant-numeric: tabular-nums; }
+.c .side li.done span:first-child { color: var(--success); }
+.c .side li.now { background: var(--primary-soft); font-weight: 700; }
+.c .side li.now span:first-child { color: var(--primary); }
+.c .side li.locked { color: var(--ink-muted); }
+.c .main { padding: 40px 36px 48px; }
+.c .col { max-width: 640px; }
+
+.ask { font-weight: 700; font-size: 16px; }
+</style>
+
+<div class="wrap">
+  <section class="memo">
+    <h1>Three frames for the course book</h1>
+    <p>Same validated thesis, same dashboard content. Only the frame changes: how the reading column sits on the screen. The table of contents has no dot leaders. Scores are examples. This is a proposal; nothing in the app has changed yet.</p>
+  </section>
+
+  <!-- A -->
+  <section class="v" aria-labelledby="va">
+    <div class="v-head"><h2 id="va">A · Halaman polos <small>plainest</small></h2>
+      <p>White from edge to edge, one reading column on the left. The fewest shapes on screen: nothing frames the content at all.</p></div>
+    <div class="screen a">
+      <div class="nav"><span class="logo">inverta</span><nav aria-label="Contoh navigasi A"><span aria-current="page">Dasbor</span><span>Sertifikat</span><span>Profil &amp; tagihan</span><span>Bantuan</span></nav><span class="running">QA Learner</span></div>
+      <div class="body"><div class="col">
+        <p class="running">Persiapan TOEFL ITP</p>
+        <h1 class="display">Selamat datang kembali, QA</h1>
+        <div class="next">
+          <span class="running">Berikutnya, sesi 4 dari 8</span>
+          <h2>Listening: longer talks</h2>
+          <p>Video 15 menit, lalu tes singkat. Lulus untuk membuka sesi 5.</p>
+          <div class="meter" aria-label="3 dari 8 sesi selesai"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="row"><a class="btn" href="#va">Lanjutkan sesi 4</a><span class="running">3 dari 8 sesi selesai</span></div>
+        </div>
+        <section class="chapter"><h2>Daftar isi</h2>
+          <ol class="toc">
+            <li class="done"><span class="n">✓</span><span class="t">Tanya jawab &amp; strategi tes</span><span class="m">Hadir</span></li>
+            <li class="done"><span class="n">✓</span><span class="t">Mengenal format &amp; strategi TOEFL</span><span class="m">Lulus, 9/10</span></li>
+            <li class="done"><span class="n">✓</span><span class="t">Listening: short conversations</span><span class="m">Lulus, 8/10</span></li>
+            <li class="now"><span class="n">4</span><span class="t">Listening: longer talks</span><span class="m">Berikutnya</span></li>
+            <li class="locked"><span class="n">5</span><span class="t">Structure: sentence completion</span><span class="m">Terkunci</span></li>
+            <li class="locked"><span class="n">8</span><span class="t">Simulasi TOEFL ITP</span><span class="m">Terkunci</span></li>
+          </ol>
+        </section>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section class="v" aria-labelledby="vb">
+    <div class="v-head"><h2 id="vb">B · Lembar di meja <small>balanced</small></h2>
+      <p>The blue-grey app background stays, and each page is a single white sheet in the middle. One box per screen, which holds the whole page, so the eye always knows where the content is.</p></div>
+    <div class="screen b">
+      <div class="nav"><span class="logo">inverta</span><nav aria-label="Contoh navigasi B"><span aria-current="page">Dasbor</span><span>Sertifikat</span><span>Profil &amp; tagihan</span><span>Bantuan</span></nav><span class="running">QA Learner</span></div>
+      <div class="body"><div class="sheet">
+        <p class="running">Persiapan TOEFL ITP</p>
+        <h1 class="display">Selamat datang kembali, QA</h1>
+        <div class="next">
+          <span class="running">Berikutnya, sesi 4 dari 8</span>
+          <h2>Listening: longer talks</h2>
+          <p>Video 15 menit, lalu tes singkat. Lulus untuk membuka sesi 5.</p>
+          <div class="meter" aria-label="3 dari 8 sesi selesai"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="row"><a class="btn" href="#vb">Lanjutkan sesi 4</a><span class="running">3 dari 8 sesi selesai</span></div>
+        </div>
+        <section class="chapter"><h2>Hasil tes akhir</h2>
+          <div class="report">
+            <div><p class="big">497</p><small>Skor prediksi<sup>1</sup></small></div>
+            <div class="scroll"><table class="spec">
+              <thead><tr><th>Bagian</th><th class="num">Benar</th><th class="num">Skor</th></tr></thead>
+              <tbody><tr><td>Listening</td><td class="num">32 / 50</td><td class="num">50</td></tr><tr><td>Structure</td><td class="num">24 / 40</td><td class="num">48</td></tr><tr><td>Reading</td><td class="num">32 / 50</td><td class="num">51</td></tr></tbody>
+            </table></div>
+          </div>
+          <p class="footnote"><sup>1</sup> Prediksi INVERTA, bukan skor TOEFL resmi dari ETS.</p>
+        </section>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section class="v" aria-labelledby="vc">
+    <div class="v-head"><h2 id="vc">C · Daftar isi di samping <small>most structured</small></h2>
+      <p>The session list stays in a left margin on every learner page, like a book’s contents tab; the right side is the reading column. Learners always see where they are, at the cost of a second column. On phones the margin folds away.</p></div>
+    <div class="screen c">
+      <div class="nav"><span class="logo">inverta</span><nav aria-label="Contoh navigasi C"><span aria-current="page">Dasbor</span><span>Sertifikat</span><span>Profil &amp; tagihan</span><span>Bantuan</span></nav><span class="running">QA Learner</span></div>
+      <div class="body">
+        <aside class="side" aria-label="Daftar sesi">
+          <p>Daftar isi</p>
+          <ol>
+            <li class="done"><span>✓</span><span>Tanya jawab &amp; strategi</span></li>
+            <li class="done"><span>✓</span><span>Format &amp; strategi TOEFL</span></li>
+            <li class="done"><span>✓</span><span>Short conversations</span></li>
+            <li class="now"><span>4</span><span>Longer talks</span></li>
+            <li class="locked"><span>5</span><span>Sentence completion</span></li>
+            <li class="locked"><span>6</span><span>Error identification</span></li>
+            <li class="locked"><span>7</span><span>Skimming &amp; scanning</span></li>
+            <li class="locked"><span>8</span><span>Simulasi TOEFL ITP</span></li>
+          </ol>
+        </aside>
+        <div class="main"><div class="col">
+          <p class="running">Persiapan TOEFL ITP</p>
+          <h1 class="display">Selamat datang kembali, QA</h1>
+          <div class="next">
+            <span class="running">Berikutnya, sesi 4 dari 8</span>
+            <h2>Listening: longer talks</h2>
+            <p>Video 15 menit, lalu tes singkat. Lulus untuk membuka sesi 5.</p>
+            <div class="row"><a class="btn" href="#vc">Lanjutkan sesi 4</a><span class="running">3 dari 8 sesi selesai</span></div>
+          </div>
+          <section class="chapter"><h2>Hasil tes akhir</h2>
+            <div class="report">
+              <div><p class="big">497</p><small>Skor prediksi<sup>1</sup></small></div>
+              <div class="scroll"><table class="spec">
+                <thead><tr><th>Bagian</th><th class="num">Benar</th><th class="num">Skor</th></tr></thead>
+                <tbody><tr><td>Listening</td><td class="num">32 / 50</td><td class="num">50</td></tr><tr><td>Structure</td><td class="num">24 / 40</td><td class="num">48</td></tr><tr><td>Reading</td><td class="num">32 / 50</td><td class="num">51</td></tr></tbody>
+              </table></div>
+            </div>
+            <p class="footnote"><sup>1</sup> Prediksi INVERTA, bukan skor TOEFL resmi dari ETS.</p>
+          </section>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="ask">Which frame should I build: A, B or C?</p>
+</div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PublicShell } from "@/components/PublicShell";
+import { Lead, PageTitle, RunningHead } from "@/components/ui";
 import { ContactForm } from "./ContactForm";
 
 export const dynamic = "force-static";
@@ -12,15 +13,12 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <PublicShell>
-      <section className="px-6 py-14">
-        <div className="mx-auto max-w-xl">
-          <div className="mb-6 flex flex-col gap-2 text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight">Hubungi kami</h1>
-            <p className="text-[15px] text-ink-muted">Pertanyaan soal program, pembayaran, atau kebutuhan tim? Kirim pesan.</p>
-          </div>
-          <ContactForm />
-        </div>
-      </section>
+      <RunningHead>Kontak</RunningHead>
+      <PageTitle>Hubungi kami</PageTitle>
+      <Lead>Pertanyaan soal program, pembayaran, atau kebutuhan tim? Kirim pesan.</Lead>
+      <div className="mt-8 max-w-xl">
+        <ContactForm />
+      </div>
     </PublicShell>
   );
 }

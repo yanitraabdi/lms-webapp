@@ -37,7 +37,7 @@ export function CookieConsent() {
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface px-6 py-4 shadow-lg">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 sm:flex-row sm:justify-between">
           <p className="text-[13px] leading-relaxed text-ink-muted">
-            Kami menggunakan cookie 🍪 untuk menjalankan layanan dan meningkatkan pengalaman Anda. Lihat{" "}
+            Kami menggunakan cookie untuk menjalankan layanan dan meningkatkan pengalaman Anda. Lihat{" "}
             <Link href="/legal/cookies" className="font-bold text-primary hover:underline">Kebijakan Cookie</Link>.
           </p>
           <div className="flex shrink-0 gap-2">

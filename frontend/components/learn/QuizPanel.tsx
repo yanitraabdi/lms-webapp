@@ -37,7 +37,7 @@ export function QuizPanel({ token, moduleId, onCompleted }: { token: string; mod
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 shadow-sm">
+    <div className="rounded-lg border border-border bg-surface p-5">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-extrabold">Kuis modul</h3>
         {alreadyPassed ? (

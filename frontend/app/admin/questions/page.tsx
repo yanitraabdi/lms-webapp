@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageTitle } from "@/components/ui/Page";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge, Button, Modal, Spinner, ErrorState, SearchIcon, XIcon } from "@/components/ui";
 import { AudioUpload } from "@/components/admin/AudioUpload";
@@ -81,6 +82,7 @@ function QuestionBank() {
 
   return (
     <div className="flex flex-col gap-3">
+      <PageTitle size="compact">Bank Soal</PageTitle>
       <div role="group" aria-label="Bank soal" className="flex flex-wrap gap-2">
         {QUESTION_BANKS.map((b) => (
           <button
@@ -133,7 +135,7 @@ function QuestionBank() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="overflow-x-auto">
         {!token || questions.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : questions.isError ? (
@@ -157,31 +159,31 @@ function QuestionBank() {
         ) : questions.data.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-ink-muted">Belum ada soal.</p>
         ) : (
-          <table className="w-full min-w-[640px] border-collapse">
+          <table className="data-table min-w-[640px]">
             <thead>
-              <tr className="bg-surface-2 text-left text-xs font-bold text-ink-muted">
-                <th className="px-5 py-3">Pertanyaan</th>
-                <th className="px-3 py-3">Bagian</th>
-                <th className="px-3 py-3">Pilihan</th>
-                <th className="px-3 py-3">Dipakai</th>
-                <th className="px-5 py-3 text-right">Aksi</th>
+              <tr>
+                <th>Pertanyaan</th>
+                <th>Bagian</th>
+                <th>Pilihan</th>
+                <th>Dipakai</th>
+                <th className="num">Aksi</th>
               </tr>
             </thead>
             <tbody className="text-[13.5px]">
               {questions.data.map((q) => (
-                <tr key={q.id} className="border-t border-border">
-                  <td className="max-w-[380px] px-5 py-3.5">
+                <tr key={q.id}>
+                  <td className="max-w-[380px]">
                     <div className="truncate font-semibold">{q.prompt}</div>
                     <div className="truncate text-[11.5px] text-ink-subtle">
                       Jawaban benar: {q.correct.map((i) => q.choices[num(i)] ?? "?").join(", ")}
                     </div>
                   </td>
-                  <td className="px-3 py-3.5">
+                  <td>
                     <Badge tone="neutral" className="px-2 py-0.5 text-[10.5px]">{q.section}</Badge>
                   </td>
-                  <td className="px-3 py-3.5">{q.choices.length}</td>
-                  <td className="px-3 py-3.5">{num(q.usedInAssessments)}</td>
-                  <td className="px-5 py-3.5">
+                  <td>{q.choices.length}</td>
+                  <td>{num(q.usedInAssessments)}</td>
+                  <td>
                     <div className="flex justify-end gap-2">
                       <Button variant="neutral" size="sm" onClick={() => setEditing(q)}>Edit</Button>
                       <Button variant="neutral" size="sm" onClick={() => move(q)}>Pindahkan ke bank lain</Button>
@@ -300,7 +302,7 @@ function QuestionForm({
         </label>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-bold text-ink-muted">Pilihan jawaban — tandai yang benar</span>
+          <span className="text-[12px] font-bold text-ink-muted">Pilihan jawaban (tandai yang benar)</span>
           {choices.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
               <input

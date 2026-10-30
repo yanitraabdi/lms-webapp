@@ -139,7 +139,7 @@ export function formatIdr(v: number | string): string {
 }
 
 export function minutesLabel(seconds: number | string | null | undefined): string {
-  if (seconds == null) return "—";
+  if (seconds == null) return "-";
   return `${Math.max(1, Math.round(num(seconds) / 60))} mnt`;
 }
 
