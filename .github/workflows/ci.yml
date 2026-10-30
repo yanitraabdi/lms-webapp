@@ -61,7 +61,8 @@ jobs:
       - name: OpenAPI → client drift check
         run: |
           npm ci --prefix frontend
-          ASPNETCORE_URLS=http://localhost:8080 dotnet run \
+          # Development: the OpenAPI document is only mapped there, and Production refuses a localhost FrontendBaseUrl.
+          ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:8080 dotnet run \
             --project backend/src/Api/Academy.Api.csproj --no-build --no-launch-profile &
           API_PID=$!
           for i in $(seq 1 30); do
