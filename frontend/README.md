@@ -33,6 +33,30 @@ npm run lint         # eslint
 npm run generate:api # regenerate api-client/schema.ts from backend OpenAPI (needs backend on :8080)
 ```
 
+## End-to-end tests
+
+Playwright suite in `e2e/`, run against its own Docker Compose project (`inverta-e2e`) on ports 3100 (frontend), 8180 (API) and 5532 (Postgres). It never touches the deployed stack and never reads the root `.env` (config is `../e2e.env` and `../docker-compose.e2e.yml`).
+
+Build and start a fresh stack (wipes the e2e volume):
+
+```bash
+npm run e2e:up
+```
+
+Run the suite:
+
+```bash
+npm run e2e
+```
+
+Stop the stack and delete its volume:
+
+```bash
+npm run e2e:down
+```
+
+Specs run serially in file order (`workers: 1`) and depend on it: `journey.spec.ts` runs before `smoke.spec.ts` and fills the admin tables that smoke then scans. Do not parallelise or reorder them.
+
 ## Routes (rendering modes)
 
 | Route | Group | Mode |

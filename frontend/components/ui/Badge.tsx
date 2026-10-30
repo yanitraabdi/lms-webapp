@@ -50,8 +50,8 @@ const statusDot: Record<Exclude<Status, "completed" | "locked">, string> = {
 
 const toneStyles: Record<Tone, string> = {
   neutral: "text-ink-muted bg-surface-2 border-transparent",
-  success: "text-success bg-success-soft border-transparent",
-  warning: "text-warning bg-warning-soft border-transparent",
+  success: "text-[#166534] bg-success-soft border-transparent",
+  warning: "text-[#92400E] bg-warning-soft border-transparent",
   danger: "text-danger bg-danger-soft border-transparent",
   info: "text-info bg-info-soft border-transparent",
 };
@@ -72,7 +72,7 @@ export function Badge({ tier, status, promo, tone, className, children, ...props
     label ??= "Paling diminati";
     leading = <StarIcon size={11} className="text-[#11253F]" />;
   } else if (promo === "new") {
-    palette = "text-accent bg-accent-soft border-transparent";
+    palette = "text-[#92400E] bg-accent-soft border-transparent";
     label ??= "Baru";
   } else if (tier) {
     palette = tierStyles[tier];

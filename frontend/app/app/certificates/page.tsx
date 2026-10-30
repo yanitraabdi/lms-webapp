@@ -113,7 +113,7 @@ function CertificateCard({ cert, token }: { cert: ProgramCertificate; token: str
         >
           Halaman verifikasi
         </Link>
-        <span className="text-[11.5px] text-ink-subtle">Kode: {cert.verificationCode}</span>
+        <span className="text-[11.5px] text-ink-muted">Kode: {cert.verificationCode}</span>
       </div>
     </div>
   );

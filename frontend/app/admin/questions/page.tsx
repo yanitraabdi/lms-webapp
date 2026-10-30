@@ -104,11 +104,12 @@ function QuestionBank() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">
+        <p className="text-xs text-ink-muted">
           Bank soal untuk tes sesi dan tes akhir. Soal disusun menjadi tes di halaman Program.
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
+            aria-label="Bagian"
             value={section}
             onChange={(e) => setSection(e.target.value)}
             className="rounded-sm border border-border bg-surface px-2.5 py-2 text-[13px] outline-none focus:border-primary"
@@ -174,7 +175,7 @@ function QuestionBank() {
                 <tr key={q.id}>
                   <td className="max-w-[380px]">
                     <div className="truncate font-semibold">{q.prompt}</div>
-                    <div className="truncate text-[11.5px] text-ink-subtle">
+                    <div className="truncate text-[11.5px] text-ink-muted">
                       Jawaban benar: {q.correct.map((i) => q.choices[num(i)] ?? "?").join(", ")}
                     </div>
                   </td>

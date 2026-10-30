@@ -66,10 +66,10 @@ export default function RegisterPage() {
         <Button type="submit" fullWidth loading={loading}>Buat akun</Button>
       </form>
 
-      <p className="text-center text-[11.5px] leading-relaxed text-ink-subtle">
+      <p className="text-center text-[11.5px] leading-relaxed text-ink-muted">
         Dengan mendaftar, Anda menyetujui{" "}
-        <Link href="/legal/terms" className="text-primary">Ketentuan</Link> &amp;{" "}
-        <Link href="/legal/privacy" className="text-primary">Kebijakan Privasi</Link>.
+        <Link href="/legal/terms" className="text-primary underline">Ketentuan</Link> &amp;{" "}
+        <Link href="/legal/privacy" className="text-primary underline">Kebijakan Privasi</Link>.
       </p>
       <p className="text-center text-[13px] text-ink-muted">
         Sudah punya akun? <Link href="/login" className="font-bold text-primary">Masuk</Link>

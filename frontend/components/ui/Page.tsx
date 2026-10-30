@@ -141,7 +141,7 @@ export function TocItem({ n, title, kind, meta, note, state, href }: TocItemProp
           <span className={titleCls}>{title}</span>
         )}
         {kind && (
-          <span className="ml-2 rounded-full bg-accent-soft px-2 text-[11.5px] font-bold text-accent">{kind}</span>
+          <span className="ml-2 rounded-full bg-accent-soft px-2 text-[11.5px] font-bold text-[#92400E]">{kind}</span>
         )}
         {note && <span className="mt-0.5 block text-[13px] font-medium text-ink-muted">{note}</span>}
       </span>

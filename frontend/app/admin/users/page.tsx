@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
             className="w-[240px] rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
           />
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-sm border border-border bg-surface px-3 py-2 text-[13px] font-semibold outline-none focus:border-primary">
+        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-sm border border-border bg-surface px-3 py-2 text-[13px] font-semibold outline-none focus:border-primary">
           <option value="">Semua status</option>
           <option value="Active">Aktif</option>
           <option value="Suspended">Ditangguhkan</option>
@@ -206,7 +206,7 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] text-ink-subtle">{label}</div>
+      <div className="text-[11px] text-ink-muted">{label}</div>
       <div className="font-bold text-ink">{value}</div>
     </div>
   );

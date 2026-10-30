@@ -72,15 +72,15 @@ export default function AdminEnrollmentsPage() {
     <div className="flex flex-col gap-3">
       <PageTitle size="compact">Pendaftaran</PageTitle>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">
+        <p className="text-xs text-ink-muted">
           Pendaftaran peserta. Mencabut akses tidak menghapus progres, percobaan, atau sertifikat.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={programId} onChange={(e) => setProgramId(e.target.value)} className={selectCls}>
+          <select aria-label="Program" value={programId} onChange={(e) => setProgramId(e.target.value)} className={selectCls}>
             <option value="">Semua program</option>
             {(programs.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
+          <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
             {STATUSES.map((s) => <option key={s} value={s}>{s ? STATUS_LABEL[s] : "Semua status"}</option>)}
           </select>
           <div className="relative">
@@ -124,7 +124,7 @@ export default function AdminEnrollmentsPage() {
                   <tr key={e.id}>
                     <td>
                       <div className="font-semibold">{e.userName}</div>
-                      <div className="text-[11.5px] text-ink-subtle">{e.userEmail}</div>
+                      <div className="text-[11.5px] text-ink-muted">{e.userEmail}</div>
                     </td>
                     <td>{e.programName}</td>
                     <td>
@@ -140,8 +140,8 @@ export default function AdminEnrollmentsPage() {
                       {num(e.completedSessions)}/{num(e.totalSessions)} sesi
                     </td>
                     <td>
-                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-subtle">Tidak ada</span>}
-                      {e.enrolledAt && <div className="text-[11px] text-ink-subtle">{fmtDateTime(e.enrolledAt)}</div>}
+                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-muted">Tidak ada</span>}
+                      {e.enrolledAt && <div className="text-[11px] text-ink-muted">{fmtDateTime(e.enrolledAt)}</div>}
                     </td>
                     <td>
                       <div className="flex justify-end">
