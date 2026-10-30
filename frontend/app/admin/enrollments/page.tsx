@@ -124,7 +124,7 @@ export default function AdminEnrollmentsPage() {
                   <tr key={e.id}>
                     <td>
                       <div className="font-semibold">{e.userName}</div>
-                      <div className="text-[11.5px] text-ink-subtle">{e.userEmail}</div>
+                      <div className="text-[11.5px] text-ink-muted">{e.userEmail}</div>
                     </td>
                     <td>{e.programName}</td>
                     <td>
@@ -140,8 +140,8 @@ export default function AdminEnrollmentsPage() {
                       {num(e.completedSessions)}/{num(e.totalSessions)} sesi
                     </td>
                     <td>
-                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-subtle">Tidak ada</span>}
-                      {e.enrolledAt && <div className="text-[11px] text-ink-subtle">{fmtDateTime(e.enrolledAt)}</div>}
+                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-muted">Tidak ada</span>}
+                      {e.enrolledAt && <div className="text-[11px] text-ink-muted">{fmtDateTime(e.enrolledAt)}</div>}
                     </td>
                     <td>
                       <div className="flex justify-end">

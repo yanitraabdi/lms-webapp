@@ -68,11 +68,11 @@ export default function AdminAttemptsPage() {
                   <tr key={a.id}>
                     <td>
                       <div className="font-semibold">{a.userName}</div>
-                      <div className="text-[11.5px] text-ink-subtle">{a.userEmail}</div>
+                      <div className="text-[11.5px] text-ink-muted">{a.userEmail}</div>
                     </td>
                     <td>
                       <div>{a.assessmentTitle}</div>
-                      <div className="text-[11.5px] text-ink-subtle">
+                      <div className="text-[11.5px] text-ink-muted">
                         {a.kind === "Final" ? "Tes akhir" : "Tes sesi"} · {fmtDateTime(a.startedAt)}
                       </div>
                     </td>
@@ -80,7 +80,7 @@ export default function AdminAttemptsPage() {
                     <td>
                       {a.totalScaledScore != null
                         ? <span className="font-bold text-primary">{num(a.totalScaledScore)}</span>
-                        : <span className="text-ink-subtle">Tidak ada</span>}
+                        : <span className="text-ink-muted">Tidak ada</span>}
                     </td>
                     <td>
                       <div className="flex flex-wrap gap-1.5">
@@ -97,7 +97,7 @@ export default function AdminAttemptsPage() {
                           <Badge tone="success" className="px-2 py-0.5 text-[10.5px]">Dipulihkan</Badge>
                         )}
                         {num(a.strikeCount) > 0 && (
-                          <span className="text-[11px] text-ink-subtle">{num(a.strikeCount)} pelanggaran</span>
+                          <span className="text-[11px] text-ink-muted">{num(a.strikeCount)} pelanggaran</span>
                         )}
                       </div>
                     </td>
@@ -195,7 +195,7 @@ function AttemptDetail({
             <h3 className="text-[13.5px] font-semibold text-ink-muted">
               Jejak pengawasan ({q.data!.events.length})
             </h3>
-            <p className="mt-1 text-[11.5px] text-ink-subtle">
+            <p className="mt-1 text-[11.5px] text-ink-muted">
               Termasuk kejadian yang diabaikan (di bawah 2 detik), jejak lengkap sengaja
               dipertahankan untuk peninjauan sengketa.
             </p>
@@ -207,7 +207,7 @@ function AttemptDetail({
                   <li key={e.id} className="flex items-start gap-2.5 rounded-base border border-border px-3 py-1.5">
                     <span className={
                       "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10.5px] font-bold " +
-                      (e.kind === "Ignored" ? "bg-surface-2 text-ink-subtle"
+                      (e.kind === "Ignored" ? "bg-surface-2 text-ink-muted"
                         : e.kind === "AutoSubmitted" ? "bg-danger-soft text-danger"
                         : e.kind === "Warned" ? "bg-warning-soft text-warning"
                         : "bg-primary-soft text-primary")
@@ -216,7 +216,7 @@ function AttemptDetail({
                     </span>
                     <span className="min-w-0 flex-1 text-[12px] text-ink-muted">
                       <span className="block">{fmtDateTime(e.occurredAt)}</span>
-                      <span className="block truncate font-mono text-[11px] text-ink-subtle">{e.clientMeta}</span>
+                      <span className="block truncate font-mono text-[11px] text-ink-muted">{e.clientMeta}</span>
                     </span>
                   </li>
                 ))}
