@@ -35,10 +35,10 @@ export function AccountMenu({ initials }: { initials: string }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Menu akun"
+        aria-label={`Menu akun ${initials}`}
         className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
-        <span aria-hidden="true">{initials}</span>
+        {initials}
       </button>
 
       {open && (
