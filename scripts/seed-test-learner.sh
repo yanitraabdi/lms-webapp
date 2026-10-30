@@ -4,7 +4,7 @@
 # THREE accounts, because passing a session test is permanent and attempts are retained (GR-7):
 #
 #   siswa@test.local    the general-purpose learner. Works through the programme.
-#   siswa2@test.local   SPENT — passed on 2026-09-04. Kept so the script stays idempotent.
+#   siswa2@test.local   a second general-purpose learner (recreated fresh 2026-10-30).
 #   siswa3@test.local   reserved for RETAKE testing (UAT E-05). Never pass its session test —
 #                       once passed the whole test is hidden, correctly and for ever, and the case
 #                       becomes unrunnable on that account. Two accounts have already been burnt
