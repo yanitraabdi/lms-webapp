@@ -107,7 +107,7 @@ function QuestionBank() {
         <p className="text-xs text-ink-muted">
           Bank soal untuk tes sesi dan tes akhir. Soal disusun menjadi tes di halaman Program.
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             aria-label="Bagian"
             value={section}
