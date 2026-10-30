@@ -72,7 +72,7 @@ export function Badge({ tier, status, promo, tone, className, children, ...props
     label ??= "Paling diminati";
     leading = <StarIcon size={11} className="text-[#11253F]" />;
   } else if (promo === "new") {
-    palette = "text-accent bg-accent-soft border-transparent";
+    palette = "text-[#92400E] bg-accent-soft border-transparent";
     label ??= "Baru";
   } else if (tier) {
     palette = tierStyles[tier];

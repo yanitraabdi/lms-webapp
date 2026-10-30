@@ -204,7 +204,7 @@ function SessionRow({
             {session.title}
           </span>
           {session.type !== "Video" && (
-            <span className="rounded-full bg-accent-soft px-2 text-[11.5px] font-bold text-accent">
+            <span className="rounded-full bg-accent-soft px-2 text-[11.5px] font-bold text-[#92400E]">
               {SESSION_TYPE_LABEL[session.type] ?? session.type}
             </span>
           )}
