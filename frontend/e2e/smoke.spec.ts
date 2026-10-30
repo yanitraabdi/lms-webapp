@@ -17,7 +17,9 @@ async function checkPage(page: Page, [path, finalPath = path]: Row) {
   await expect(page.locator("h1")).toHaveCount(1);
   expect(errors).toEqual([]);
   await expectNoSeriousA11y(page);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // Compare with the configured viewport: under mobile emulation innerWidth itself grows with overflowing content.
+  const vw = page.viewportSize()!.width;
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(vw);
 }
 
 const PUBLIC: Row[] = [
