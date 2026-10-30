@@ -76,11 +76,11 @@ export default function AdminEnrollmentsPage() {
           Pendaftaran peserta. Mencabut akses tidak menghapus progres, percobaan, atau sertifikat.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={programId} onChange={(e) => setProgramId(e.target.value)} className={selectCls}>
+          <select aria-label="Program" value={programId} onChange={(e) => setProgramId(e.target.value)} className={selectCls}>
             <option value="">Semua program</option>
             {(programs.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
+          <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
             {STATUSES.map((s) => <option key={s} value={s}>{s ? STATUS_LABEL[s] : "Semua status"}</option>)}
           </select>
           <div className="relative">

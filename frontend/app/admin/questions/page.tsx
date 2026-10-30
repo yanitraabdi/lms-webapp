@@ -109,6 +109,7 @@ function QuestionBank() {
         </p>
         <div className="flex items-center gap-2">
           <select
+            aria-label="Bagian"
             value={section}
             onChange={(e) => setSection(e.target.value)}
             className="rounded-sm border border-border bg-surface px-2.5 py-2 text-[13px] outline-none focus:border-primary"
