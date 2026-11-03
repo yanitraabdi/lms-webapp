@@ -145,7 +145,13 @@ function ProgramDashboard({ token, enrollment }: { token: string; enrollment: En
       <aside className="contents lg:block">
         {next && (
           <div className="order-1 mt-6 lg:order-none lg:mt-8">
-            <NextUpPanel title={next.title} href={nextHref(next, data.programId)} />
+            <NextUpPanel
+              title={next.title}
+              href={nextHref(next, data.programId)}
+              type={next.type}
+              partsDone={data.nextSessionPartsDone == null ? null : num(data.nextSessionPartsDone)}
+              partCount={data.nextSessionPartCount == null ? null : num(data.nextSessionPartCount)}
+            />
           </div>
         )}
         <div className="order-3 lg:order-none">

@@ -47,6 +47,7 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     await expectToc(page, 0, 1);
     await expect(page.getByRole("region", { name: "Berikutnya" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Lanjutkan belajar" })).toHaveAttribute("href", new RegExp(ids[0]));
+    await expect(page.getByRole("link", { name: /^Lanjutkan/ })).toHaveCount(1);
   });
 
   await test.step("2 linear lock (GR-8)", async () => {
