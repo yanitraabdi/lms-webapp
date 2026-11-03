@@ -8,6 +8,7 @@ export function Band({
   eyebrow,
   tint = false,
   className,
+  pad = "py-12 md:py-16",
   children,
 }: {
   id?: string;
@@ -15,6 +16,8 @@ export function Band({
   eyebrow?: ReactNode;
   tint?: boolean;
   className?: string;
+  /** Vertical padding; replaces the default (cn doesn't merge), so bands can vary the rhythm. */
+  pad?: string;
   children: ReactNode;
 }) {
   const headingId = useId();
@@ -24,7 +27,7 @@ export function Band({
       aria-labelledby={title ? headingId : undefined}
       className={cn("scroll-mt-16 border-t border-border first:border-t-0", tint ? "bg-bg" : "bg-surface", className)}
     >
-      <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
+      <div className={cn("mx-auto max-w-6xl px-6", pad)}>
         {eyebrow && <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-primary">{eyebrow}</p>}
         {title && (
           <h2 id={headingId} className={cn("text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-ink md:text-[32px]", !!eyebrow && "mt-2")}>

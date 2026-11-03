@@ -184,7 +184,7 @@ body {
    Each plays once and rests on its final state, which is also the base style,
    so reduced motion (animation: none below) shows the finished picture. */
 
-/* A, "the path": the fill reaches dot i at 300ms + i * 900ms; all done by ~4.4s (WCAG 2.2.2). */
+/* A, "the path": starts in view; the fill reaches dot i at 300ms + i * 900ms; all done by ~4.4s (WCAG 2.2.2). */
 @keyframes journey-fill-y { from { transform: scaleY(0); } }
 @keyframes journey-fill-x { from { transform: scaleX(0); } }
 @keyframes journey-dot {
@@ -196,6 +196,9 @@ body {
 @media (min-width: 560px) {
   .journey-fill { transform-origin: left; animation-name: journey-fill-x; }
 }
+/* Held at t=0 until JS sets data-playing on scroll into view (after the shorthands, which reset play-state). */
+.journey-fill, .journey-dot { animation-play-state: paused; }
+[data-anim="journey"][data-playing] :is(.journey-fill, .journey-dot) { animation-play-state: running; }
 
 /* B, "the app peek": held at t=0 (scene 1) until JS sets data-playing; scenes ~3s each, rests on scene 3. */
 @keyframes peek-out { 0%, 92% { opacity: 1; } 100% { opacity: 0; } }

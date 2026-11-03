@@ -1,4 +1,6 @@
-import type { CSSProperties } from "react";
+"use client";
+
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 const STEPS = [
   { label: "Video", sub: "materi" },
@@ -13,10 +15,24 @@ const line =
   "absolute left-[15px] top-[10%] bottom-[10%] w-[2px] rounded-full " +
   "min-[560px]:left-[10%] min-[560px]:right-[10%] min-[560px]:top-[15px] min-[560px]:bottom-auto min-[560px]:h-[2px] min-[560px]:w-auto";
 
-/** Animation A, "the path": plays once on load (CSS in globals.css), then rests fully lit. */
+/** Animation A, "the path": plays once when it scrolls into view (CSS in globals.css), then rests fully lit. */
 export function JourneyAnimation() {
+  const ref = useRef<HTMLElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  // On phones the hero stacks and A sits below the fold; starting on load would finish it unseen.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setPlaying(true); io.disconnect(); }
+    }, { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <figure data-anim="journey" className="m-0">
+    <figure ref={ref} data-anim="journey" data-playing={playing || undefined} className="m-0">
       <div aria-hidden="true" className="flex h-[280px] items-center rounded-lg bg-bg px-6 min-[560px]:h-[184px]">
         <div className="relative h-[240px] w-full min-[560px]:h-[120px]">
           <div className={`${line} bg-border`} />

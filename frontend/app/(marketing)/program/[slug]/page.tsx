@@ -78,14 +78,15 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
     <>
       <PublicNav programId={program.id} />
       <main>
-        <Band eyebrow="Persiapan TOEFL ITP · Bahasa Indonesia">
-          <div className="grid items-center gap-10 md:pb-8 lg:grid-cols-2 lg:gap-12">
+        <Band eyebrow="Persiapan TOEFL ITP · Bahasa Indonesia" pad="py-16 md:py-24">
+          {/* Full-width headline: at 64px a half column fits ~15 characters a line (5 lines); this keeps it to 3. */}
+          <h1 className="mt-3 max-w-[22ch] text-[clamp(40px,5vw,64px)] font-extrabold leading-[1.04] tracking-[-0.025em] text-ink">
+            Belajar TOEFL langkah demi langkah, sampai tahu prediksi skor Anda.
+          </h1>
+          <div className="mt-6 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-12">
             <div>
-              <h1 className="mt-3 max-w-[16ch] text-[clamp(40px,5vw,64px)] font-extrabold leading-[1.04] tracking-[-0.025em] text-ink">
-                Belajar TOEFL langkah demi langkah, sampai tahu prediksi skor Anda.
-              </h1>
-              <p className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-ink-muted">
-                {program.summary ?? "Video materi, tes singkat di setiap sesi, kelas live bersama pengajar, lalu simulasi tes akhir berformat ITP dengan sertifikat prediksi skor."}
+              <p className="max-w-[52ch] text-[17px] leading-relaxed text-ink-muted">
+                {program.summary || "Video materi, tes singkat di setiap sesi, kelas live bersama pengajar, lalu simulasi tes akhir berformat ITP dengan sertifikat prediksi skor."}
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <EnrollCta programId={program.id} className="w-full sm:w-56" />
@@ -102,14 +103,14 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
         </Band>
 
-        <Band id="apa-itu" title="Apa itu INVERTA" tint>
+        <Band id="apa-itu" title="Apa itu INVERTA" tint pad="py-10 md:py-12">
           {program.description && (
             <p className="mt-4 max-w-[65ch] whitespace-pre-line text-[16.5px] leading-relaxed text-ink-muted">{program.description}</p>
           )}
           <Columns items={parts} className="sm:grid-cols-2 lg:grid-cols-4" />
         </Band>
 
-        <Band id="daftar-isi" title="Daftar isi program">
+        <Band id="daftar-isi" title="Daftar isi program" pad="py-14 md:py-20">
           <p className="mt-2 text-[15px] tabular-nums text-ink-muted">{facts}</p>
           <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
             <Toc label="Daftar sesi">
@@ -131,7 +132,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           </div>
         </Band>
 
-        <Band title="Yang membedakan" tint>
+        <Band title="Yang membedakan" tint pad="py-10 md:py-12">
           <Columns items={different} className="md:grid-cols-3" />
         </Band>
 

@@ -39,6 +39,8 @@ test("animations have text equivalents and stop under reduced motion", async ({ 
 test("the path plays once and stops; the peek plays on view, pauses and replays", async ({ page }) => {
   await page.goto(`/program/${SLUG}`);
   const journey = page.locator('figure[data-anim="journey"]');
+  await journey.scrollIntoViewIfNeeded();
+  await expect(journey).toHaveAttribute("data-playing", "true");
   await expect.poll(() => journey.evaluate(running), { timeout: 6_000 }).toBe(0); // WCAG 2.2.2: ≤ 5s, no loop
   const peek = page.locator('figure[data-anim="peek"]');
   await peek.scrollIntoViewIfNeeded();
@@ -63,4 +65,19 @@ test("bands in order, hero enrol above the fold on desktop and phone", async ({ 
   await expect(page.getByRole("main")).toContainText("Rp");
   await expect(page.getByRole("main")).toContainText("bukan skor TOEFL resmi");
   await expect(page.getByRole("list", { name: "Daftar sesi" }).getByRole("listitem")).toHaveCount(8);
+});
+
+test("on a phone the path waits below the fold, then plays once in view", async ({ page }) => {
+  // 375x667 (iPhone SE): A is below the fold. At 812 tall the hero is short enough that A is already in view.
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto(`/program/${SLUG}`);
+  const journey = page.locator('figure[data-anim="journey"]');
+  await expect(page.locator("h1")).toBeVisible();
+  await expect(journey).not.toBeInViewport({ ratio: 0.4 });
+  await page.waitForTimeout(1_000); // give a wrongly on-load animation time to start
+  expect(await journey.evaluate(running)).toBe(0);
+  await expect(journey).not.toHaveAttribute("data-playing");
+  await journey.scrollIntoViewIfNeeded();
+  await expect.poll(() => journey.evaluate(running)).toBeGreaterThan(0);
+  await expect.poll(() => journey.evaluate(running), { timeout: 6_000 }).toBe(0);
 });
