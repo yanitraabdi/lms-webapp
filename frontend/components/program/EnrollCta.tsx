@@ -20,7 +20,7 @@ const BENEFITS = [
  * only the verified payment webhook does that (GR-2). With `priceIdr` it renders the
  * price/enrol box; without, just the button (closing paragraph).
  */
-export function EnrollCta({ programId, priceIdr, className }: { programId: string; priceIdr?: number | string; className?: string }) {
+export function EnrollCta({ programId, priceIdr, className, size = "md" }: { programId: string; priceIdr?: number | string; className?: string; size?: "md" | "sm" }) {
   const { status, user, accessToken } = useAuth();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -56,8 +56,15 @@ export function EnrollCta({ programId, priceIdr, className }: { programId: strin
 
   const action = (
     <>
-      <Button fullWidth onClick={onClick} loading={busy}>
-        {status === "authenticated" ? "Daftar sekarang" : "Masuk & daftar"}
+      {/* "sm" is the nav button: Button's sm is h-8, the nav's ctaBase is h-9 (! beats it). */}
+      <Button
+        fullWidth={size === "md"}
+        size={size}
+        className={size === "sm" ? "h-9! px-3.5" : undefined}
+        onClick={onClick}
+        loading={busy}
+      >
+        Daftar sekarang
       </Button>
       {error && (
         <p className="mt-2 rounded-base border border-danger/30 bg-danger-soft px-3 py-2 text-[12.5px] text-danger">

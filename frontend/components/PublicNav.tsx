@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AccountMenu } from "@/components/app/AccountMenu";
 import { Logo } from "@/components/Logo";
+import { EnrollCta } from "@/components/program/EnrollCta";
 
 // INVERTA is a single-program product — the program landing replaces catalog/pricing
 // as primary navigation (KAK §9.15). Those routes remain in-repo but are unlinked.
@@ -19,7 +20,8 @@ const links = [
 const ctaBase =
   "inline-flex h-9 items-center justify-center rounded-sm px-3.5 text-[13px] font-bold transition-colors";
 
-export function PublicNav({ className }: { className?: string }) {
+// `programId` (program page only) swaps "Daftar gratis" for the compact enrol button.
+export function PublicNav({ className, programId }: { className?: string; programId?: string }) {
   const { status, user } = useAuth();
   const authed = status === "authenticated";
   const initials = (user?.name ?? "?")
@@ -53,15 +55,20 @@ export function PublicNav({ className }: { className?: string }) {
             {/* Was a bare link to /app/account, which sent signed-in visitors to the archived
                 subscription page. Same dropdown as the in-app header: profile, then sign out. */}
             <AccountMenu initials={initials} />
+            {programId && <EnrollCta programId={programId} size="sm" />}
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <Link href="/login" className={cn(ctaBase, "text-ink hover:bg-surface-2")}>
               Masuk
             </Link>
-            <Link href="/register" className={cn(ctaBase, "bg-primary text-primary-ink hover:bg-primary-hover")}>
-              Daftar gratis
-            </Link>
+            {programId ? (
+              <EnrollCta programId={programId} size="sm" />
+            ) : (
+              <Link href="/register" className={cn(ctaBase, "bg-primary text-primary-ink hover:bg-primary-hover")}>
+                Daftar gratis
+              </Link>
+            )}
           </div>
         )}
       </nav>

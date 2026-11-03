@@ -35,8 +35,8 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
 
   await test.step("1 enrol through the webhook path (GR-2)", async () => {
     await signIn(page, learner.email, learner.password);
-    await gotoReady(page, `/program/${SLUG}`, page.getByRole("button", { name: "Daftar sekarang" }).first());
-    await page.getByRole("button", { name: "Daftar sekarang" }).first().click();
+    await gotoReady(page, `/program/${SLUG}`, page.getByRole("main").getByRole("button", { name: "Daftar sekarang" }).first());
+    await page.getByRole("main").getByRole("button", { name: "Daftar sekarang" }).first().click();
     await page.waitForURL("**/checkout/dev-pay**");
     expect(enrollmentStatus(learner.id)).not.toBe("Active"); // PendingPayment or absent
     await page.getByRole("button", { name: "Bayar sekarang (berhasil)" }).click();

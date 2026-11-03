@@ -57,7 +57,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
 
   return (
     <>
-      <PublicNav />
+      <PublicNav programId={program.id} />
       <main>
         <ProgramJsonLd program={program} faq={faqShown} />
         <SheetPage>
