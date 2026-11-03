@@ -49,7 +49,7 @@ export function LearnerShell({ children }: { children: ReactNode }) {
       </Link>
       <nav aria-label="Menu utama" className="flex flex-col gap-0.5 px-3 py-2">
         {links.map((l) => {
-          const active = path === l.href || path.startsWith(l.href) || (l.tour === "nav-program" && path.startsWith("/app/program/"));
+          const active = path === l.href || path.startsWith(l.href) || (l.href === "/app/dashboard" && path.startsWith("/app/program/"));
           return (
             <Link
               key={l.href}

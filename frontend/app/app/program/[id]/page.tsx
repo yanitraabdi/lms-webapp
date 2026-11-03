@@ -119,7 +119,7 @@ function ProgramBody({
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
       {/* ---- left: the list. Full width on a phone, 30% from lg up. ---- */}
-      <aside className="w-full lg:sticky lg:top-[78px] lg:w-[30%] lg:min-w-[280px]">
+      <aside className="w-full lg:sticky lg:top-5 lg:w-[30%] lg:min-w-[280px]">
         <div className="mb-4 flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <RunningHead>{completed}/{total} sesi</RunningHead>

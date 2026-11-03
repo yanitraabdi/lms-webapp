@@ -45,6 +45,8 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     ids = sessionIds();
     expect(ids).toHaveLength(8);
     await expectToc(page, 0, 1);
+    await expect(page.getByRole("region", { name: "Berikutnya" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Lanjutkan belajar" })).toHaveAttribute("href", new RegExp(ids[0]));
   });
 
   await test.step("2 linear lock (GR-8)", async () => {
@@ -127,6 +129,8 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
   });
 
   await test.step("8 certificate and verify page", async () => {
+    await gotoReady(page, "/app/dashboard", page.getByRole("list", { name: "Daftar sesi" }));
+    await expect(page.getByRole("region", { name: "Berikutnya" })).toHaveCount(0);
     await gotoReady(page, "/app/certificates", page.getByRole("heading", { name: "Sertifikat", exact: true }));
     await expect(page.getByText("Sertifikat prediksi", { exact: true })).toHaveCount(1);
     code = (await page.getByText(/^Kode: /).innerText()).replace("Kode: ", "").trim();
