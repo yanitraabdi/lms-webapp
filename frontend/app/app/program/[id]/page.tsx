@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AppHeader } from "@/components/app/AppHeader";
+import { LearnerShell } from "@/components/app/LearnerShell";
 import { SessionView } from "@/components/learn/SessionView";
 import { Badge, Button, Spinner, ErrorState, CheckIcon, LockIcon, PlayIcon, SheetPage, RunningHead, PageTitle } from "@/components/ui";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -35,8 +35,7 @@ export default function StudentProgramPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader />
+    <LearnerShell>
       <SheetPage wide>
         {q.isPending ? (
           <div className="flex min-h-[240px] items-center justify-center"><Spinner size={24} /></div>
@@ -55,7 +54,7 @@ export default function StudentProgramPage() {
           <ProgramBody token={accessToken} programId={id} data={q.data} />
         )}
       </SheetPage>
-    </div>
+    </LearnerShell>
   );
 }
 

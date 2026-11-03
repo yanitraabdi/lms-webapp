@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AppHeader } from "@/components/app/AppHeader";
+import { LearnerShell } from "@/components/app/LearnerShell";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { Button, Spinner, ErrorState, EmptyState, SheetPage, RunningHead, PageTitle, Chapter, Toc, TocItem } from "@/components/ui";
 import { ProgressHeader, nextHref } from "@/components/dashboard/ProgressHeader";
@@ -44,8 +44,7 @@ export default function DashboardPage() {
     (e) => e.status === "Active" || e.status === "Completed");
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader />
+    <LearnerShell>
       <OnboardingFlow token={accessToken} />
       <SheetPage>
         {active[0] && <RunningHead>{active[0].programName}</RunningHead>}
@@ -86,7 +85,7 @@ export default function DashboardPage() {
           </div>
         )}
       </SheetPage>
-    </div>
+    </LearnerShell>
   );
 }
 

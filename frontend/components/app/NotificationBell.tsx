@@ -14,19 +14,28 @@ import {
   type Notification,
 } from "@/lib/engagement";
 
-export function NotificationBell() {
+function useBellQuery() {
   const token = useAuth().accessToken;
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const q = useQuery({
+  return useQuery({
     queryKey: ["notifications-bell"],
     queryFn: () => listNotifications(token!),
     enabled: !!token,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
+}
+
+/** Unread count from the bell's query, so the sidebar badge shares its cache and poll. */
+export function useUnreadCount(): number {
+  return num(useBellQuery().data?.unreadCount ?? 0);
+}
+
+export function NotificationBell() {
+  const token = useAuth().accessToken;
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const q = useBellQuery();
 
   useEffect(() => {
     if (!open) return;
