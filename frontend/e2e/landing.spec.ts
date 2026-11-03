@@ -22,3 +22,28 @@ test("other public pages keep Daftar gratis", async ({ page }) => {
   await page.goto("/about");
   await expect(page.getByRole("banner").getByRole("link", { name: "Daftar gratis" })).toBeVisible();
 });
+
+const running = (el: Element) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length;
+
+test("animations have text equivalents and stop under reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`/program/${SLUG}`);
+  for (const name of ["journey", "peek"]) {
+    const fig = page.locator(`figure[data-anim="${name}"]`);
+    await expect(fig.locator("figcaption.sr-only")).not.toBeEmpty();
+    expect(await fig.evaluate(running)).toBe(0);
+  }
+  await expect(page.locator('figure[data-anim="peek"]')).toContainText("bukan skor TOEFL resmi");
+});
+
+test("the path plays once and stops; the peek plays on view, pauses and replays", async ({ page }) => {
+  await page.goto(`/program/${SLUG}`);
+  const journey = page.locator('figure[data-anim="journey"]');
+  await expect.poll(() => journey.evaluate(running), { timeout: 6_000 }).toBe(0); // WCAG 2.2.2: ≤ 5s, no loop
+  const peek = page.locator('figure[data-anim="peek"]');
+  await peek.scrollIntoViewIfNeeded();
+  await expect(peek.getByRole("button", { name: "Jeda" })).toBeVisible();
+  await peek.getByRole("button", { name: "Jeda" }).click();
+  expect(await peek.evaluate(running)).toBe(0);
+  await expect.poll(() => peek.getByRole("button", { name: "Putar ulang" }).count(), { timeout: 12_000 }).toBe(1);
+});

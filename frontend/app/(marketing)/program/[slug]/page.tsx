@@ -10,6 +10,8 @@ import { ItpFormat } from "@/components/program/ItpFormat";
 import { ProgramFaq } from "@/components/program/ProgramFaq";
 import { ClosingCta } from "@/components/program/ClosingCta";
 import { ProgramJsonLd } from "@/components/program/ProgramJsonLd";
+import { JourneyAnimation } from "@/components/program/JourneyAnimation";
+import { AppPeekAnimation } from "@/components/program/AppPeekAnimation";
 import { getFaq } from "@/lib/content";
 import {
   getPublicProgram, minutesLabel, totalDurationLabel, fmtDateTime,
@@ -117,6 +119,12 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
                 internal, <strong className="text-ink">bukan skor TOEFL resmi</strong> dan tidak
                 diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik ETS.
               </Footnote>
+
+              {/* Temporary mount for Task 3's e2e; Task 4 places these in the hero and band 3. */}
+              <div className="mt-10 flex flex-col gap-8">
+                <JourneyAnimation />
+                <AppPeekAnimation lessonTitle={sessions.find((s) => s.type === "Video")?.title} />
+              </div>
             </div>
 
             <aside className="mt-10 hidden min-[860px]:mt-0 min-[860px]:block">
