@@ -56,6 +56,7 @@ export function LearnerShell({ children }: { children: ReactNode }) {
               href={l.href}
               data-tour={l.tour}
               aria-current={active ? "page" : undefined}
+              onClick={() => drawer.current?.close()} // a link to the current page never changes the path
               className={cn(item, active ? "bg-primary-soft text-primary" : "text-ink-muted hover:bg-surface-2 hover:text-ink")}
             >
               {l.label}
@@ -85,7 +86,7 @@ export function LearnerShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg md:grid md:grid-cols-[220px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen border-r border-border bg-surface md:block">{panel}</aside>
+      <aside className="sticky top-0 z-30 hidden h-screen border-r border-border bg-surface md:block">{panel}</aside>
 
       <header className="sticky top-0 z-40 flex h-[58px] items-center justify-between gap-3 border-b border-border bg-surface px-4 md:hidden">
         <Link href="/app/dashboard" className="flex shrink-0 items-center">

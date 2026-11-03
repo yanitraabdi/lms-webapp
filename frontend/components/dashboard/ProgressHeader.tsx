@@ -22,8 +22,7 @@ export function ProgressHeader({ program }: { program: StudentProgram }) {
         </>
       )}
       <div
-        role="img"
-        aria-label={`${completed} dari ${total} sesi selesai`}
+        {...(next ? { "aria-hidden": true } : { role: "img", "aria-label": `${completed} dari ${total} sesi selesai` })}
         className="mt-5 flex flex-wrap gap-1"
       >
         {program.sessions.map((s) => (

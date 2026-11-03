@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     // three times. A name that already carries the brand is used as-is; otherwise the template
     // adds it. Admins can rename the programme, so this cannot assume either form.
     title: program.name.includes("INVERTA") ? { absolute: program.name } : program.name,
-    description: program.summary ?? program.description.slice(0, 160),
+    description: program.summary || program.description.slice(0, 160),
   };
 }
 

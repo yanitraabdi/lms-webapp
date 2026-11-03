@@ -132,6 +132,17 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
   await test.step("8 certificate and verify page", async () => {
     await gotoReady(page, "/app/dashboard", page.getByRole("list", { name: "Daftar sesi" }));
     await expect(page.getByRole("region", { name: "Berikutnya" })).toHaveCount(0);
+    // the certificate card lives in the 280px dashboard column: its links must stay inside it
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const cards = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "Buka sertifikat" }) });
+    await expect(cards).toHaveCount(1);
+    const card = (await cards.first().boundingBox())!;
+    for (const name of ["Buka sertifikat", "Halaman verifikasi"]) {
+      const b = (await cards.first().getByRole("link", { name }).boundingBox())!;
+      expect(b.x, name).toBeGreaterThanOrEqual(card.x);
+      expect(b.x + b.width, name).toBeLessThanOrEqual(card.x + card.width + 0.5);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
     await gotoReady(page, "/app/certificates", page.getByRole("heading", { name: "Sertifikat", exact: true }));
     await expect(page.getByText("Sertifikat prediksi", { exact: true })).toHaveCount(1);
     code = (await page.getByText(/^Kode: /).innerText()).replace("Kode: ", "").trim();

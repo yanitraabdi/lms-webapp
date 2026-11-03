@@ -75,7 +75,7 @@ export function AppPeekAnimation({ lessonTitle }: { lessonTitle?: string }) {
         </div>
       </div>
       <Button variant="ghost" size="sm" onClick={toggle} className="peek-toggle mt-2">
-        {active ? "Jeda" : "Putar ulang"}
+        {active ? "Jeda" : playing ? "Putar ulang" : "Putar"}
       </Button>
       <figcaption className="sr-only">
         Contoh tampilan aplikasi: video materi, tes sesi yang lulus, lalu sertifikat prediksi skor.
