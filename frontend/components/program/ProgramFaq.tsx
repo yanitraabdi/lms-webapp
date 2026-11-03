@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Chapter } from "@/components/ui";
+import { Band } from "@/components/program/Band";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import type { FaqItem } from "@/lib/content";
 
 export function ProgramFaq({ items, hasMore }: { items: FaqItem[]; hasMore: boolean }) {
   if (items.length === 0) return null;
   return (
-    <Chapter title="Pertanyaan umum">
-      <div className="mt-3">
+    <Band tint title="Pertanyaan umum">
+      <div className="mt-6 max-w-3xl">
         <FaqAccordion items={items} searchable={false} />
       </div>
       {hasMore && (
@@ -18,6 +18,6 @@ export function ProgramFaq({ items, hasMore }: { items: FaqItem[]; hasMore: bool
           Lihat semua pertanyaan
         </Link>
       )}
-    </Chapter>
+    </Band>
   );
 }

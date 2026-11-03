@@ -4,9 +4,8 @@ import { userId, verifyEmail } from "./db";
 
 export const LEARNER_PASSWORD = "E2e-Learner-1!";
 
-export async function newLearner() {
+export async function newLearner(name = "Siswa E2E") {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
-  const name = "Siswa E2E";
   await api("/auth/register", { method: "POST", body: { name, email, password: LEARNER_PASSWORD } });
   verifyEmail(email);
   const token = await login(email, LEARNER_PASSWORD);

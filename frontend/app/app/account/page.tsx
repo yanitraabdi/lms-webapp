@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AppHeader } from "@/components/app/AppHeader";
+import { LearnerShell } from "@/components/app/LearnerShell";
 import { Badge, Button, Spinner, ErrorState, SheetPage, PageTitle, Lead, Chapter } from "@/components/ui";
 import { listMyEnrollments, updateProfile, changePassword, num, type Enrollment } from "@/lib/programs";
 
@@ -95,8 +95,7 @@ export default function AccountPage() {
   const pwValid = current.length > 0 && next.length >= 8 && next === confirm;
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader />
+    <LearnerShell>
       <SheetPage>
         <PageTitle>Profil & tagihan</PageTitle>
         <Lead>Kelola data akun dan lihat pembelian Anda.</Lead>
@@ -199,6 +198,6 @@ export default function AccountPage() {
           )}
         </Chapter>
       </SheetPage>
-    </div>
+    </LearnerShell>
   );
 }

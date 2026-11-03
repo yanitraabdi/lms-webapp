@@ -11,7 +11,7 @@ export function CertificateCards({ certificates }: { certificates: ProgramCertif
 
   return (
     <Chapter title="Sertifikat">
-      <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <ul className="mt-4 grid grid-cols-1 gap-3">
         {certificates.map((c) => (
           <li key={c.id} className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface p-4">
             <span className="font-bold text-ink">{c.programName}</span>
@@ -20,7 +20,7 @@ export function CertificateCards({ certificates }: { certificates: ProgramCertif
               {new Date(c.issuedAt).toLocaleDateString("id-ID", { dateStyle: "long" })}
             </RunningHead>
             <span className="break-all font-mono text-[13px] text-ink">{c.verificationCode}</span>
-            <span className="mt-1 flex gap-4">
+            <span className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
               <Link href="/app/certificates" className={LINK}>Buka sertifikat</Link>
               <Link href={`/verify/${c.verificationCode}`} className={LINK}>Halaman verifikasi</Link>
             </span>

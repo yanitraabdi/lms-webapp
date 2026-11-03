@@ -6,10 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AppHeader } from "@/components/app/AppHeader";
+import { LearnerShell } from "@/components/app/LearnerShell";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
-import { Button, Spinner, ErrorState, EmptyState, SheetPage, RunningHead, PageTitle, Chapter, Toc, TocItem } from "@/components/ui";
+import { Button, Spinner, ErrorState, EmptyState, PageTitle, Chapter, Toc, TocItem } from "@/components/ui";
 import { ProgressHeader, nextHref } from "@/components/dashboard/ProgressHeader";
+import { NextUpPanel } from "@/components/dashboard/NextUpPanel";
 import { FinalResultCard } from "@/components/dashboard/FinalResultCard";
 import { CertificateCards } from "@/components/dashboard/CertificateCards";
 import { listMyEnrollments, getStudentProgram, num, SESSION_TYPE_LABEL, type Enrollment } from "@/lib/programs";
@@ -44,11 +45,9 @@ export default function DashboardPage() {
     (e) => e.status === "Active" || e.status === "Completed");
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader />
+    <LearnerShell>
       <OnboardingFlow token={accessToken} />
-      <SheetPage>
-        {active[0] && <RunningHead>{active[0].programName}</RunningHead>}
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
         <PageTitle>{`Selamat datang kembali${firstName ? `, ${firstName}` : ""}`}</PageTitle>
 
         {enrollments.isPending ? (
@@ -85,8 +84,8 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
-      </SheetPage>
-    </div>
+      </div>
+    </LearnerShell>
   );
 }
 
@@ -123,26 +122,44 @@ function ProgramDashboard({ token, enrollment }: { token: string; enrollment: En
   const next = data.sessions.find((s) => s.id === data.nextSessionId);
 
   return (
-    <>
-      <ProgressHeader program={data} />
-      <Chapter title="Daftar isi">
-        <Toc label="Daftar sesi">
-          {data.sessions.map((s, i) => (
-            <TocItem
-              key={s.id}
-              n={i + 1}
-              title={s.title}
-              kind={SESSION_TYPE_LABEL[s.type]}
-              state={tocState(s, data.nextSessionId)}
-              meta={tocMeta(s, data.nextSessionId)}
-              href={s.state === "Locked" ? undefined : nextHref(s, data.programId)}
+    <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-8">
+      {/* One DOM copy: below lg the next-up panel is ordered first, from lg up it sits in the aside. */}
+      <div className="order-2 lg:order-none">
+        <ProgressHeader program={data} />
+        <Chapter title="Daftar isi">
+          <Toc label="Daftar sesi">
+            {data.sessions.map((s, i) => (
+              <TocItem
+                key={s.id}
+                n={i + 1}
+                title={s.title}
+                kind={SESSION_TYPE_LABEL[s.type]}
+                state={tocState(s, data.nextSessionId)}
+                meta={tocMeta(s, data.nextSessionId)}
+                href={s.state === "Locked" ? undefined : nextHref(s, data.programId)}
+              />
+            ))}
+          </Toc>
+        </Chapter>
+      </div>
+      <aside className="contents lg:block">
+        {next && (
+          <div className="order-1 mt-6 lg:order-none lg:mt-8">
+            <NextUpPanel
+              title={next.title}
+              href={nextHref(next, data.programId)}
+              type={next.type}
+              partsDone={data.nextSessionPartsDone == null ? null : num(data.nextSessionPartsDone)}
+              partCount={data.nextSessionPartCount == null ? null : num(data.nextSessionPartCount)}
             />
-          ))}
-        </Toc>
-      </Chapter>
-      <FinalResultCard certificate={programCerts[0]} sessionsRemaining={total - completed} status={certs.status} />
-      <SessionTestHistory token={token} programId={data.programId} continueHref={next ? nextHref(next, data.programId) : null} />
-      <CertificateCards certificates={programCerts} />
-    </>
+          </div>
+        )}
+        <div className="order-3 lg:order-none">
+          <SessionTestHistory token={token} programId={data.programId} continueHref={next ? nextHref(next, data.programId) : null} />
+          <FinalResultCard certificate={programCerts[0]} sessionsRemaining={total - completed} status={certs.status} />
+          <CertificateCards certificates={programCerts} />
+        </div>
+      </aside>
+    </div>
   );
 }

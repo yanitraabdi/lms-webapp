@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AppHeader } from "@/components/app/AppHeader";
+import { LearnerShell } from "@/components/app/LearnerShell";
 import { Button, Spinner, ErrorState, Switch, SheetPage, PageTitle, Chapter } from "@/components/ui";
 import {
   listNotifications,
@@ -33,14 +33,13 @@ export default function NotificationsPage() {
     return <div className="flex min-h-screen items-center justify-center bg-bg"><Spinner size={24} /></div>;
   }
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader />
+    <LearnerShell>
       <SheetPage>
         <PageTitle>Notifikasi</PageTitle>
         <NotificationList token={accessToken} />
         <Preferences token={accessToken} />
       </SheetPage>
-    </div>
+    </LearnerShell>
   );
 }
 

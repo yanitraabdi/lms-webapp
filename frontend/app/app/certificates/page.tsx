@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { AppHeader } from "@/components/app/AppHeader";
+import { LearnerShell } from "@/components/app/LearnerShell";
 import { Button, Spinner, ErrorState, EmptyState, SheetPage, PageTitle, Lead, Footnote } from "@/components/ui";
 import { listMyCertificates, downloadCertificate, num, type ProgramCertificate } from "@/lib/sessions";
 import { fmtDateTime } from "@/lib/programs";
@@ -29,8 +29,7 @@ export default function CertificatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader />
+    <LearnerShell>
       <SheetPage>
         <PageTitle>Sertifikat</PageTitle>
         <Lead>Sertifikat prediksi TOEFL Anda. Setiap sertifikat dapat diverifikasi secara publik.</Lead>
@@ -59,7 +58,7 @@ export default function CertificatesPage() {
           TOEFL adalah merek dagang terdaftar milik ETS.
         </Footnote>
       </SheetPage>
-    </div>
+    </LearnerShell>
   );
 }
 

@@ -180,8 +180,54 @@ body {
 }
 .exam-band { animation: exam-grow 260ms var(--ds-ease-out) 1200ms both; }
 
+/* ---- Landing animations (spec §2.6) ----
+   Each plays once and rests on its final state, which is also the base style,
+   so reduced motion (animation: none below) shows the finished picture. */
+
+/* A, "the path": starts in view; the fill reaches dot i at 300ms + i * 900ms; all done by ~4.4s (WCAG 2.2.2). */
+@keyframes journey-fill-y { from { transform: scaleY(0); } }
+@keyframes journey-fill-x { from { transform: scaleX(0); } }
+@keyframes journey-dot {
+  0% { background-color: var(--ds-color-surface); border-color: var(--ds-color-border); color: var(--ds-color-ink-muted); }
+  55% { transform: scale(1.1); }
+}
+.journey-fill { transform-origin: top; animation: journey-fill-y 3600ms linear 300ms both; }
+.journey-dot { animation: journey-dot 450ms var(--ds-ease-out) both; animation-delay: calc(300ms + var(--i, 0) * 900ms); }
+@media (min-width: 560px) {
+  .journey-fill { transform-origin: left; animation-name: journey-fill-x; }
+}
+/* Held at t=0 until JS sets data-playing on scroll into view (after the shorthands, which reset play-state). */
+.journey-fill, .journey-dot { animation-play-state: paused; }
+[data-anim="journey"][data-playing] :is(.journey-fill, .journey-dot) { animation-play-state: running; }
+
+/* B, "the app peek": held at t=0 (scene 1) until JS sets data-playing; scenes ~3s each, rests on scene 3. */
+@keyframes peek-out { 0%, 92% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes peek-mid {
+  0% { opacity: 0; transform: translateY(6px); }
+  10%, 92% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes peek-progress { from { transform: scaleX(0); } }
+@keyframes peek-choice { from { background-color: var(--ds-color-surface); border-color: var(--ds-color-border); } }
+@keyframes peek-pop { from { opacity: 0; transform: translateY(4px); } }
+@keyframes peek-enter { from { opacity: 0; transform: translateY(6px); } }
+.peek-scene-1, .peek-scene-2 { opacity: 0; }
+.peek-scene-1 { animation: peek-out 3000ms linear both; }
+.peek-progress { transform: scaleX(0.92); animation: peek-progress 2400ms linear 200ms both; }
+.peek-scene-2 { animation: peek-mid 3000ms var(--ds-ease-std) 3000ms both; }
+.peek-choice { animation: peek-choice 250ms var(--ds-ease-out) 4000ms both; }
+.peek-pass { animation: peek-pop 300ms var(--ds-ease-out) 4600ms both; }
+.peek-scene-3 { animation: peek-enter 500ms var(--ds-ease-out) 6000ms both; }
+/* Jeda must leave nothing moving inside the figure, the button's own hover fade included. */
+.peek-toggle { transition: none; }
+/* After the shorthands above, which reset play-state. */
+.peek-anim { animation-play-state: paused; }
+.peek[data-playing]:not([data-paused]) .peek-anim { animation-play-state: running; }
+
 @media (prefers-reduced-motion: reduce) {
   .exam-option, .exam-timer, .exam-section-leave { transition: none; }
   .exam-fade-in, .exam-section-enter, .exam-scrim, .exam-scrim > *, .exam-scrim[data-closing],
   .exam-settle, .exam-band { animation: none; }
+  .journey-fill, .journey-dot, .peek-anim { animation: none; }
+  .peek-toggle { display: none; }
 }

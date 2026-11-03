@@ -9,7 +9,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
  * admin layout — so a learner could sign in and never sign out. AuthProvider.logout() was already
  * wired and working; nothing rendered it.
  */
-export function AccountMenu({ initials }: { initials: string }) {
+/** `up` opens the menu above the button, for the learner sidebar where the button sits at the bottom. */
+export function AccountMenu({ initials, up = false }: { initials: string; up?: boolean }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -44,7 +45,7 @@ export function AccountMenu({ initials }: { initials: string }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+8px)] z-50 w-60 overflow-hidden rounded-base border border-border bg-surface shadow-lg"
+          className={`absolute z-50 ${up ? "bottom-[calc(100%+8px)] left-0" : "right-0 top-[calc(100%+8px)]"} w-60 overflow-hidden rounded-base border border-border bg-surface shadow-lg`}
         >
           <div className="border-b border-border px-3.5 py-3">
             <p className="truncate text-[13.5px] font-bold text-ink">{user?.name}</p>
