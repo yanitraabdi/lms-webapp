@@ -31,9 +31,9 @@ const columns: Array<{ heading: string; links: Array<{ label: string; href: stri
 export function SiteFooter() {
   return (
     <footer className="bg-bg pb-7 pt-6 text-ink-muted">
-      <div className="mx-auto grid max-w-[760px] gap-8 px-5 text-[13px] sm:px-7 md:grid-cols-[1.4fr_1fr_1fr_1fr] min-[820px]:px-0">
+      <div className="mx-auto grid max-w-6xl gap-8 px-6 text-[13px] md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div className="flex flex-col gap-3">
-          <Logo />
+          <Logo className="self-start" />
           <p className="max-w-[280px] leading-relaxed">
             Persiapan TOEFL terstruktur dalam Bahasa Indonesia. Untuk pelajar dan profesional yang
             mengejar skor terbaik.
@@ -50,7 +50,7 @@ export function SiteFooter() {
           </div>
         ))}
       </div>
-      <div className="mx-auto mt-8 flex max-w-[760px] flex-wrap justify-between gap-3 border-t border-border px-5 pt-5 text-[13px] sm:px-7 min-[820px]:px-0">
+      <div className="mx-auto mt-8 flex max-w-6xl flex-wrap justify-between gap-3 border-t border-border px-6 pt-5 text-[13px]">
         <span>© 2026 INVERTA. Hak cipta dilindungi.</span>
         <span>Dibuat di Indonesia</span>
       </div>
