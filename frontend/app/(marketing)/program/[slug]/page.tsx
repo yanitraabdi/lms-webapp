@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PublicNav } from "@/components/PublicNav";
 import { SiteFooter } from "@/components/SiteFooter";
-import { SheetPage, RunningHead, PageTitle, Lead, Chapter, Footnote, Toc, TocItem } from "@/components/ui";
+import { Footnote, Toc, TocItem } from "@/components/ui";
+import { Band } from "@/components/program/Band";
 import { EnrollCta } from "@/components/program/EnrollCta";
-import { HowItWorks } from "@/components/program/HowItWorks";
+import { BENEFITS } from "@/components/program/benefits";
 import { SyllabusParts } from "@/components/program/SyllabusParts";
-import { ItpFormat } from "@/components/program/ItpFormat";
 import { ProgramFaq } from "@/components/program/ProgramFaq";
-import { ClosingCta } from "@/components/program/ClosingCta";
 import { ProgramJsonLd } from "@/components/program/ProgramJsonLd";
 import { JourneyAnimation } from "@/components/program/JourneyAnimation";
 import { AppPeekAnimation } from "@/components/program/AppPeekAnimation";
 import { getFaq } from "@/lib/content";
+import { ITP_FORMAT, ITP_TOTAL_MINUTES, ITP_TOTAL_QUESTIONS } from "@/lib/itpFormat";
 import {
   getPublicProgram, minutesLabel, totalDurationLabel, fmtDateTime,
-  num, type PublicSession,
+  formatIdr, num, type PublicSession,
 } from "@/lib/programs";
 
 export const revalidate = 300;
@@ -50,91 +51,140 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
   const videoCount = sessions.filter((s) => s.type === "Video").length;
   const liveCount = sessions.filter((s) => s.type === "Live").length;
 
-  const facts: { dt: string; dd: string }[] = [
-    { dt: "Sesi terstruktur", dd: String(program.sessionCount) },
-    ...(videoCount > 0 ? [{ dt: "Video pembelajaran", dd: String(videoCount) }] : []),
-    ...(liveCount > 0 ? [{ dt: "Sesi live", dd: String(liveCount) }] : []),
-    { dt: "Total materi", dd: totalDurationLabel(program.totalDurationSeconds) },
+  const facts = [
+    `${program.sessionCount} sesi`,
+    videoCount > 0 && `${videoCount} video`,
+    liveCount > 0 && `${liveCount} kelas live`,
+    `${totalDurationLabel(program.totalDurationSeconds)} materi`,
+  ].filter(Boolean).join(" · ");
+
+  const parts = [
+    { title: "Video materi", body: `${videoCount} video · ${totalDurationLabel(program.totalDurationSeconds)}` },
+    { title: "Tes per sesi", body: "Wajib lulus untuk membuka sesi berikutnya" },
+    ...(liveCount > 0 ? [{ title: "Kelas live", body: `${liveCount} kelas live terjadwal` }] : []),
+    { title: "Tes akhir", body: `${ITP_TOTAL_QUESTIONS} soal · ${ITP_TOTAL_MINUTES} menit · skor prediksi` },
+  ];
+
+  const different = [
+    { title: "Tidak bisa loncat", body: "Tes di setiap sesi wajib lulus sebelum sesi berikutnya terbuka, jadi dasar Anda kuat sebelum lanjut." },
+    {
+      title: "Format seperti TOEFL ITP",
+      body: `Listening ${ITP_FORMAT.listening.questions} · Structure ${ITP_FORMAT.structure.questions} · Reading ${ITP_FORMAT.reading.questions} soal, berwaktu.`,
+    },
+    { title: "Hasil yang bisa dibuktikan", body: "Sertifikat prediksi skor dengan kode verifikasi yang bisa dicek siapa saja." },
   ];
 
   return (
     <>
       <PublicNav programId={program.id} />
       <main>
-        <ProgramJsonLd program={program} faq={faqShown} />
-        <SheetPage>
-          <div className="min-[860px]:grid min-[860px]:grid-cols-[minmax(0,1fr)_300px] min-[860px]:gap-14">
-            <div className="min-w-0">
-              <RunningHead>Program persiapan TOEFL ITP</RunningHead>
-              <PageTitle>{program.name}</PageTitle>
-              {program.summary && <Lead>{program.summary}</Lead>}
-              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 min-[560px]:grid-cols-4 min-[860px]:grid-cols-2">
-                {facts.map((f) => (
-                  <div key={f.dt}>
-                    <dt className="text-[12.5px] text-ink-muted">{f.dt}</dt>
-                    <dd className="text-[20px] font-extrabold tabular-nums text-ink">{f.dd}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              <div className="mt-8 min-[860px]:hidden">
-                <EnrollCta programId={program.id} priceIdr={program.priceIdr} />
+        <Band eyebrow="Persiapan TOEFL ITP · Bahasa Indonesia">
+          <div className="grid items-center gap-10 md:pb-8 lg:grid-cols-2 lg:gap-12">
+            <div>
+              <h1 className="mt-3 max-w-[16ch] text-[clamp(40px,5vw,64px)] font-extrabold leading-[1.04] tracking-[-0.025em] text-ink">
+                Belajar TOEFL langkah demi langkah, sampai tahu prediksi skor Anda.
+              </h1>
+              <p className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-ink-muted">
+                {program.summary ?? "Video materi, tes singkat di setiap sesi, kelas live bersama pengajar, lalu simulasi tes akhir berformat ITP dengan sertifikat prediksi skor."}
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <EnrollCta programId={program.id} className="w-full sm:w-56" />
+                <Link
+                  href="#daftar-isi"
+                  className="rounded-sm font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  Lihat isi program
+                </Link>
               </div>
-
-              <Chapter title="Tentang program ini">
-                <p className="mt-3 max-w-[65ch] whitespace-pre-line leading-relaxed text-ink-muted">{program.description}</p>
-              </Chapter>
-
-              <Chapter
-                title="Daftar isi"
-                intro="Sesi terbuka berurutan. Sesi berikutnya terbuka setelah Anda lulus tes di sesi sebelumnya."
-              >
-                <Toc label="Daftar sesi">
-                  {sessions.map((s, i) => (
-                    <TocItem
-                      key={s.id}
-                      n={i + 1}
-                      title={s.title}
-                      state="open"
-                      kind={s.type === "Live" ? "Live" : s.type === "FinalAssessment" ? "Tes akhir" : undefined}
-                      note={s.description || undefined}
-                      meta={<SessionMeta session={s} />}
-                    />
-                  ))}
-                </Toc>
-              </Chapter>
-
-              <ItpFormat />
-
-              <HowItWorks />
-
-              <ProgramFaq items={faqShown} hasMore={faqHasMore} />
-
-              <ClosingCta programId={program.id} />
-
-              {/* Prediction disclaimer: KAK 9.9.6, non-negotiable */}
-              <Footnote>
-                <strong className="text-ink">Catatan penting.</strong> Skor yang dihasilkan program ini
-                adalah <strong className="text-ink">prediksi INVERTA</strong> berdasarkan simulasi
-                internal, <strong className="text-ink">bukan skor TOEFL resmi</strong> dan tidak
-                diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik ETS.
-              </Footnote>
-
-              {/* Temporary mount for Task 3's e2e; Task 4 places these in the hero and band 3. */}
-              <div className="mt-10 flex flex-col gap-8">
-                <JourneyAnimation />
-                <AppPeekAnimation lessonTitle={sessions.find((s) => s.type === "Video")?.title} />
-              </div>
+              <p className="mt-3 text-[13.5px] text-ink-muted">Sekali bayar · akses seluruh program</p>
             </div>
-
-            <aside className="mt-10 hidden min-[860px]:mt-0 min-[860px]:block">
-              <EnrollCta programId={program.id} priceIdr={program.priceIdr} />
-            </aside>
+            <JourneyAnimation />
           </div>
-        </SheetPage>
+        </Band>
+
+        <Band id="apa-itu" title="Apa itu INVERTA" tint>
+          {program.description && (
+            <p className="mt-4 max-w-[65ch] whitespace-pre-line text-[16.5px] leading-relaxed text-ink-muted">{program.description}</p>
+          )}
+          <Columns items={parts} className="sm:grid-cols-2 lg:grid-cols-4" />
+        </Band>
+
+        <Band id="daftar-isi" title="Daftar isi program">
+          <p className="mt-2 text-[15px] tabular-nums text-ink-muted">{facts}</p>
+          <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+            <Toc label="Daftar sesi">
+              {sessions.map((s, i) => (
+                <TocItem
+                  key={s.id}
+                  n={i + 1}
+                  title={s.title}
+                  state="open"
+                  kind={s.type === "Live" ? "Live" : s.type === "FinalAssessment" ? "Tes akhir" : undefined}
+                  note={s.description || undefined}
+                  meta={<SessionMeta session={s} />}
+                />
+              ))}
+            </Toc>
+            <div className="lg:sticky lg:top-24">
+              <AppPeekAnimation lessonTitle={sessions.find((s) => s.type === "Video")?.title} />
+            </div>
+          </div>
+        </Band>
+
+        <Band title="Yang membedakan" tint>
+          <Columns items={different} className="md:grid-cols-3" />
+        </Band>
+
+        <Band title="Biaya" className="text-center">
+          <div className="mx-auto max-w-xl">
+            <p className="mt-4 text-[clamp(40px,5vw,56px)] font-extrabold leading-none tracking-[-0.025em] tabular-nums text-ink">
+              {formatIdr(program.priceIdr)}
+            </p>
+            <p className="mt-3 text-[16px] text-ink-muted">Sekali bayar, bukan langganan</p>
+            <ul className="mx-auto mt-7 inline-flex flex-col gap-2.5 text-left">
+              {BENEFITS.map((b) => (
+                <li key={b} className="flex gap-2.5 text-[16px] text-ink">
+                  <span aria-hidden="true" className="font-bold text-success">✓</span>
+                  {b}
+                </li>
+              ))}
+            </ul>
+            <EnrollCta programId={program.id} className="mx-auto mt-8 max-w-xs" />
+          </div>
+        </Band>
+
+        <ProgramFaq items={faqShown} hasMore={faqHasMore} />
+
+        {/* Prediction disclaimer: KAK 9.9.6, non-negotiable */}
+        <div className="border-t border-border bg-surface">
+          <div className="mx-auto max-w-6xl px-6 pb-10 pt-6">
+            <Footnote>
+              <strong className="text-ink">Catatan penting.</strong> Skor yang dihasilkan program ini
+              adalah <strong className="text-ink">prediksi INVERTA</strong> berdasarkan simulasi
+              internal, <strong className="text-ink">bukan skor TOEFL resmi</strong> dan tidak
+              diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik ETS.
+            </Footnote>
+          </div>
+        </div>
+
+        <ProgramJsonLd program={program} faq={faqShown} />
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+/** A row of titled columns, each under a heavy rule: a rule, never a box. */
+function Columns({ items, className }: { items: { title: string; body: string }[]; className: string }) {
+  return (
+    <ul className={`mt-8 grid gap-x-10 gap-y-8 ${className}`}>
+      {items.map((it) => (
+        <li key={it.title} className="border-t-2 border-ink pt-4">
+          <h3 className="text-[17px] font-extrabold text-ink">{it.title}</h3>
+          <p className="mt-1.5 text-[15.5px] leading-relaxed text-ink-muted">{it.body}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 

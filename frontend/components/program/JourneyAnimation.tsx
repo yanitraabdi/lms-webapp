@@ -30,7 +30,7 @@ export function JourneyAnimation() {
                 >
                   {i + 1}
                 </span>
-                <span className="leading-tight">
+                <span className="leading-tight min-[560px]:whitespace-nowrap">
                   <span className="block text-[13.5px] font-bold text-ink">{s.label}</span>
                   <span className="block text-[12px] text-ink-muted">{s.sub}</span>
                 </span>

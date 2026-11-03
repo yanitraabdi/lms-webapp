@@ -47,3 +47,20 @@ test("the path plays once and stops; the peek plays on view, pauses and replays"
   expect(await peek.evaluate(running)).toBe(0);
   await expect.poll(() => peek.getByRole("button", { name: "Putar ulang" }).count(), { timeout: 12_000 }).toBe(1);
 });
+
+test("bands in order, hero enrol above the fold on desktop and phone", async ({ page }) => {
+  for (const size of [{ width: 1280, height: 720 }, { width: 375, height: 812 }]) {
+    await page.setViewportSize(size);
+    await page.goto(`/program/${SLUG}`);
+    await expect(page.locator("h1")).toHaveText("Belajar TOEFL langkah demi langkah, sampai tahu prediksi skor Anda.");
+    await expect(page.getByRole("main").getByRole("button", { name: "Daftar sekarang" }).first()).toBeInViewport();
+  }
+  const h2 = await page.locator("main h2").allInnerTexts();
+  expect(h2.slice(0, 5)).toEqual(["Apa itu INVERTA", "Daftar isi program", "Yang membedakan", "Biaya", "Pertanyaan umum"]);
+  await expect(page.getByRole("main")).not.toContainText(/Kenapa berhasil|tes asli/);
+  await page.getByRole("link", { name: "Lihat isi program" }).click();
+  await expect(page.getByRole("list", { name: "Daftar sesi" })).toBeInViewport();
+  await expect(page.getByRole("main")).toContainText("Rp");
+  await expect(page.getByRole("main")).toContainText("bukan skor TOEFL resmi");
+  await expect(page.getByRole("list", { name: "Daftar sesi" }).getByRole("listitem")).toHaveCount(8);
+});
