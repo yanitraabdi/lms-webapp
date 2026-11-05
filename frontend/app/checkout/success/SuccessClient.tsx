@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircleIcon, AlertTriangleIcon, PageTitle, SHEET_CLASSES } from "@/components/ui";
+import { CheckCircleIcon, AlertTriangleIcon, PageTitle } from "@/components/ui";
 
 export function SuccessClient() {
   const failed = useSearchParams().get("status") === "failed";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-3 py-8 sm:px-7">
-      <div className={`w-full max-w-[520px] ${SHEET_CLASSES}`}>
+    <div className="flex min-h-screen items-center justify-center bg-bg px-6 py-8">
+      <div className="w-full max-w-[520px]">
         <span className={failed ? "text-danger" : "text-success"}>
           {failed ? <AlertTriangleIcon size={28} /> : <CheckCircleIcon size={30} />}
         </span>

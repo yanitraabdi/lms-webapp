@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Footnote, SHEET_CLASSES, PageTitle, RunningHead } from "@/components/ui";
+import { Footnote, PageTitle, RunningHead } from "@/components/ui";
 import { verifyCertificate, num, type CertificateVerification } from "@/lib/sessions";
 import { fmtDateTime } from "@/lib/programs";
 import { Logo } from "@/components/Logo";
@@ -27,6 +27,14 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
   const valid = result?.valid ?? false;
   const sections = Object.entries(result?.scaledScores ?? {});
 
+  // Mandatory on every certificate surface (GR-14).
+  const disclaimer = (
+    <Footnote>
+      {result?.disclaimer ??
+        "Skor ini adalah PREDIKSI yang diterbitkan INVERTA berdasarkan simulasi internal. Ini BUKAN skor TOEFL resmi dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik Educational Testing Service (ETS)."}
+    </Footnote>
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-bg">
       <header className="border-b border-border bg-surface">
@@ -37,53 +45,63 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
         </div>
       </header>
 
-      <main className="flex-1 px-3 py-4 sm:px-7 sm:py-8">
-        <div className={`mx-auto w-full max-w-[760px] ${SHEET_CLASSES}`}>
+      <main className="flex-1 bg-surface">
+        <div className="mx-auto w-full max-w-6xl px-6 py-8 sm:py-10">
           <RunningHead>Verifikasi sertifikat</RunningHead>
           {valid && result ? (
-            <>
-              <PageTitle>{result.recipientName}</PageTitle>
-              <p className="mt-2 text-ink-muted">{result.programName}</p>
-              <p className="mt-1 text-[13.5px] font-bold text-[#166534]">Sertifikat terverifikasi</p>
+            <div className="md:grid md:grid-cols-2 md:gap-x-12">
+              <div>
+                <PageTitle>{result.recipientName}</PageTitle>
+                <p className="mt-2 text-ink-muted">{result.programName}</p>
+                <p className="mt-1 text-[13.5px] font-bold text-[#166534]">Sertifikat terverifikasi</p>
 
-              <table className="data-table mt-6">
-                <thead>
-                  <tr>
-                    <th>Rincian</th>
-                    <th className="num">Hasil</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.totalScore != null && (
+                <table className="data-table mt-6">
+                  <thead>
                     <tr>
-                      <td>Skor prediksi TOEFL</td>
-                      <td className="num text-[20px] font-extrabold text-primary">
-                        {num(result.totalScore)}
-                        {result.predictedBand && (
-                          <span className="ml-2 text-[13px] font-normal text-ink-muted">{result.predictedBand}</span>
-                        )}
-                      </td>
+                      <th>Rincian</th>
+                      <th className="num">Hasil</th>
                     </tr>
-                  )}
-                  {sections.map(([name, value]) => (
-                    <tr key={name}>
-                      <td>{name}</td>
-                      <td className="num font-bold">{num(value)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td>Kode verifikasi</td>
-                    <td className="num break-all font-bold">{result.code}</td>
-                  </tr>
-                  {result.issuedAt && (
+                  </thead>
+                  <tbody>
+                    {result.totalScore != null && (
+                      <tr>
+                        <td>Skor prediksi TOEFL</td>
+                        <td className="num text-[20px] font-extrabold text-primary">
+                          {num(result.totalScore)}
+                          {result.predictedBand && (
+                            <span className="ml-2 text-[13px] font-normal text-ink-muted">{result.predictedBand}</span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {sections.map(([name, value]) => (
+                      <tr key={name}>
+                        <td>{name}</td>
+                        <td className="num font-bold">{num(value)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 md:mt-0">
+                <table className="data-table">
+                  <tbody>
                     <tr>
-                      <td>Tanggal terbit</td>
-                      <td className="num">{fmtDateTime(result.issuedAt)}</td>
+                      <td>Kode verifikasi</td>
+                      <td className="num break-all font-bold">{result.code}</td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </>
+                    {result.issuedAt && (
+                      <tr>
+                        <td>Tanggal terbit</td>
+                        <td className="num">{fmtDateTime(result.issuedAt)}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                {disclaimer}
+              </div>
+            </div>
           ) : (
             <>
               <PageTitle>Sertifikat tidak ditemukan</PageTitle>
@@ -91,14 +109,9 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                 Kode <strong className="break-all text-ink">{code}</strong> tidak cocok dengan sertifikat mana pun.
                 Periksa kembali penulisannya.
               </p>
+              {disclaimer}
             </>
           )}
-
-          {/* Mandatory on every certificate surface (GR-14). */}
-          <Footnote>
-            {result?.disclaimer ??
-              "Skor ini adalah PREDIKSI yang diterbitkan INVERTA berdasarkan simulasi internal. Ini BUKAN skor TOEFL resmi dan tidak diterbitkan oleh ETS. TOEFL adalah merek dagang terdaftar milik Educational Testing Service (ETS)."}
-          </Footnote>
         </div>
       </main>
     </div>
