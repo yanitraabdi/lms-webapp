@@ -5,7 +5,7 @@ import { JOURNEY_STEPS } from "@/components/program/journey-steps";
 export function AuthBrandPanel() {
   return (
     <div className="flex h-full w-full max-w-[460px] flex-col justify-center gap-10 text-white">
-      <Logo variant="white" height="h-9" />
+      <Logo variant="white" height="h-9" className="self-start" />
       <p className="text-[32px] font-extrabold leading-[1.15] tracking-[-0.02em]">
         Belajar TOEFL langkah demi langkah, sampai tahu prediksi skor Anda.
       </p>

@@ -10,6 +10,20 @@ test("footer logo keeps its aspect ratio", async ({ page }) => {
   expect(Math.abs(w / h - nw / nh)).toBeLessThan(0.05);
 });
 
+test("sign-in logos keep their aspect ratio", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/login");
+  const imgs = page.locator("img[alt='INVERTA']");
+  await expect(imgs.first()).toBeVisible();
+  const ratios = await imgs.evaluateAll(async (els) => {
+    await Promise.all((els as HTMLImageElement[]).map((el) =>
+      el.complete && el.naturalWidth > 0 ? null : new Promise((r) => { el.onload = r; })));
+    return (els as HTMLImageElement[]).map((el) => ({ box: el.clientWidth / el.clientHeight, nat: el.naturalWidth / el.naturalHeight }));
+  });
+  expect(ratios.length).toBeGreaterThan(0);
+  for (const r of ratios) expect(Math.abs(r.box - r.nat)).toBeLessThan(0.05);
+});
+
 test("anonymous visitor sees one enrol label in nav and hero, nav enrol goes to login", async ({ page }) => {
   await page.goto(`/program/${SLUG}`);
   await expect(page.getByRole("button", { name: "Masuk & daftar" })).toHaveCount(0);
