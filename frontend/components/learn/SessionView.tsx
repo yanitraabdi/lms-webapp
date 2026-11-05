@@ -136,7 +136,7 @@ export function SessionView({
           <span className="text-[12.5px] text-ink-subtle">Sesi {num(s.orderIndex)}</span>
         </div>
       </header>
-      <SheetPage>
+      <SheetPage focus>
         <div className="flex flex-col gap-5">{body}</div>
       </SheetPage>
     </div>
@@ -144,7 +144,7 @@ export function SessionView({
 }
 
 function Wrap({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
-  return embedded ? <>{children}</> : <SheetPage>{children}</SheetPage>;
+  return embedded ? <>{children}</> : <SheetPage focus>{children}</SheetPage>;
 }
 
 function Mark({ state }: { state: "done" | "half" | "none" }) {

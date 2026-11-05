@@ -5,6 +5,9 @@ import type { Page } from "@playwright/test";
 
 type Row = [path: string, finalPath?: string];
 
+// Pages still on SHEET_CLASSES (plus every /admin* page, below); Tasks 4 and 5 remove these entries.
+const CARD_PENDING = new Set(["/login", "/register", "/forgot-password", "/verify/UNKNOWN-CODE"]);
+
 async function checkPage(page: Page, [path, finalPath = path]: Row, anonymous = false) {
   const errors: string[] = [];
   // Anonymous visitors get one expected 401 from the silent session-refresh bootstrap; nothing else is tolerated.
@@ -20,6 +23,12 @@ async function checkPage(page: Page, [path, finalPath = path]: Row, anonymous = 
   // Compare with the configured viewport: under mobile emulation innerWidth itself grows with overflowing content.
   const vw = page.viewportSize()!.width;
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(vw);
+  // The old floating "sheet" card (SHEET_CLASSES) must not come back on any live page.
+  if (!CARD_PENDING.has(path) && !path.startsWith("/admin")) {
+    const cards = await page.evaluate(() =>
+      [...document.querySelectorAll("body *")].filter((el) => getComputedStyle(el).boxShadow.includes("-18px")).length);
+    expect(cards).toBe(0);
+  }
 }
 
 const PUBLIC: Row[] = [

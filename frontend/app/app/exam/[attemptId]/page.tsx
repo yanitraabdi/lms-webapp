@@ -146,7 +146,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
   if (load.isError) {
     // The server clock keeps running, so a failed reload must be retryable in place.
     return (
-      <SheetPage>
+      <SheetPage focus>
         <ErrorState
           title="Tes tidak tersedia"
           message={loadMessage(load.error, "Gagal memuat tes.")}
@@ -173,7 +173,7 @@ function Exam({ token, attemptId }: { token: string; attemptId: string }) {
         <WarningOverlay strikes={num(warning.strikes)} limit={num(warning.strikeLimit)} onClose={() => setWarning(null)} />
       )}
 
-      <SheetPage>
+      <SheetPage focus>
         {running ? (
           <Sitting
             token={token}
