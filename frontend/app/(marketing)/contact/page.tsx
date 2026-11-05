@@ -13,11 +13,15 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <PublicShell>
-      <RunningHead>Kontak</RunningHead>
-      <PageTitle>Hubungi kami</PageTitle>
-      <Lead>Pertanyaan soal program, pembayaran, atau kebutuhan tim? Kirim pesan.</Lead>
-      <div className="mt-8 max-w-xl">
-        <ContactForm />
+      <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+        <div>
+          <RunningHead>Kontak</RunningHead>
+          <PageTitle>Hubungi kami</PageTitle>
+          <Lead>Pertanyaan soal program, pembayaran, atau kebutuhan tim? Kirim pesan.</Lead>
+        </div>
+        <div className="max-w-xl md:pt-2">
+          <ContactForm />
+        </div>
       </div>
     </PublicShell>
   );

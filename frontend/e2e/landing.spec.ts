@@ -81,3 +81,16 @@ test("on a phone the path waits below the fold, then plays once in view", async 
   await expect.poll(() => journey.evaluate(running)).toBeGreaterThan(0);
   await expect.poll(() => journey.evaluate(running), { timeout: 6_000 }).toBe(0);
 });
+
+test("legal pages have a contents list on desktop and none on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/legal/terms");
+  const toc = page.getByRole("navigation", { name: "Daftar isi" });
+  await expect(toc).toBeVisible();
+  const first = toc.getByRole("link").first();
+  const href = await first.getAttribute("href");
+  await first.click();
+  await expect(page.locator(href!)).toBeInViewport();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(toc).toBeHidden();
+});

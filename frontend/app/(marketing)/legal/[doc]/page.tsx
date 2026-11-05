@@ -106,17 +106,23 @@ export default async function LegalDocPage({ params }: { params: Promise<{ doc: 
       <PageTitle>{d.title}</PageTitle>
       <Lead>{d.intro}</Lead>
 
-      <nav aria-label="Daftar isi" className="mt-6 flex flex-col gap-1.5 text-[13.5px]">
-        {d.sections.map((s, i) => (
-          <a key={i} href={`#sec-${i}`} className="rounded-sm text-ink-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{s.heading}</a>
-        ))}
-      </nav>
+      <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-12">
+        <nav aria-label="Daftar isi" className="hidden lg:block">
+          <div className="sticky top-24 mt-12 flex flex-col gap-1.5 border-t border-ink pt-4 text-[13.5px]">
+            {d.sections.map((s, i) => (
+              <a key={i} href={`#sec-${i}`} className="rounded-sm text-ink-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{s.heading}</a>
+            ))}
+          </div>
+        </nav>
 
-      {d.sections.map((s, i) => (
-        <Chapter key={i} id={`sec-${i}`} title={s.heading}>
-          <p className="mt-3 max-w-[65ch] leading-relaxed text-ink-muted">{s.body}</p>
-        </Chapter>
-      ))}
+        <div className="max-w-[70ch]">
+          {d.sections.map((s, i) => (
+            <Chapter key={i} id={`sec-${i}`} title={s.heading}>
+              <p className="mt-3 leading-relaxed text-ink-muted">{s.body}</p>
+            </Chapter>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-12 flex flex-wrap gap-2 border-t border-ink pt-4 text-[13px]">
         {Object.entries(DOCS).map(([slug, dd]) => (
