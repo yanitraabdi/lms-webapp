@@ -100,6 +100,8 @@ export default function AccountPage() {
         <PageTitle>Profil & tagihan</PageTitle>
         <Lead>Kelola data akun dan lihat pembelian Anda.</Lead>
 
+        <div className="lg:grid lg:grid-cols-2 lg:gap-10">
+        <div className="min-w-0">
         {/* ---- profile ---- */}
         <Chapter title="Profil">
 
@@ -131,7 +133,7 @@ export default function AccountPage() {
         {/* ---- password ---- */}
         <Chapter title="Kata sandi">
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-4">
             <Field label="Kata sandi saat ini">
               <input type="password" className={inputCls} value={current} onChange={(e) => setCurrent(e.target.value)} />
             </Field>
@@ -155,7 +157,9 @@ export default function AccountPage() {
             {pwErr && <span className="text-[12.5px] font-semibold text-danger">{pwErr}</span>}
           </div>
         </Chapter>
+        </div>
 
+        <div className="min-w-0">
         {/* ---- purchase ---- */}
         <Chapter title="Tagihan" intro="INVERTA dibayar sekali untuk seluruh program, bukan langganan bulanan.">
 
@@ -197,6 +201,8 @@ export default function AccountPage() {
             </div>
           )}
         </Chapter>
+        </div>
+        </div>
       </SheetPage>
     </LearnerShell>
   );
