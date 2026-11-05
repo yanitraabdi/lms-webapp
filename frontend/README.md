@@ -37,15 +37,19 @@ npm run generate:api # regenerate api-client/schema.ts from backend OpenAPI (nee
 
 Playwright suite in `e2e/`, run against its own Docker Compose project (`inverta-e2e`) on ports 3100 (frontend), 8180 (API) and 5532 (Postgres). It never touches the deployed stack and never reads the root `.env` (config is `../e2e.env` and `../docker-compose.e2e.yml`).
 
-Build and start a fresh stack (wipes the e2e volume):
+**Everyday runs: no Docker builds.** The Docker VM is shared with other projects, and rebuilding images on every test round starves them. `e2e:dev` starts only the e2e Postgres and API containers (building them once if no image exists), serves the frontend with `next dev` on :3100, runs the suite, then stops the containers:
+
+```bash
+npm run e2e:dev
+npm run e2e:dev -- e2e/landing.spec.ts   # one file
+```
+
+While iterating, keep a `next dev --port 3100` running yourself (with `API_INTERNAL_URL=http://localhost:8180`). `e2e:dev` reuses it, and edits are live with no rebuild.
+
+**Production check: build once, at the end.** Before merging or deploying, build and start a fresh stack (wipes the e2e volume), then run the suite against the built image:
 
 ```bash
 npm run e2e:up
-```
-
-Run the suite:
-
-```bash
 npm run e2e
 ```
 

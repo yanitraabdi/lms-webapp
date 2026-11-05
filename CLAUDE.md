@@ -93,6 +93,10 @@ dotnet ef migrations script --idempotent    # review SQL
 cd frontend && npm install && npm run dev
 npm run generate:api      # regenerate client from backend OpenAPI
 
+# E2E: everyday = no Docker builds (next dev + e2e API/Postgres); build once at the end
+cd frontend && npm run e2e:dev
+cd frontend && npm run e2e:up && npm run e2e   # production check before merge/deploy
+
 # Local full stack
 docker compose up -d --build
 # Tunnel-ready deploy (single origin) — see DEPLOY.md
