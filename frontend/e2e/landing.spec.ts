@@ -32,6 +32,13 @@ test("anonymous visitor sees one enrol label in nav and hero, nav enrol goes to 
   await page.waitForURL(/\/login\?next=%2Fprogram%2Ftoefl-preparation/);
 });
 
+test("about page describes the TOEFL programme, with the prediction note", async ({ page }) => {
+  await page.goto("/about");
+  await expect(page.locator("h1")).toContainText("TOEFL");
+  await expect(page.getByRole("main")).toContainText("bukan skor TOEFL resmi");
+  await expect(page.getByRole("main")).not.toContainText(/\bAI\b|Basic ke Advanced/); // archived AI Academy copy
+});
+
 test("other public pages keep Daftar gratis", async ({ page }) => {
   await page.goto("/about");
   await expect(page.getByRole("banner").getByRole("link", { name: "Daftar gratis" })).toBeVisible();
