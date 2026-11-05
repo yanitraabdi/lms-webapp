@@ -122,9 +122,20 @@ function ProgramDashboard({ token, enrollment }: { token: string; enrollment: En
   const next = data.sessions.find((s) => s.id === data.nextSessionId);
 
   return (
-    <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-8">
-      {/* One DOM copy: below lg the next-up panel is ordered first, from lg up it sits in the aside. */}
-      <div className="order-2 lg:order-none">
+    <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:grid-rows-[auto_1fr] lg:gap-x-8">
+      {/* DOM order = phone reading order (next-up first); from lg the grid moves it into the right column. */}
+      {next && (
+        <div className="mt-6 lg:col-start-2 lg:row-start-1 lg:mt-8">
+          <NextUpPanel
+            title={next.title}
+            href={nextHref(next, data.programId)}
+            type={next.type}
+            partsDone={data.nextSessionPartsDone == null ? null : num(data.nextSessionPartsDone)}
+            partCount={data.nextSessionPartCount == null ? null : num(data.nextSessionPartCount)}
+          />
+        </div>
+      )}
+      <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
         <ProgressHeader program={data} />
         <Chapter title="Daftar isi">
           <Toc label="Daftar sesi">
@@ -142,23 +153,10 @@ function ProgramDashboard({ token, enrollment }: { token: string; enrollment: En
           </Toc>
         </Chapter>
       </div>
-      <aside className="contents lg:block">
-        {next && (
-          <div className="order-1 mt-6 lg:order-none lg:mt-8">
-            <NextUpPanel
-              title={next.title}
-              href={nextHref(next, data.programId)}
-              type={next.type}
-              partsDone={data.nextSessionPartsDone == null ? null : num(data.nextSessionPartsDone)}
-              partCount={data.nextSessionPartCount == null ? null : num(data.nextSessionPartCount)}
-            />
-          </div>
-        )}
-        <div className="order-3 lg:order-none">
-          <SessionTestHistory token={token} programId={data.programId} continueHref={next ? nextHref(next, data.programId) : null} />
-          <FinalResultCard certificate={programCerts[0]} sessionsRemaining={total - completed} status={certs.status} />
-          <CertificateCards certificates={programCerts} />
-        </div>
+      <aside className="lg:col-start-2 lg:row-start-2">
+        <SessionTestHistory token={token} programId={data.programId} continueHref={next ? nextHref(next, data.programId) : null} />
+        <FinalResultCard certificate={programCerts[0]} sessionsRemaining={total - completed} status={certs.status} />
+        <CertificateCards certificates={programCerts} />
       </aside>
     </div>
   );
