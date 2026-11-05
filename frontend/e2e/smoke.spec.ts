@@ -6,7 +6,7 @@ import type { Page } from "@playwright/test";
 type Row = [path: string, finalPath?: string];
 
 // Pages still on SHEET_CLASSES (plus every /admin* page, below); Tasks 4 and 5 remove these entries.
-const CARD_PENDING = new Set(["/login", "/register", "/forgot-password", "/verify/UNKNOWN-CODE"]);
+const CARD_PENDING = new Set(["/verify/UNKNOWN-CODE"]);
 
 async function checkPage(page: Page, [path, finalPath = path]: Row, anonymous = false) {
   const errors: string[] = [];
