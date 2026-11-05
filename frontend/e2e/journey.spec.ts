@@ -47,6 +47,12 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     expect(ids).toHaveLength(8);
     await expectToc(page, 0, 1);
     await expect(page.getByRole("region", { name: "Berikutnya" })).toBeVisible();
+    // Reading order matches the phone layout: next-up comes before the session list in the DOM.
+    const nextFirst = await page.getByRole("region", { name: "Berikutnya" }).evaluate((el) =>
+      !!(el.compareDocumentPosition(document.querySelector('[aria-label="Daftar sesi"]')!) & Node.DOCUMENT_POSITION_FOLLOWING));
+    expect(nextFirst).toBe(true);
+    const [nb, lb] = [await page.getByRole("region", { name: "Berikutnya" }).boundingBox(), await page.getByRole("list", { name: "Daftar sesi" }).boundingBox()];
+    expect(nb!.x).toBeGreaterThan(lb!.x + lb!.width); // desktop: still in the right column
     await expect(page.getByRole("link", { name: "Lanjutkan belajar" })).toHaveAttribute("href", new RegExp(ids[0]));
     await expect(page.getByRole("link", { name: /^Lanjutkan/ })).toHaveCount(1);
   });

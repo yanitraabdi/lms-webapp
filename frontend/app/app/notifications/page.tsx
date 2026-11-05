@@ -149,13 +149,13 @@ function Preferences({ token }: { token: string }) {
           <>
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 border-b border-ink pb-2 text-[12.5px] font-semibold text-ink-muted">
               <span>Kategori</span>
-              {channels.map((c) => <span key={c} className="w-[72px] text-center">{CHANNEL_LABELS[c]}</span>)}
+              {channels.map((c) => <span key={c} className="w-[92px] whitespace-nowrap text-center">{CHANNEL_LABELS[c]}</span>)}
             </div>
             {CATEGORY_ORDER.map((cat) => (
               <div key={cat} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 border-b border-surface-2 py-3.5 last:border-0">
                 <span className="text-sm font-semibold text-ink">{CATEGORY_LABELS[cat]}</span>
                 {channels.map((ch) => (
-                  <div key={ch} className="flex w-[72px] justify-center">
+                  <div key={ch} className="flex w-[92px] justify-center">
                     <Switch
                       checked={byKey.get(`${cat}|${ch}`) ?? false}
                       onCheckedChange={() => toggle(cat, ch)}
