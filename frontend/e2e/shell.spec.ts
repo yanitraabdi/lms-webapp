@@ -45,3 +45,15 @@ test("long name does not overflow at 375px", async ({ page }) => {
   await page.getByRole("button", { name: "Buka menu" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
+
+test("desktop: account sections sit side by side, no horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await signIn(page, l.email, l.password);
+  await page.goto("/app/account");
+  const a = await page.getByRole("heading", { name: "Profil", exact: true }).boundingBox();
+  const b = await page.getByRole("heading", { name: "Tagihan", exact: true }).boundingBox();
+  expect(a && b).toBeTruthy();
+  expect(Math.abs(a!.x - b!.x)).toBeGreaterThan(100);
+  expect(a!.y < b!.y + b!.height && b!.y < a!.y + a!.height).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+});

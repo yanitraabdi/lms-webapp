@@ -1,5 +1,6 @@
 import { api, ADMIN, login } from "./support/api";
 import { expectNoSeriousA11y } from "./support/axe";
+import { expectNoCard } from "./support/card";
 import { correctAnswers, psql } from "./support/db";
 import { expect, gotoReady, newLearner, signIn, test } from "./support/learner";
 import type { Page } from "@playwright/test";
@@ -76,6 +77,7 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     const [, assessment1] = part(ids[0], "Test");
     await gotoReady(page, `/app/session/${ids[0]}`, page.getByRole("heading", { name: "Tes sesi" }));
     const start = page.getByRole("button", { name: "Mulai tes" });
+    await expectNoCard(page);
     if (await start.count()) await start.click();
     await answerFromKey(page, correctAnswers(assessment1));
     await page.getByRole("button", { name: "Kirim jawaban" }).click();
@@ -125,6 +127,7 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     }
     await expect(page.locator("#exam-result-title")).toHaveText("Tes selesai", { timeout: 60_000 });
     await expect(page.getByText("Skor prediksi TOEFL")).toBeVisible();
+    await expectNoCard(page);
     await expect(page.locator("main, body").getByText(NOT_OFFICIAL).first()).toBeVisible();
     await expect(page.locator("p.sr-only").first()).toHaveText(/^\d+$/);
   });
@@ -143,6 +146,8 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
       expect(b.x + b.width, name).toBeLessThanOrEqual(card.x + card.width + 0.5);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+    await gotoReady(page, `/app/program/${psql(`SELECT id FROM programs WHERE slug = '${SLUG}'`)}`, page.locator("h1"));
+    await expectNoCard(page);
     await gotoReady(page, "/app/certificates", page.getByRole("heading", { name: "Sertifikat", exact: true }));
     await expect(page.getByText("Sertifikat prediksi", { exact: true })).toHaveCount(1);
     code = (await page.getByText(/^Kode: /).innerText()).replace("Kode: ", "").trim();
@@ -153,6 +158,7 @@ test("learner journey: enrol, learn, final assessment, verified certificate", as
     await page.goto(`/verify/${code}`);
     await expect(page.getByText("Sertifikat terverifikasi")).toBeVisible();
     await expect(page.getByRole("heading", { name: learner.name })).toBeVisible();
+    await expectNoCard(page);
     await expect(page.getByText(NOT_OFFICIAL).first()).toBeVisible();
     await expectNoSeriousA11y(page); // smoke only reaches the invalid-code state
 

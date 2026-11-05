@@ -10,6 +10,20 @@ test("footer logo keeps its aspect ratio", async ({ page }) => {
   expect(Math.abs(w / h - nw / nh)).toBeLessThan(0.05);
 });
 
+test("sign-in logos keep their aspect ratio", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/login");
+  const imgs = page.locator("img[alt='INVERTA']");
+  await expect(imgs.first()).toBeVisible();
+  const ratios = await imgs.evaluateAll(async (els) => {
+    await Promise.all((els as HTMLImageElement[]).map((el) =>
+      el.complete && el.naturalWidth > 0 ? null : new Promise((r) => { el.onload = r; })));
+    return (els as HTMLImageElement[]).map((el) => ({ box: el.clientWidth / el.clientHeight, nat: el.naturalWidth / el.naturalHeight }));
+  });
+  expect(ratios.length).toBeGreaterThan(0);
+  for (const r of ratios) expect(Math.abs(r.box - r.nat)).toBeLessThan(0.05);
+});
+
 test("anonymous visitor sees one enrol label in nav and hero, nav enrol goes to login", async ({ page }) => {
   await page.goto(`/program/${SLUG}`);
   await expect(page.getByRole("button", { name: "Masuk & daftar" })).toHaveCount(0);
@@ -80,4 +94,32 @@ test("on a phone the path waits below the fold, then plays once in view", async 
   await journey.scrollIntoViewIfNeeded();
   await expect.poll(() => journey.evaluate(running)).toBeGreaterThan(0);
   await expect.poll(() => journey.evaluate(running), { timeout: 6_000 }).toBe(0);
+});
+
+test("legal pages have a contents list on desktop and none on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/legal/terms");
+  const toc = page.getByRole("navigation", { name: "Daftar isi" });
+  await expect(toc).toBeVisible();
+  const first = toc.getByRole("link").first();
+  const href = await first.getAttribute("href");
+  await first.click();
+  await expect(page.locator(href!)).toBeInViewport();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(toc).toBeHidden();
+});
+
+test("shell-container public pages line up with the nav logo", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/legal/terms");
+  const logo = await page.locator("header img[alt='INVERTA']").first().boundingBox();
+  const h1 = await page.locator("h1").first().boundingBox();
+  expect(Math.abs(h1!.x - logo!.x)).toBeLessThanOrEqual(1);
+});
+
+test("sign-in page has one main landmark containing the heading", async ({ page }) => {
+  await page.goto("/login");
+  const main = page.getByRole("main");
+  await expect(main).toHaveCount(1);
+  await expect(main.getByRole("heading", { level: 1 })).toHaveCount(1);
 });

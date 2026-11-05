@@ -1,9 +1,11 @@
 import { expectNoSeriousA11y } from "./support/axe";
+import { expectNoCard } from "./support/card";
 import { ADMIN } from "./support/api";
 import { expect, newLearner, signIn, test } from "./support/learner";
 import type { Page } from "@playwright/test";
 
 type Row = [path: string, finalPath?: string];
+
 
 async function checkPage(page: Page, [path, finalPath = path]: Row, anonymous = false) {
   const errors: string[] = [];
@@ -20,6 +22,7 @@ async function checkPage(page: Page, [path, finalPath = path]: Row, anonymous = 
   // Compare with the configured viewport: under mobile emulation innerWidth itself grows with overflowing content.
   const vw = page.viewportSize()!.width;
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(vw);
+  await expectNoCard(page);
 }
 
 const PUBLIC: Row[] = [

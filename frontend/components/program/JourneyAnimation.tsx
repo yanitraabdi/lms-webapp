@@ -1,14 +1,7 @@
 "use client";
 
+import { JOURNEY_STEPS as STEPS } from "./journey-steps";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-
-const STEPS = [
-  { label: "Video", sub: "materi" },
-  { label: "Tes sesi", sub: "lulus = lanjut" },
-  { label: "Kelas live", sub: "bersama pengajar" },
-  { label: "Tes akhir", sub: "format ITP" },
-  { label: "Sertifikat", sub: "prediksi skor" },
-];
 
 // Line runs dot-centre to dot-centre: vertical under 560px (rows), horizontal above (columns).
 const line =

@@ -59,7 +59,7 @@ function IntroPage({ token, sessionId }: { token: string; sessionId: string }) {
   }
   if (meta.isError || !meta.data) {
     return (
-      <SheetPage>
+      <SheetPage focus>
         <ErrorState
           title="Tes tidak tersedia"
           message="Selesaikan sesi sebelumnya terlebih dahulu."
@@ -69,7 +69,7 @@ function IntroPage({ token, sessionId }: { token: string; sessionId: string }) {
     );
   }
   return (
-    <SheetPage>
+    <SheetPage focus>
       <Intro test={meta.data} onBegin={begin} busy={busy} error={error} />
     </SheetPage>
   );

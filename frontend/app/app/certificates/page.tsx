@@ -46,7 +46,7 @@ export default function CertificatesPage() {
             action={<Link href="/app/dashboard" className="text-sm font-bold text-primary hover:underline">Ke dasbor</Link>}
           />
         ) : (
-          <div className="mt-8 flex flex-col gap-4">
+          <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
             {q.data.map((c) => <CertificateCard key={c.id} cert={c} token={accessToken} />)}
           </div>
         )}
@@ -78,7 +78,7 @@ function CertificateCard({ cert, token }: { cert: ProgramCertificate; token: str
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-5">
+    <div className="border-t border-ink pt-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <span className="text-[13.5px] font-semibold text-ink-muted">Sertifikat prediksi</span>

@@ -36,7 +36,7 @@ export default function StudentProgramPage() {
 
   return (
     <LearnerShell>
-      <SheetPage wide>
+      <SheetPage>
         {q.isPending ? (
           <div className="flex min-h-[240px] items-center justify-center"><Spinner size={24} /></div>
         ) : q.isError ? (

@@ -30,14 +30,14 @@ export default async function HelpPage() {
         Temukan jawaban cepat. Tidak menemukan yang Anda cari? <Link href="/contact" className="font-bold text-primary hover:underline">Hubungi kami</Link>.
       </Lead>
 
-      <dl className="mt-8 flex flex-col gap-3">
-          {categories.map((c) => (
-            <div key={c.title}>
-              <dt className="font-bold text-ink">{c.title}</dt>
-              <dd className="max-w-[60ch] text-ink-muted">{c.body}</dd>
-            </div>
-          ))}
-        </dl>
+      <dl className="mt-8 grid gap-6 md:grid-cols-3">
+        {categories.map((c) => (
+          <div key={c.title} className="border-t border-border pt-3">
+            <dt className="font-bold text-ink">{c.title}</dt>
+            <dd className="max-w-[60ch] text-ink-muted">{c.body}</dd>
+          </div>
+        ))}
+      </dl>
 
       <Chapter title="Pertanyaan umum">
         <div className="mt-4">
