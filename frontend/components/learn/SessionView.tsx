@@ -124,9 +124,9 @@ export function SessionView({
   if (embedded) return <div className="flex flex-col gap-5">{body}</div>;
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex h-[58px] max-w-4xl items-center justify-between gap-3 px-6">
+        <div className="mx-auto flex h-[58px] max-w-3xl items-center justify-between gap-3 px-4 sm:px-8">
           <Link
             href={`/app/program/${s.programId}`}
             className="inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-muted hover:text-ink"

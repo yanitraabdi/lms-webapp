@@ -108,3 +108,18 @@ test("legal pages have a contents list on desktop and none on phones", async ({ 
   await page.setViewportSize({ width: 375, height: 812 });
   await expect(toc).toBeHidden();
 });
+
+test("shell-container public pages line up with the nav logo", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/legal/terms");
+  const logo = await page.locator("header img[alt='INVERTA']").first().boundingBox();
+  const h1 = await page.locator("h1").first().boundingBox();
+  expect(Math.abs(h1!.x - logo!.x)).toBeLessThanOrEqual(1);
+});
+
+test("sign-in page has one main landmark containing the heading", async ({ page }) => {
+  await page.goto("/login");
+  const main = page.getByRole("main");
+  await expect(main).toHaveCount(1);
+  await expect(main.getByRole("heading", { level: 1 })).toHaveCount(1);
+});

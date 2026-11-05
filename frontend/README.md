@@ -44,7 +44,9 @@ npm run e2e:dev
 npm run e2e:dev -- e2e/landing.spec.ts   # one file
 ```
 
-While iterating, keep a `next dev --port 3100` running yourself (with `API_INTERNAL_URL=http://localhost:8180`). `e2e:dev` reuses it, and edits are live with no rebuild.
+While iterating, keep a `next dev --port 3100` running yourself (with `API_INTERNAL_URL=http://localhost:8180`). `e2e:dev` reuses it, and edits are live with no rebuild. Don't run another `next dev` (e.g. `npm run dev` on :3000) at the same time: both write to `.next`.
+
+After backend changes, run `npm run e2e:up` once: `e2e:dev` reuses existing images and keeps the e2e database.
 
 **Production check: build once, at the end.** Before merging or deploying, build and start a fresh stack (wipes the e2e volume), then run the suite against the built image:
 

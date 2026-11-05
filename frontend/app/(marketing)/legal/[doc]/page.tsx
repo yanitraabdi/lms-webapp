@@ -107,6 +107,7 @@ export default async function LegalDocPage({ params }: { params: Promise<{ doc: 
       <Lead>{d.intro}</Lead>
 
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-12">
+        {/* mt-12 below must match Chapter's top margin in components/ui/Page.tsx */}
         <nav aria-label="Daftar isi" className="hidden lg:block">
           <div className="sticky top-24 mt-12 flex flex-col gap-1.5 border-t border-ink pt-4 text-[13.5px]">
             {d.sections.map((s, i) => (

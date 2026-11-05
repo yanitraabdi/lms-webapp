@@ -36,7 +36,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex h-[58px] max-w-6xl items-center gap-2.5 px-6">
           <Link href="/">

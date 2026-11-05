@@ -11,9 +11,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <aside className="hidden bg-ink px-12 lg:flex lg:items-center lg:justify-center">
         <AuthBrandPanel />
       </aside>
-      <div className="flex min-h-screen items-center justify-center bg-surface px-5 py-10 sm:px-8">
+      <main className="flex min-h-screen items-center justify-center bg-surface px-5 py-10 sm:px-8">
         <div className="w-full max-w-[400px]">{children}</div>
-      </div>
+      </main>
     </div>
   );
 }
