@@ -201,8 +201,28 @@ if (app.Services.GetRequiredService<BillingOptions>().IsDev)
 // Integration tests (WebApplicationFactory) leave this off, so /health needs no database.
 if (app.Configuration.GetValue<bool>("RunMigrations"))
 {
-    using var scope = app.Services.CreateScope();
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+    // After a Docker Desktop restart the containers come up together, ignoring depends_on, so the
+    // database may not accept connections yet: retry for ~60s, then exit so `restart:` takes over.
+    // (Letting the exception escape once left the process hung, listening on nothing.)
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+            break;
+        }
+        catch (Exception ex) when (attempt < 30)
+        {
+            app.Logger.LogWarning("Database not ready (attempt {Attempt}/30): {Message}", attempt, ex.Message);
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogCritical(ex, "Database unreachable after 30 attempts; exiting so the container restarts.");
+            Environment.Exit(1);
+        }
+    }
 }
 
 // Seed a sample curriculum (idempotent) when enabled (docker-compose dev).
