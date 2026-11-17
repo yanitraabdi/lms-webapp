@@ -151,8 +151,8 @@ export function totalDurationLabel(seconds: number | string): string {
   return m === 0 ? `${h} jam` : `${h} jam ${m} menit`;
 }
 
-export function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("id-ID", {
+export function fmtDateTime(iso: string, locale = "id-ID"): string {
+  return new Date(iso).toLocaleString(locale, {
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 }
