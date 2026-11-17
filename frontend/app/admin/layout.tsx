@@ -78,6 +78,9 @@ function AdminShell({ children }: { children: ReactNode }) {
           );
         })}
         <div className="flex-1" />
+        <Link href="/app/account" className="rounded-lg px-3 py-2 text-[12.5px] font-semibold text-white/70 hover:bg-white/5">
+          Account &amp; password
+        </Link>
         <button
           type="button"
           onClick={logout}

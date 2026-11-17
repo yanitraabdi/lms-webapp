@@ -28,7 +28,7 @@ Docker network. No public API hostname, no CORS, no domain baked into the bundle
 
 | Var | Purpose |
 |-----|---------|
-| `ADMIN_PASSWORD` | SuperAdmin password (replaces the well-known dev default). **Required.** |
+| `ADMIN_PASSWORD` | SuperAdmin password, used **only** on the first start of a new database (no well-known default in Production — the API refuses to start without it then). Afterwards change it in the app (**Profil & tagihan**) and delete it from `.env`. |
 | `MEDIA_SIGNING_KEY` | HMAC key for signed media (listening audio) URLs (replaces the well-known dev default). **Required.** |
 | `PUBLIC_SITE_URL` | Public origin for sitemap/robots/canonical, e.g. `https://academy.example.com`. Optional. |
 | `FRONTEND_PORT` | Host port the frontend is published on (default `3001`). The tunnel binds this. |
@@ -234,7 +234,7 @@ curl -I https://academy.example.com/
 Sign in to `/login`, then visit `/admin` with:
 
 - **Email:** `admin@academy.local`
-- **Password:** value of `ADMIN_PASSWORD` in `.env`
+- **Password:** the `ADMIN_PASSWORD` you set for the first start, until you change it in the app (**Profil & tagihan** → change password). Changing `.env` later does not change the account.
 
 ## Notes & caveats
 
