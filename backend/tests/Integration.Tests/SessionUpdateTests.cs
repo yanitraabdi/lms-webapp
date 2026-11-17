@@ -54,7 +54,7 @@ public class SessionUpdateTests(AuthApiFactory factory) : IClassFixture<AuthApiF
     public async Task An_edit_cannot_move_the_session()
     {
         // The live session holds order 2. Sending 2 for the video used to collide with
-        // UNIQUE(program_id, order_index) and fail as "Urutan sesi bentrok".
+        // UNIQUE(program_id, order_index) and fail as "Session order conflict".
         var c = await Seed();
 
         var res = await Put(c, c.VideoId, Body("Video", "Sesi video", orderIndex: 2, asset: "sample", duration: 900));

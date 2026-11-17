@@ -12,7 +12,7 @@ import {
 
 const STATUSES = ["", "PendingPayment", "Active", "Completed", "Revoked"] as const;
 const STATUS_LABEL: Record<string, string> = {
-  PendingPayment: "Menunggu bayar", Active: "Aktif", Completed: "Selesai", Revoked: "Dicabut",
+  PendingPayment: "Awaiting payment", Active: "Active", Completed: "Completed", Revoked: "Revoked",
 };
 
 export default function AdminEnrollmentsPage() {
@@ -46,12 +46,12 @@ export default function AdminEnrollmentsPage() {
   });
 
   async function revoke(e: AdminEnrollment) {
-    if (!token || !confirm(`Cabut akses ${e.userName} dari ${e.programName}?\n\nProgres peserta TIDAK dihapus.`)) return;
+    if (!token || !confirm(`Revoke ${e.userName}'s access to ${e.programName}?\n\nThe learner's progress is NOT deleted.`)) return;
     try {
       await revokeEnrollment(token, e.id);
       qc.invalidateQueries({ queryKey: ["admin-enrollments"] });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal mencabut akses.");
+      alert(err instanceof Error ? err.message : "Couldn't revoke access.");
     }
   }
 
@@ -59,40 +59,40 @@ export default function AdminEnrollmentsPage() {
   // be resolved in the learner's favour. This reuses the grant endpoint, which returns the SAME
   // enrollment to Active rather than creating a second one, so the learner's progress is unchanged.
   async function restore(e: AdminEnrollment) {
-    if (!token || !confirm(`Pulihkan akses ${e.userName} ke ${e.programName}?`)) return;
+    if (!token || !confirm(`Restore ${e.userName}'s access to ${e.programName}?`)) return;
     try {
       await grantEnrollment(token, e.userEmail, e.programId);
       qc.invalidateQueries({ queryKey: ["admin-enrollments"] });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal memulihkan akses.");
+      alert(err instanceof Error ? err.message : "Couldn't restore access.");
     }
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <PageTitle size="compact">Pendaftaran</PageTitle>
+      <PageTitle size="compact">Enrollments</PageTitle>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-ink-muted">
-          Pendaftaran peserta. Mencabut akses tidak menghapus progres, percobaan, atau sertifikat.
+          Learner enrollments. Revoking access does not delete progress, attempts, or certificates.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <select aria-label="Program" value={programId} onChange={(e) => setProgramId(e.target.value)} className={selectCls}>
-            <option value="">Semua program</option>
+            <option value="">All programs</option>
             {(programs.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
-            {STATUSES.map((s) => <option key={s} value={s}>{s ? STATUS_LABEL[s] : "Semua status"}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{s ? STATUS_LABEL[s] : "All statuses"}</option>)}
           </select>
           <div className="relative">
             <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Cari nama/email…"
+              placeholder="Search name/email…"
               className="w-[190px] rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
             />
           </div>
-          <Button size="sm" onClick={() => setGranting(true)}>+ Beri akses</Button>
+          <Button size="sm" onClick={() => setGranting(true)}>+ Grant access</Button>
         </div>
       </div>
 
@@ -101,22 +101,22 @@ export default function AdminEnrollmentsPage() {
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : enrollments.isError ? (
           <div className="p-6">
-            <ErrorState title="Gagal memuat pendaftaran"
-              action={<Button variant="neutral" size="sm" onClick={() => enrollments.refetch()}>Muat ulang</Button>} />
+            <ErrorState title="Couldn't load enrollments"
+              action={<Button variant="neutral" size="sm" onClick={() => enrollments.refetch()}>Reload</Button>} />
           </div>
         ) : enrollments.data.items.length === 0 ? (
-          <p className="px-6 py-8 text-center text-sm text-ink-muted">Tidak ada pendaftaran.</p>
+          <p className="px-6 py-8 text-center text-sm text-ink-muted">No enrollments.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table min-w-[720px]">
               <thead>
                 <tr>
-                  <th>Peserta</th>
+                  <th>Learner</th>
                   <th>Program</th>
                   <th>Status</th>
-                  <th>Progres</th>
-                  <th>Dibayar</th>
-                  <th className="num">Aksi</th>
+                  <th>Progress</th>
+                  <th>Paid</th>
+                  <th className="num">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-[13.5px]">
@@ -137,18 +137,18 @@ export default function AdminEnrollmentsPage() {
                       </Badge>
                     </td>
                     <td>
-                      {num(e.completedSessions)}/{num(e.totalSessions)} sesi
+                      {num(e.completedSessions)}/{num(e.totalSessions)} sessions
                     </td>
                     <td>
-                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-muted">Tidak ada</span>}
-                      {e.enrolledAt && <div className="text-[11px] text-ink-muted">{fmtDateTime(e.enrolledAt)}</div>}
+                      {num(e.amountPaidIdr) > 0 ? formatIdr(e.amountPaidIdr) : <span className="text-ink-muted">None</span>}
+                      {e.enrolledAt && <div className="text-[11px] text-ink-muted">{fmtDateTime(e.enrolledAt, "en-GB")}</div>}
                     </td>
                     <td>
                       <div className="flex justify-end">
                         {e.status === "Revoked" ? (
-                          <Button variant="neutral" size="sm" onClick={() => restore(e)}>Pulihkan</Button>
+                          <Button variant="neutral" size="sm" onClick={() => restore(e)}>Restore</Button>
                         ) : (
-                          <Button variant="neutral" size="sm" onClick={() => revoke(e)}>Cabut</Button>
+                          <Button variant="neutral" size="sm" onClick={() => revoke(e)}>Revoke</Button>
                         )}
                       </div>
                     </td>
@@ -185,7 +185,7 @@ function GrantModal({
       await grantEnrollment(token, email.trim(), programId);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal memberi akses.");
+      setError(e instanceof Error ? e.message : "Couldn't grant access.");
       setBusy(false);
     }
   }
@@ -194,24 +194,24 @@ function GrantModal({
     <Modal
       open
       onClose={onClose}
-      title="Beri akses manual"
+      title="Grant access manually"
       className="max-w-md"
       footer={
         <div className="flex w-full justify-end gap-2">
-          <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-          <Button size="sm" onClick={save} loading={busy} disabled={!email.trim() || !programId}>Beri akses</Button>
+          <Button variant="neutral" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={save} loading={busy} disabled={!email.trim() || !programId}>Grant access</Button>
         </div>
       }
     >
       <div className="flex flex-col gap-3">
         {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
         <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] leading-relaxed text-ink-muted">
-          Jalur dukungan: memberi akses tanpa pembayaran (kompensasi/koreksi refund).
-          Tindakan ini tercatat di audit log.
+          Support path: grants access without payment (compensation or refund correction).
+          This action is recorded in the audit log.
         </p>
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] font-bold text-ink-muted">Email peserta</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="nama@email.com" />
+          <span className="text-[12px] font-bold text-ink-muted">Learner email</span>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="name@email.com" />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-bold text-ink-muted">Program</span>

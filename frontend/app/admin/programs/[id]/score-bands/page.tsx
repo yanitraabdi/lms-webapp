@@ -26,8 +26,8 @@ export default function ScoreBandsPage() {
   async function apply(rows: ParsedBand[]) {
     const existing = q.data?.length ?? 0;
     if (!confirm(
-      `Ganti tabel konversi dengan ${rows.length} baris?` +
-      (existing ? `\n\n${existing} baris yang ada akan ditimpa.` : ""))) return;
+      `Replace the conversion table with ${rows.length} rows?` +
+      (existing ? `\n\n${existing} existing rows will be overwritten.` : ""))) return;
 
     setBusy(true); setError(null); setSaved(false);
     try {
@@ -42,7 +42,7 @@ export default function ScoreBandsPage() {
       await q.refetch();
       setSaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan tabel.");
+      setError(e instanceof Error ? e.message : "Couldn't save the table.");
     } finally {
       setBusy(false);
     }
@@ -67,7 +67,7 @@ export default function ScoreBandsPage() {
     return <div className="flex min-h-[300px] items-center justify-center"><Spinner size={24} /></div>;
   }
   if (q.isError) {
-    return <ErrorState title="Gagal memuat tabel konversi" />;
+    return <ErrorState title="Couldn't load the conversion table" />;
   }
 
   return (
@@ -76,42 +76,42 @@ export default function ScoreBandsPage() {
         <Link href="/admin/programs" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-ink-muted hover:text-ink">
           <ChevronRightIcon size={15} className="rotate-180" /> Program
         </Link>
-        <PageTitle size="compact">Tabel konversi skor</PageTitle>
+        <PageTitle size="compact">Score conversion table</PageTitle>
         <p className="mt-1 text-[13px] text-ink-muted">
-          Setiap skor mentah harus dipetakan tepat satu kali. Tanpa tabel yang lengkap, sertifikat
-          tidak dapat diterbitkan dan program tidak dapat diterbitkan.
+          Every raw score must be mapped exactly once. Without a complete table, certificates
+          cannot be issued and the program cannot be published.
         </p>
       </div>
 
       {error && <div className="rounded-base bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">{error}</div>}
-      {saved && <div className="rounded-base bg-success-soft px-4 py-3 text-sm font-semibold text-success">Tabel tersimpan</div>}
+      {saved && <div className="rounded-base bg-success-soft px-4 py-3 text-sm font-semibold text-success">Table saved</div>}
 
       <div>
         <ScoreBandPaste onParsed={apply} />
-        {busy && <p className="mt-2 text-[12.5px] text-ink-muted">Menyimpan…</p>}
+        {busy && <p className="mt-2 text-[12.5px] text-ink-muted">Saving…</p>}
       </div>
 
-      <Chapter title="Tersimpan saat ini">
+      <Chapter title="Currently saved">
         <div className="mb-3 mt-1 flex flex-wrap items-center justify-end gap-2">
           <div className="flex items-center gap-3">
-            <span className="text-[12.5px] text-ink-muted">{q.data.length} baris</span>
+            <span className="text-[12.5px] text-ink-muted">{q.data.length} rows</span>
             <Button variant="neutral" size="sm" onClick={download} disabled={q.data.length === 0}>
-              Unduh (.tsv)
+              Download (.tsv)
             </Button>
           </div>
         </div>
 
         {q.data.length === 0 ? (
-          <p className="py-6 text-center text-sm text-ink-muted">Belum ada tabel konversi.</p>
+          <p className="py-6 text-center text-sm text-ink-muted">No conversion table yet.</p>
         ) : (
           <div className="max-h-[320px] overflow-auto">
             <table className="data-table">
               <thead className="sticky top-0 bg-surface">
                 <tr>
-                  <th>Bagian</th>
+                  <th>Section</th>
                   <th>Min</th>
                   <th>Max</th>
-                  <th>Skala</th>
+                  <th>Scaled</th>
                   <th>Label</th>
                 </tr>
               </thead>
@@ -122,7 +122,7 @@ export default function ScoreBandsPage() {
                     <td>{num(b.minRaw)}</td>
                     <td>{num(b.maxRaw)}</td>
                     <td className="font-semibold">{num(b.scaledScore)}</td>
-                    <td className="text-ink-muted">{b.predictedBand ?? "Tidak ada"}</td>
+                    <td className="text-ink-muted">{b.predictedBand ?? "None"}</td>
                   </tr>
                 ))}
               </tbody>

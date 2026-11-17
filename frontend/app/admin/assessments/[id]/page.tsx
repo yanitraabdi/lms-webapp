@@ -48,7 +48,7 @@ export default function AssessmentComposerPage() {
     return <div className="flex min-h-[300px] items-center justify-center"><Spinner size={24} /></div>;
   }
   if (q.isError) {
-    return <ErrorState title="Tes tidak ditemukan" message="Periksa kembali tautannya." />;
+    return <ErrorState title="Test not found" message="Check the link and try again." />;
   }
 
   const sections = q.data.config.sections ?? [];
@@ -58,7 +58,7 @@ export default function AssessmentComposerPage() {
   async function save() {
     // Replacing the set on a test people have already sat is destructive enough to confirm.
     if (num(q.data!.attemptCount) > 0 &&
-        !confirm("Tes ini sudah dikerjakan peserta. Ganti susunan soal?")) return;
+        !confirm("Learners have already taken this test. Replace the question set?")) return;
 
     setBusy(true); setError(null); setSaved(false);
     try {
@@ -79,7 +79,7 @@ export default function AssessmentComposerPage() {
       await q.refetch();
       setSaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan susunan soal.");
+      setError(e instanceof Error ? e.message : "Couldn't save the question set.");
     } finally {
       setBusy(false);
     }
@@ -94,20 +94,20 @@ export default function AssessmentComposerPage() {
           </Link>
           <PageTitle size="compact">{q.data.title}</PageTitle>
           <p className="text-[12.5px] text-ink-subtle">
-            {totalSelected} dari {totalRequired} soal tersusun
-            {num(q.data.attemptCount) > 0 && ` · ${num(q.data.attemptCount)} percobaan tercatat`}
+            {totalSelected} of {totalRequired} questions composed
+            {num(q.data.attemptCount) > 0 && ` · ${num(q.data.attemptCount)} attempts recorded`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {saved && <span className="text-[13px] font-bold text-success">Tersimpan</span>}
-          <Button onClick={save} loading={busy}>Simpan susunan</Button>
+          {saved && <span className="text-[13px] font-bold text-success">Saved</span>}
+          <Button onClick={save} loading={busy}>Save question set</Button>
         </div>
       </div>
 
       {num(q.data.attemptCount) > 0 && (
         <div className="rounded-base border border-[#F5D9A8] bg-warning-soft px-4 py-3 text-[13px] text-ink">
-          Tes ini sudah dikerjakan peserta. Mengubah susunan soal tidak mengubah hasil yang sudah
-          tercatat, tetapi akan berlaku untuk percobaan berikutnya.
+          Learners have already taken this test. Changing the question set does not alter results
+          already recorded, but it applies to later attempts.
         </div>
       )}
 
@@ -115,7 +115,7 @@ export default function AssessmentComposerPage() {
 
       {sections.length === 0 ? (
         <p className="py-8 text-center text-sm text-ink-muted">
-          Tes ini belum memiliki konfigurasi bagian.
+          This test has no section configuration yet.
         </p>
       ) : (
         sections.map((s) => {

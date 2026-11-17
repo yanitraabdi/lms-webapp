@@ -25,14 +25,14 @@ export function AttendanceModal({
       await markAttendance(token, sessionId, [userId], attended);
       await q.refetch();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Gagal menyimpan kehadiran.");
+      alert(e instanceof Error ? e.message : "Couldn't save attendance.");
     } finally {
       setBusy(false);
     }
   }
 
   async function markAll() {
-    if (!confirm("Tandai semua peserta hadir?")) return;
+    if (!confirm("Mark all learners as attended?")) return;
     setBusy(true);
     try {
       await markAllAttendance(token, sessionId);
@@ -46,12 +46,12 @@ export function AttendanceModal({
     <Modal
       open
       onClose={onClose}
-      title="Kehadiran sesi live"
+      title="Live session attendance"
       className="max-w-2xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
-          <Button variant="neutral" size="sm" onClick={markAll} loading={busy}>Tandai semua hadir</Button>
-          <Button size="sm" onClick={onClose}>Selesai</Button>
+          <Button variant="neutral" size="sm" onClick={markAll} loading={busy}>Mark all attended</Button>
+          <Button size="sm" onClick={onClose}>Done</Button>
         </div>
       }
     >
@@ -59,7 +59,7 @@ export function AttendanceModal({
         <div className="flex min-h-[160px] items-center justify-center"><Spinner size={22} /></div>
       ) : q.isError ? (
         <p className="py-6 text-center text-sm text-ink-muted">
-          Kehadiran hanya berlaku untuk sesi bertipe Live.
+          Attendance only applies to Live sessions.
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -67,16 +67,16 @@ export function AttendanceModal({
             <div>
               <div className="text-[14px] font-bold">{q.data.sessionTitle}</div>
               {q.data.scheduledAt && (
-                <div className="text-[12px] text-ink-muted">{fmtDateTime(q.data.scheduledAt)}</div>
+                <div className="text-[12px] text-ink-muted">{fmtDateTime(q.data.scheduledAt, "en-GB")}</div>
               )}
             </div>
             <Badge tone="neutral" className="px-2.5 py-1 text-[12px]">
-              {num(q.data.attendedCount)}/{num(q.data.enrolledCount)} hadir
+              {num(q.data.attendedCount)}/{num(q.data.enrolledCount)} attended
             </Badge>
           </div>
 
           {q.data.rows.length === 0 ? (
-            <p className="py-6 text-center text-sm text-ink-muted">Belum ada peserta terdaftar.</p>
+            <p className="py-6 text-center text-sm text-ink-muted">No enrolled learners yet.</p>
           ) : (
             <ul className="flex max-h-[360px] flex-col gap-1.5 overflow-y-auto">
               {q.data.rows.map((r) => (
@@ -87,14 +87,14 @@ export function AttendanceModal({
                   </span>
                   {r.sessionCompleted && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-success">
-                      <CheckIcon size={12} strokeWidth={3} /> Selesai
+                      <CheckIcon size={12} strokeWidth={3} /> Completed
                     </span>
                   )}
                   <button
                     type="button"
                     role="switch"
                     aria-checked={r.attended}
-                    aria-label={r.attended ? `Batalkan kehadiran ${r.name}` : `Tandai ${r.name} hadir`}
+                    aria-label={r.attended ? `Undo attendance for ${r.name}` : `Mark ${r.name} as attended`}
                     disabled={busy}
                     onClick={() => toggle(r.userId, !r.attended)}
                     className={"relative h-[24px] w-[42px] shrink-0 rounded-full transition-colors disabled:opacity-50 " +
@@ -109,8 +109,8 @@ export function AttendanceModal({
           )}
 
           <p className="text-[11.5px] leading-relaxed text-ink-subtle">
-            Menandai hadir akan menyelesaikan sesi ini dan membuka sesi berikutnya. Membatalkan
-            tanda hanya menghapus status kehadiran; progres yang sudah diperoleh tidak dicabut.
+            Marking a learner as attended completes this session and unlocks the next one. Undoing
+            the mark only removes the attendance status; progress already earned is not revoked.
           </p>
         </div>
       )}

@@ -428,7 +428,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("jawaban benar", await res.Content.ReadAsStringAsync());
+        Assert.Contains("correct answer", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public class SessionGatingTests(AuthApiFactory factory) : IClassFixture<AuthApiF
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("2 pilihan", await res.Content.ReadAsStringAsync());
+        Assert.Contains("2 options", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]

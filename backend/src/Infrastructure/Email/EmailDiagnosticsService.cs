@@ -19,10 +19,10 @@ public class EmailDiagnosticsService(EmailOptions options, IEmailSender sender, 
     {
         var admin = await db.Users.Where(u => u.Id == adminId)
             .Select(u => new { u.Email, u.Name }).FirstOrDefaultAsync(ct)
-            ?? throw new AdminException("Akun admin tidak ditemukan.", 404);
+            ?? throw new AdminException("Admin account not found.", 404);
 
         if (!options.IsSmtp)
-            return new(false, "Mode dev — email hanya ditulis ke log API, tidak benar-benar dikirim.");
+            return new(false, "Dev mode — email is only written to the API log, not actually sent.");
 
         // SmtpClient.Timeout does not apply to SendMailAsync, so an unreachable host (dropped SYN)
         // would hang the button; bound it here. WaitAsync guarantees the return even if the send
@@ -42,6 +42,6 @@ public class EmailDiagnosticsService(EmailOptions options, IEmailSender sender, 
         {
             throw new AdminException(SmtpErrorMessage.Unreachable, 502);
         }
-        return new(true, $"Email uji terkirim ke {admin.Email}. Periksa kotak masuk (dan folder spam).");
+        return new(true, $"Test email sent to {admin.Email}. Check the inbox (and the spam folder).");
     }
 }

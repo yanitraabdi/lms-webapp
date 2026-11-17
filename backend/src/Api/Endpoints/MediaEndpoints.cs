@@ -84,15 +84,15 @@ public static class MediaEndpoints
                     if (key is null)
                     {
                         items.Add(new BulkAudioItem(file.FileName, null,
-                            "Nama berkas tidak dapat dipakai. Gunakan nama seperti L01.mp3."));
+                            "This file name can't be used. Use a name like L01.mp3."));
                         continue;
                     }
 
                     if (keysInThisBatch.TryGetValue(key, out var collidesWith))
                     {
                         items.Add(new BulkAudioItem(file.FileName, null,
-                            $"Nama berkas menghasilkan kunci yang sama dengan '{collidesWith}' ({key}). " +
-                            "Ganti nama salah satu berkas lalu unggah ulang."));
+                            $"This file name produces the same key as '{collidesWith}' ({key}). " +
+                            "Rename one of the files and upload again."));
                         continue;
                     }
 

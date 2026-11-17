@@ -39,35 +39,35 @@ export function parseBands(text: string): { rows: ParsedBand[]; errors: string[]
 
     const lineNo = i + 1;
     if (cells.length < 4) {
-      errors.push(`Baris ${lineNo}: butuh 4 kolom (bagian, min, max, skala).`);
+      errors.push(`Line ${lineNo}: needs 4 columns (section, min, max, scaled).`);
       return;
     }
     if (cells.length > 5) {
-      errors.push(`Baris ${lineNo}: terlalu banyak kolom (maks. 5: bagian, min, max, skala, label).`);
+      errors.push(`Line ${lineNo}: too many columns (max 5: section, min, max, scaled, label).`);
       return;
     }
 
     const [rawSection, min, max, scaled, band] = cells;
     const section = SECTIONS.find((s) => s.toLowerCase() === rawSection.toLowerCase());
     if (!section) {
-      errors.push(`Baris ${lineNo}: bagian "${rawSection}" tidak dikenal.`);
+      errors.push(`Line ${lineNo}: unknown section "${rawSection}".`);
       return;
     }
 
     if (![min, max, scaled].every((v) => INT_RE.test(v))) {
-      errors.push(`Baris ${lineNo}: min, max dan skala harus bilangan bulat (tidak boleh kosong).`);
+      errors.push(`Line ${lineNo}: min, max and scaled must be whole numbers (not empty).`);
       return;
     }
 
     const [minRaw, maxRaw, scaledScore] = [min, max, scaled].map(Number);
     if (minRaw > maxRaw) {
-      errors.push(`Baris ${lineNo}: min (${minRaw}) lebih besar dari max (${maxRaw}).`);
+      errors.push(`Line ${lineNo}: min (${minRaw}) is greater than max (${maxRaw}).`);
       return;
     }
 
     const limit = LIMITS[section];
     if (limit && maxRaw > limit[0]) {
-      errors.push(`Baris ${lineNo}: max (${maxRaw}) melebihi batas skor mentah ${section} (${limit[0]}).`);
+      errors.push(`Line ${lineNo}: max (${maxRaw}) exceeds the ${section} raw score limit (${limit[0]}).`);
       return;
     }
 
@@ -108,7 +108,7 @@ export function coverage(rows: ParsedBand[]): CoverageRow[] {
 }
 
 function list(values: number[]): string {
-  return values.length <= 6 ? values.join(", ") : `${values[0]}–${values[values.length - 1]} (${values.length} nilai)`;
+  return values.length <= 6 ? values.join(", ") : `${values[0]}–${values[values.length - 1]} (${values.length} values)`;
 }
 
 /** Paste box plus per-section coverage summary. Nothing leaves here until the input parses. */
@@ -121,7 +121,7 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1">
         <span className="text-[12px] font-bold text-ink-muted">
-          Tempel tabel dari spreadsheet. Kolom: bagian, min, max, skala, label (opsional)
+          Paste the table from a spreadsheet. Columns: section, min, max, scaled, label (optional)
         </span>
         <textarea
           value={text}
@@ -134,27 +134,27 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
 
       {parsed && parsed.errors.length > 0 && (
         <div className="rounded-base bg-danger-soft px-4 py-3 text-[13px] text-danger">
-          <p className="font-bold">{parsed.errors.length} baris bermasalah, tidak ada yang disimpan:</p>
+          <p className="font-bold">{parsed.errors.length} line(s) with problems, nothing was saved:</p>
           <ul className="mt-1 list-inside list-disc">
             {parsed.errors.slice(0, 8).map((e) => <li key={e}>{e}</li>)}
           </ul>
-          {parsed.errors.length > 8 && <p className="mt-1">…dan {parsed.errors.length - 8} lainnya.</p>}
+          {parsed.errors.length > 8 && <p className="mt-1">…and {parsed.errors.length - 8} more.</p>}
         </div>
       )}
 
       {cover && (
         <div className="rounded-base border border-border bg-surface-2 px-4 py-3 text-[12.5px]">
-          <p className="font-bold text-ink">{parsed!.rows.length} baris terbaca</p>
+          <p className="font-bold text-ink">{parsed!.rows.length} line(s) read</p>
           <ul className="mt-1.5 flex flex-col gap-1">
             {cover.map((c) => (
               <li key={c.section} className={c.complete ? "text-success" : "text-warning"}>
                 <strong>{c.section}</strong>{" "}
                 {c.complete
-                  ? `lengkap (0–${c.maxRaw})`
+                  ? `complete (0–${c.maxRaw})`
                   : [
-                      c.missing.length ? `belum dipetakan: ${list(c.missing)}` : null,
-                      c.duplicated.length ? `tumpang tindih: ${list(c.duplicated)}` : null,
-                      c.outOfRange ? `${c.outOfRange} skala di luar rentang` : null,
+                      c.missing.length ? `not mapped: ${list(c.missing)}` : null,
+                      c.duplicated.length ? `overlapping: ${list(c.duplicated)}` : null,
+                      c.outOfRange ? `${c.outOfRange} scaled value(s) out of range` : null,
                     ].filter(Boolean).join(" · ")}
               </li>
             ))}
@@ -163,16 +163,16 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
           {/* Safety net: the exact payload that will be sent, before it is sent. */}
           <details open className="mt-2.5">
             <summary className="cursor-pointer text-[12px] font-bold text-ink-muted hover:text-ink">
-              Lihat {parsed!.rows.length} baris yang akan disimpan
+              Show the {parsed!.rows.length} line(s) to be saved
             </summary>
             <div className="mt-1.5 max-h-[220px] overflow-y-auto rounded-sm border border-border">
               <table className="w-full border-collapse text-[12px]">
                 <thead className="sticky top-0 bg-surface">
                   <tr className="text-left font-bold text-ink-muted">
-                    <th className="px-2 py-1">Bagian</th>
+                    <th className="px-2 py-1">Section</th>
                     <th className="px-2 py-1">Min</th>
                     <th className="px-2 py-1">Max</th>
-                    <th className="px-2 py-1">Skala</th>
+                    <th className="px-2 py-1">Scaled</th>
                     <th className="px-2 py-1">Label</th>
                   </tr>
                 </thead>
@@ -199,7 +199,7 @@ export function ScoreBandPaste({ onParsed }: { onParsed: (rows: ParsedBand[]) =>
         disabled={!parsed || parsed.errors.length > 0 || parsed.rows.length === 0}
         onClick={() => parsed && onParsed(parsed.rows)}
       >
-        Gunakan tabel ini
+        Use this table
       </Button>
     </div>
   );

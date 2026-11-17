@@ -62,5 +62,11 @@ test.describe("learner", () => {
 
 test.describe("admin", () => {
   test.beforeEach(({ page }) => signIn(page, ADMIN.email, ADMIN.password));
-  for (const row of ADMIN_PAGES) test(row[0], ({ page }) => checkPage(page, row));
+  for (const row of ADMIN_PAGES) test(row[0], async ({ page }) => {
+    await checkPage(page, row);
+    // The admin is English (DECISIONS 2026-11-17): interface words only; authored content may be Indonesian.
+    const admin = page.locator('[lang="en"]');
+    await expect(admin).toHaveCount(1);
+    await expect(admin).not.toContainText(/\b(Muat ulang|Belum ada|Gagal|Simpan|Hapus|Aksi|Pendaftaran|Percobaan|Pengguna|Keluar)\b/);
+  });
 });

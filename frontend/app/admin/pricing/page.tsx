@@ -38,23 +38,23 @@ export default function AdminPricingPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan.");
+      setError(e instanceof Error ? e.message : "Couldn't save.");
     } finally {
       setSaving(false);
     }
   }
 
   if (!token || plans.isPending) return <div className="flex min-h-[160px] items-center justify-center"><Spinner size={22} /></div>;
-  if (plans.isError) return <ErrorState title="Gagal memuat paket" action={<Button variant="neutral" size="sm" onClick={() => plans.refetch()}>Muat ulang</Button>} />;
+  if (plans.isError) return <ErrorState title="Couldn't load plans" action={<Button variant="neutral" size="sm" onClick={() => plans.refetch()}>Reload</Button>} />;
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-ink-subtle">Perubahan berlaku untuk langganan baru &amp; perpanjangan (pelanggan lama tetap pada harga terkunci hingga perpanjangan).</p>
+      <p className="text-xs text-ink-subtle">Changes apply to new subscriptions &amp; renewals (existing subscribers keep their locked price until renewal).</p>
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
         {paid.map((p) => (
           <div key={p.id} className="flex flex-col gap-2 rounded-base border border-border bg-surface p-4">
             <Badge tier={TIER_BADGE[num(p.tierLevel)]} className="w-fit" />
-            <label className="text-[11.5px] text-ink-muted">Harga / bulan (Rp)</label>
+            <label className="text-[11.5px] text-ink-muted">Price / month (Rp)</label>
             <input
               inputMode="numeric"
               value={edits[p.id] ?? formatIdr(p.priceMonthly)}
@@ -65,8 +65,8 @@ export default function AdminPricingPage() {
         ))}
       </div>
       <div className="flex items-center gap-3">
-        <Button loading={saving} onClick={save}>Simpan harga</Button>
-        {saved && <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-success"><CheckIcon size={15} strokeWidth={2.4} /> Harga tersimpan</span>}
+        <Button loading={saving} onClick={save}>Save prices</Button>
+        {saved && <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-success"><CheckIcon size={15} strokeWidth={2.4} /> Prices saved</span>}
         {error && <span className="text-[12.5px] text-danger">{error}</span>}
       </div>
     </div>

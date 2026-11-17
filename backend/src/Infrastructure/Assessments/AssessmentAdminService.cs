@@ -77,18 +77,18 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
     {
         if (config.RetakeCap is int cap && cap < 1)
             throw new AssessmentException(
-                "Batas percobaan minimal 1. Kosongkan untuk tanpa batas.");
+                "Attempt limit must be at least 1. Leave empty for no limit.");
 
         if (config.PassThreshold is int mark && mark < 1)
             throw new AssessmentException(
-                "Skor lulus minimal 1. Kosongkan jika tes ini tidak memiliki batas lulus.");
+                "Pass mark must be at least 1. Leave empty if this test has no pass mark.");
 
         if (config.DiscussionAfterFailures is int n && n < 1)
             throw new AssessmentException(
-                "Video pembahasan terbuka minimal setelah 1 kali gagal. Kosongkan jika hanya terbuka setelah lulus.");
+                "The discussion video opens after at least 1 failed attempt. Leave empty if it opens only after a pass.");
 
         if (config.AudioPlayLimit is int plays && plays < 1)
-            throw new AssessmentException("Batas pemutaran audio minimal 1.");
+            throw new AssessmentException("Audio play limit must be at least 1.");
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
     {
         if (config.PassThreshold is int mark && questionCount > 0 && mark > questionCount)
             throw new AssessmentException(
-                $"Skor lulus ({mark}) tidak boleh melebihi jumlah soal ({questionCount}).");
+                $"Pass mark ({mark}) can't exceed the number of questions ({questionCount}).");
     }
 
     /// <summary>Merges the partial request over what is stored, then validates the RESULT — a
@@ -139,7 +139,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
     public async Task UpdateAsync(Guid actor, Guid id, UpsertAssessmentRequest req, CancellationToken ct = default)
     {
         var a = await db.Assessments.FirstOrDefaultAsync(x => x.Id == id, ct)
-            ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
+            ?? throw new AssessmentException("Test not found.", 404);
         var (configJson, config) = Resolve(a.Config, req);
         ValidateAgainstQuestions(config, await db.AssessmentQuestions.CountAsync(q => q.AssessmentId == id, ct));
         if (Enum.TryParse<AssessmentKind>(req.Kind, true, out var k) && k != a.Kind)
@@ -147,7 +147,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             // The kind decides which question bank the test may draw from; changing it under existing questions breaks that.
             if (await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == id, ct)
                 || await db.Attempts.AnyAsync(x => x.AssessmentId == id, ct))
-                throw new AssessmentException("Jenis tes tidak bisa diubah setelah tes memiliki soal.", 400);
+                throw new AssessmentException("The test type can't be changed once the test has questions.", 400);
             a.Kind = k;
         }
         a.Title = req.Title.Trim();
@@ -163,10 +163,10 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
 
         // Attempts are retained learner records (GR-7) — a scored test cannot be erased.
         if (await db.Attempts.AnyAsync(x => x.AssessmentId == id, ct))
-            throw new AssessmentException("Tes tidak bisa dihapus karena sudah dikerjakan peserta.", 409);
+            throw new AssessmentException("This test can't be deleted because learners have already taken it.", 409);
 
         if (await db.SessionParts.AnyAsync(p => p.AssessmentId == id, ct))
-            throw new AssessmentException("Tes masih dipakai di sebuah sesi. Hapus bagiannya terlebih dahulu.", 409);
+            throw new AssessmentException("This test is still used in a session. Delete its part first.", 409);
 
         // Detach from any session first so the FK (SetNull) intent is explicit.
         var sessions = await db.ProgramSessions.Where(s => s.AssessmentId == id).ToListAsync(ct);
@@ -181,15 +181,15 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         Guid actor, Guid id, SetAssessmentQuestionsRequest req, CancellationToken ct = default)
     {
         var assessment = await db.Assessments.FirstOrDefaultAsync(a => a.Id == id, ct)
-            ?? throw new AssessmentException("Tes tidak ditemukan.", 404);
+            ?? throw new AssessmentException("Test not found.", 404);
 
         var ids = req.QuestionIdsInOrder.Distinct().ToList();
         if (ids.Count != req.QuestionIdsInOrder.Count)
-            throw new AssessmentException("Terdapat soal duplikat dalam daftar.");
+            throw new AssessmentException("The list contains duplicate questions.");
 
         var existing = await db.Questions.Where(q => ids.Contains(q.Id)).Select(q => q.Id).ToListAsync(ct);
         if (existing.Count != ids.Count)
-            throw new AssessmentException("Sebagian soal tidak ditemukan di bank soal.", 400);
+            throw new AssessmentException("Some questions were not found in the question bank.", 400);
 
         // A test draws only from its own bank (spec 2026-10-05). Questions it already holds are
         // exempt: no copies were made when banks were introduced, and past attempts point at them.
@@ -198,7 +198,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             .Select(aq => aq.QuestionId).ToListAsync(ct);
         var added = ids.Except(held).ToList();
         if (await db.Questions.AnyAsync(q => added.Contains(q.Id) && q.Bank != bank, ct))
-            throw new AssessmentException("Soal dari bank lain tidak bisa dipakai di tes ini.", 400);
+            throw new AssessmentException("Questions from another bank can't be used in this test.", 400);
 
         // Refused BEFORE anything is removed: composing fewer questions than the stored pass mark
         // would leave a test nobody can pass.
@@ -227,10 +227,10 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         Guid actor, Guid sessionId, Guid? assessmentId, CancellationToken ct = default)
     {
         var session = await db.ProgramSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct)
-            ?? throw new AssessmentException("Sesi tidak ditemukan.", 404);
+            ?? throw new AssessmentException("Session not found.", 404);
 
         if (assessmentId is Guid aid && !await db.Assessments.AnyAsync(a => a.Id == aid, ct))
-            throw new AssessmentException("Tes tidak ditemukan.", 404);
+            throw new AssessmentException("Test not found.", 404);
 
         // A video's test lives on its Test part; only other types keep the session column.
         if (session.Type != SessionType.Video) session.AssessmentId = assessmentId;
@@ -239,12 +239,12 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
             var tests = await db.SessionParts
                 .Where(p => p.SessionId == sessionId && p.Kind == SessionPartKind.Test).ToListAsync(ct);
             if (tests.Count > 1)
-                throw new AssessmentException("Sesi ini memiliki beberapa tes. Atur lewat daftar bagian.", 409);
+                throw new AssessmentException("This session has several tests. Manage them through the parts list.", 409);
 
             var current = tests.SingleOrDefault();
             if (current is not null && current.AssessmentId != assessmentId
                 && await db.Attempts.AnyAsync(a => a.AssessmentId == current.AssessmentId, ct))
-                throw new AssessmentException("Tes ini sudah dikerjakan peserta dan tidak bisa diganti.", 409);
+                throw new AssessmentException("Learners have already taken this test, so it can't be replaced.", 409);
 
             if (assessmentId is null)
             {
@@ -254,7 +254,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
                         p.SessionId == sessionId && p.Kind == SessionPartKind.Discussion
                         && p.OrderIndex == current.OrderIndex + 1, ct);
                     if (discussion is not null)
-                        throw new AssessmentException("Hapus video pembahasan tes ini terlebih dahulu.", 409);
+                        throw new AssessmentException("Delete this test's discussion video first.", 409);
                     db.SessionParts.Remove(current);
                 }
             }
@@ -279,7 +279,7 @@ public class AssessmentAdminService(AppDbContext db) : IAssessmentAdminService
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
         {
-            throw new AssessmentException("Tes ini sudah dipakai di sesi lain.", 409);
+            throw new AssessmentException("This test is already used in another session.", 409);
         }
     }
 

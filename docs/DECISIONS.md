@@ -69,6 +69,22 @@ transitive resolution):
 **Rule going forward:** never trust `| tail` on a `docker compose build` to report success — it
 masks the exit code. Check for the `Image ... Built` line or the container's image age.
 
+### Admin language: English (PO, 2026-11-17)
+The **admin area is English-only**; learner-facing UI, emails and learner API messages stay Bahasa
+Indonesia (FSD "Bahasa Indonesia UI" now means the learner product). Admin-only API error messages
+are English too. No language switch (PO's choice). Mechanics: `app/admin/layout.tsx` sets
+`lang="en"` and `<UiLocaleProvider value="en">`, which shared `Spinner`/`Modal` read for their
+aria labels. Shared helpers take a locale/unit argument (`fmtDateTime(iso, "en-GB")`,
+`minutesLabel(s, "min")`); money keeps `Rp` with `id-ID` grouping. A message reachable from both
+learner and admin paths stays Indonesian. The admin smoke e2e guards against Indonesian
+interface words coming back.
+
+### Admin password lives in the app, not `.env` (PO, 2026-11-17)
+`ADMIN_PASSWORD` is used only when a new database has no admin yet. In Production `DevAdminSeeder`
+never falls back to the well-known dev password: no admin + no `ADMIN_PASSWORD` → startup fails
+loudly. Afterwards the admin changes the password in the app (`/app/account`, linked from the admin
+sidebar) and `ADMIN_PASSWORD` is removed from `.env`.
+
 ### Still owed by the business (blocking launch, not the build)
 Real syllabus · **score→TOEFL-band mapping** (Q6 — ships with a clearly-marked placeholder; the
 headline "prediction" feature has no valid content without it) · **legal review of TOEFL

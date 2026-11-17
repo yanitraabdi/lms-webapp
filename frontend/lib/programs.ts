@@ -138,9 +138,9 @@ export function formatIdr(v: number | string): string {
   return "Rp " + num(v).toLocaleString("id-ID");
 }
 
-export function minutesLabel(seconds: number | string | null | undefined): string {
+export function minutesLabel(seconds: number | string | null | undefined, unit = "mnt"): string {
   if (seconds == null) return "-";
-  return `${Math.max(1, Math.round(num(seconds) / 60))} mnt`;
+  return `${Math.max(1, Math.round(num(seconds) / 60))} ${unit}`;
 }
 
 export function totalDurationLabel(seconds: number | string): string {

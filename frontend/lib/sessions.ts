@@ -163,7 +163,7 @@ export async function downloadImportTemplate(token: string): Promise<void> {
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
-  a.download = "inverta-bank-soal-template.xlsx";
+  a.download = "inverta-question-bank-template.xlsx";
   document.body.appendChild(a);
   a.click();
   a.remove();

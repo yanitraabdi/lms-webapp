@@ -53,7 +53,7 @@ export default function QuestionImportPage() {
         qc.invalidateQueries({ queryKey: ["picker-questions"] });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal memproses berkas.");
+      setError(e instanceof Error ? e.message : "Couldn't process the file.");
     } finally {
       setBusy(null);
     }
@@ -66,7 +66,7 @@ export default function QuestionImportPage() {
     try {
       setAudio(await uploadAudioBulk(token, Array.from(files)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal mengunggah audio.");
+      setError(e instanceof Error ? e.message : "Couldn't upload the audio.");
     } finally {
       setBusy(null);
     }
@@ -79,11 +79,11 @@ export default function QuestionImportPage() {
     <div className="flex flex-col gap-4">
       <div>
         <Link href="/admin/questions" className="text-[12.5px] font-bold text-primary hover:underline">
-          Kembali ke bank soal
+          Back to question bank
         </Link>
-        <PageTitle size="compact">Impor soal</PageTitle>
+        <PageTitle size="compact">Import questions</PageTitle>
         <p className="mt-2 text-sm text-ink-muted">
-          Impor banyak soal sekaligus dari berkas Excel. Isi bank soal, tes akhir tetap disusun di halaman Program.
+          Import many questions at once from an Excel file. This fills the question bank; the final assessment is still composed on the Program page.
         </p>
       </div>
 
@@ -92,30 +92,30 @@ export default function QuestionImportPage() {
       )}
 
       {/* ---- 1. template ---- */}
-      <Chapter title="1. Unduh template">
+      <Chapter title="1. Download the template">
         <p className="mt-1 text-[13px] text-ink-muted">
-          Template berisi contoh soal untuk setiap bagian dan sheet petunjuk pengisian.
+          The template has sample questions for each section and an instructions sheet.
         </p>
         <Button
           size="sm"
           variant="neutral"
           className="mt-3"
           onClick={() => token && downloadImportTemplate(token).catch(
-            (e) => setError(e instanceof Error ? e.message : "Gagal mengunduh template."))}
+            (e) => setError(e instanceof Error ? e.message : "Couldn't download the template."))}
         >
-          Unduh template (.xlsx)
+          Download template (.xlsx)
         </Button>
       </Chapter>
 
       {/* ---- 2. sheet ---- */}
-      <Chapter title="2. Unggah berkas soal">
+      <Chapter title="2. Upload the question file">
         <p className="mt-1 text-[13px] text-ink-muted">
-          Berkas diperiksa seluruhnya dulu. Jika ada satu kesalahan, tidak ada soal yang tersimpan.
+          The whole file is checked first. If there is a single error, no questions are saved.
         </p>
 
         <fieldset className="mt-3">
           <legend className="text-[13px] font-bold text-ink">
-            Impor ke bank: <span className="text-danger" aria-hidden="true">*</span>
+            Import into bank: <span className="text-danger" aria-hidden="true">*</span>
           </legend>
           <div className="mt-1.5 flex flex-wrap gap-4">
             {QUESTION_BANKS.map((b) => (
@@ -134,45 +134,45 @@ export default function QuestionImportPage() {
               </label>
             ))}
           </div>
-          {!bank && <p className="mt-1.5 text-[12.5px] text-ink-muted">Pilih bank tujuan terlebih dahulu.</p>}
+          {!bank && <p className="mt-1.5 text-[12.5px] text-ink-muted">Choose a target bank first.</p>}
         </fieldset>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             type="file"
             accept=".xlsx"
-            aria-label="Berkas soal"
+            aria-label="Question file"
             disabled={!bank}
             onChange={(e) => pick(e.target.files?.[0] ?? null)}
             className="text-[13px] file:mr-3 file:rounded-sm file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-[13px] file:font-bold"
           />
           <Button size="sm" variant="neutral" disabled={!bank || !file || busy !== null} onClick={() => run("preview")}>
-            {busy === "preview" ? "Memeriksa…" : "Periksa"}
+            {busy === "preview" ? "Checking…" : "Check"}
           </Button>
           <Button size="sm" disabled={!bank || !clean || busy !== null} onClick={() => run("commit")}>
-            {busy === "commit" ? "Mengimpor…" : "Impor sekarang"}
+            {busy === "commit" ? "Importing…" : "Import now"}
           </Button>
           {busy !== null && <Spinner size={16} />}
         </div>
 
         {result?.committed && (
           <p className="mt-3 rounded-base bg-success-soft px-3 py-2 text-[13px] font-semibold text-success">
-            Berhasil. {result.createCount} soal baru, {result.updateCount} soal diperbarui.
+            Done. {result.createCount} new questions, {result.updateCount} updated.
           </p>
         )}
 
         {errors.length > 0 && (
           <div className="mt-4">
             <p className="text-[13px] font-bold text-danger">
-              {errors.length} kesalahan. Perbaiki di Excel lalu unggah ulang berkas yang sama.
+              {errors.length} errors. Fix them in Excel, then upload the same file again.
             </p>
             <div className="mt-2 max-h-[320px] overflow-auto rounded-sm border border-border">
               <table className="data-table">
                 <thead className="sticky top-0 bg-surface">
                   <tr>
-                    <th>Baris</th>
-                    <th>Kolom</th>
-                    <th>Masalah</th>
+                    <th>Row</th>
+                    <th>Column</th>
+                    <th>Problem</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,14 +190,14 @@ export default function QuestionImportPage() {
         )}
 
         {result && bank && (
-          <p className="mt-4 text-[13px] font-bold text-ink">Bank tujuan: {BANK_LABEL[bank]}</p>
+          <p className="mt-4 text-[13px] font-bold text-ink">Target bank: {BANK_LABEL[bank]}</p>
         )}
 
         {result && errors.length === 0 && (
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-2 text-[13px]">
-              <Badge tone="success">{result.createCount} baru</Badge>
-              <Badge tone="neutral">{result.updateCount} diperbarui</Badge>
+              <Badge tone="success">{result.createCount} new</Badge>
+              <Badge tone="neutral">{result.updateCount} updated</Badge>
               {Object.entries(result.perSection ?? {}).map(([section, count]) => (
                 <Badge key={section} tone="neutral">{section}: {count}</Badge>
               ))}
@@ -207,9 +207,9 @@ export default function QuestionImportPage() {
                 <thead className="sticky top-0 bg-surface">
                   <tr>
                     <th>Id</th>
-                    <th>Bagian</th>
-                    <th>Pertanyaan</th>
-                    <th>Aksi</th>
+                    <th>Section</th>
+                    <th>Question</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -219,10 +219,10 @@ export default function QuestionImportPage() {
                       <td>{item.section}</td>
                       <td className="max-w-[420px] truncate">{item.prompt}</td>
                       <td>
-                        {/* An id reused by mistake shows up HERE as "Perbarui", the one place a
+                        {/* An id reused by mistake shows up HERE as "Update", the one place a
                             human can catch it before an existing question is overwritten. */}
                         <Badge tone={item.isUpdate ? "warning" : "success"}>
-                          {item.isUpdate ? "Perbarui" : "Baru"}
+                          {item.isUpdate ? "Update" : "New"}
                         </Badge>
                       </td>
                     </tr>
@@ -235,17 +235,17 @@ export default function QuestionImportPage() {
       </Chapter>
 
       {/* ---- 3. audio ---- */}
-      <Chapter title="3. Unggah audio listening">
+      <Chapter title="3. Upload Listening audio">
         <p className="mt-1 text-[13px] text-ink-muted">
-          Nama berkas harus sama dengan kolom <code className="font-mono">audio_file</code> di sheet, misalnya L01.mp3.
-          Urutannya bebas, impor dulu atau unggah audio dulu.
+          File names must match the <code className="font-mono">audio_file</code> column in the sheet, for example L01.mp3.
+          Order does not matter: import first or upload the audio first.
         </p>
 
         <input
           type="file"
           accept="audio/*"
           multiple
-          aria-label="Berkas audio"
+          aria-label="Audio files"
           disabled={busy !== null}
           onChange={(e) => sendAudio(e.target.files)}
           className="mt-3 text-[13px] file:mr-3 file:rounded-sm file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-[13px] file:font-bold"
@@ -257,7 +257,7 @@ export default function QuestionImportPage() {
               <li key={item.filename} className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-[12px]">{item.filename}</span>
                 {item.key
-                  ? <Badge tone="success">tersimpan sebagai {item.key}</Badge>
+                  ? <Badge tone="success">saved as {item.key}</Badge>
                   : <Badge tone="danger">{item.error}</Badge>}
               </li>
             ))}

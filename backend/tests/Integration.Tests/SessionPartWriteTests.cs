@@ -179,7 +179,7 @@ public class SessionPartWriteTests(AuthApiFactory factory) : IClassFixture<AuthA
             new { assessmentId = a.Id });
 
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
-        Assert.Contains("Tes ini sudah dipakai di sesi lain.", await res.Content.ReadAsStringAsync());
+        Assert.Contains("This test is already used in another session.", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -201,8 +201,8 @@ public class SessionPartWriteTests(AuthApiFactory factory) : IClassFixture<AuthA
 
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
         var body = await res.Content.ReadAsStringAsync();
-        Assert.Contains("Tes ini sudah dipakai di sesi lain.", body);
-        Assert.DoesNotContain("Urutan sesi bentrok", body);
+        Assert.Contains("This test is already used in another session.", body);
+        Assert.DoesNotContain("Session order conflict", body);
     }
 
     // ---- helpers ----

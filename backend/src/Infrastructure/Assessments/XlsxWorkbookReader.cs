@@ -29,17 +29,17 @@ public static class XlsxWorkbookReader
         {
             // A corrupt or non-xlsx upload is the admin's mistake, not a 500.
             throw new AssessmentException(
-                "Berkas tidak dapat dibaca sebagai Excel (.xlsx). Gunakan template yang disediakan.", 400);
+                "The file can't be read as Excel (.xlsx). Use the provided template.", 400);
         }
 
         using (workbook)
         {
             var sheet = Find(workbook, QuestionsSheet)
                 ?? throw new AssessmentException(
-                    $"Sheet '{QuestionsSheet}' tidak ditemukan. Gunakan template yang disediakan.", 400);
+                    $"Sheet '{QuestionsSheet}' not found. Use the provided template.", 400);
 
             var header = sheet.FirstRowUsed()
-                ?? throw new AssessmentException($"Sheet '{QuestionsSheet}' kosong.", 400);
+                ?? throw new AssessmentException($"Sheet '{QuestionsSheet}' is empty.", 400);
 
             var columns = new List<string>();
             var byColumnNumber = new Dictionary<int, string>();
@@ -177,41 +177,41 @@ public static class XlsxWorkbookReader
         instructions.Column(1).Style.Alignment.WrapText = true;
         var lines = new[]
         {
-            "CARA MENGISI TEMPLATE BANK SOAL INVERTA",
+            "HOW TO FILL IN THE INVERTA QUESTION BANK TEMPLATE",
             "",
-            "1. Isi sheet 'Questions'. Satu baris = satu soal. Jangan mengubah baris judul (baris 1).",
+            "1. Fill in the 'Questions' sheet. One row = one question. Do not change the header row (row 1).",
             "",
-            "2. Kolom wajib: " + string.Join(", ", QuestionImportParser.RequiredColumns) + ".",
-            "   Kolom opsional: " + string.Join(", ", QuestionImportParser.OptionalColumns) + ".",
+            "2. Required columns: " + string.Join(", ", QuestionImportParser.RequiredColumns) + ".",
+            "   Optional columns: " + string.Join(", ", QuestionImportParser.OptionalColumns) + ".",
             "",
-            "3. id — nomor soal buatan Anda, misalnya L01, S14, R07. Harus unik dalam satu berkas.",
-            "   Id ini dipakai untuk memperbarui soal: mengunggah ulang berkas yang sama akan",
-            "   MEMPERBAIKI soal yang sudah ada, bukan menggandakannya.",
+            "3. id — a question number you make up, e.g. L01, S14, R07. Must be unique within the file.",
+            "   The id is used to update questions: uploading the same file again will",
+            "   UPDATE the existing questions, not duplicate them.",
             "",
-            "4. section — salah satu dari: " + string.Join(", ", Enum.GetNames<Academy.Domain.Enums.QuestionSection>()) + ".",
+            "4. section — one of: " + string.Join(", ", Enum.GetNames<Academy.Domain.Enums.QuestionSection>()) + ".",
             "",
-            "5. answer — SATU huruf saja: A, B, C, atau D. Bukan angka, dan tidak boleh lebih dari satu",
-            "   huruf. Setiap soal TOEFL ITP hanya punya satu jawaban benar.",
+            "5. answer — exactly ONE letter: A, B, C, or D. Not a number, and not more than one",
+            "   letter. Every TOEFL ITP question has only one correct answer.",
             "",
-            "6. Pilihan jawaban diisi berurutan mulai choice_a. Minimal dua pilihan. Jangan",
-            "   mengosongkan choice_b lalu mengisi choice_c.",
+            "6. Fill in options in order starting with choice_a. At least two options. Do not",
+            "   leave choice_b empty and then fill in choice_c.",
             "",
-            "7. prompt boleh berisi beberapa baris (tekan Alt+Enter di dalam sel). Percakapan",
-            "   Listening biasanya tiga baris: dua pembicara dan pertanyaannya.",
+            "7. prompt may contain several lines (press Alt+Enter inside the cell). A",
+            "   Listening conversation is usually three lines: two speakers and the question.",
             "",
-            "8. passage_id — untuk soal Reading yang berbagi satu bacaan. Tulis bacaannya SEKALI di",
-            "   sheet 'Passages', lalu tulis id-nya di setiap soal yang memakainya.",
+            "8. passage_id — for Reading questions that share one passage. Write the passage ONCE in the",
+            "   'Passages' sheet, then write its id on every question that uses it.",
             "",
-            "9. audio_file — cukup nama berkasnya, misalnya L01.mp3. Berkas audionya diunggah",
-            "   terpisah di halaman impor. Urutannya bebas: impor dulu atau unggah audio dulu.",
+            "9. audio_file — just the file name, e.g. L01.mp3. The audio files are uploaded",
+            "   separately on the import page. Order doesn't matter: import first or upload audio first.",
             "",
-            "10. tags — dipisah koma, misalnya: easy, main-idea.",
+            "10. tags — comma-separated, e.g. easy, main-idea.",
             "",
-            "11. Kolom opsional yang dikosongkan TIDAK menghapus data lama saat memperbarui soal.",
-            "    Untuk mengosongkan audio atau bacaan, gunakan halaman Bank Soal.",
+            "11. An optional column left empty does NOT erase existing data when updating a question.",
+            "    To clear audio or a passage, use the Question bank page.",
             "",
-            "12. Berkas diperiksa seluruhnya sebelum disimpan. Jika ada satu kesalahan, TIDAK ADA",
-            "    soal yang tersimpan — perbaiki lalu unggah ulang berkas yang sama.",
+            "12. The whole file is checked before anything is saved. If there is a single error, NO",
+            "    questions are saved — fix it and upload the same file again.",
         };
         for (var i = 0; i < lines.Length; i++)
             instructions.Cell(i + 1, 1).SetValue(lines[i]);

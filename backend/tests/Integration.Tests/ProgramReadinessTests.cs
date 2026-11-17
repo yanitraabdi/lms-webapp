@@ -155,14 +155,14 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.True(format.Blocking);
         Assert.False(r.Ready);
         // The detail must let an operator find the problem: what was declared, what is required.
-        Assert.Contains("Listening tertulis 5 soal, wajib 50", format.Detail);
-        Assert.Contains("Structure tertulis 4 soal, wajib 40", format.Detail);
-        Assert.Contains("Reading tertulis 5 soal, wajib 50", format.Detail);
+        Assert.Contains("Listening declares 5 questions, but 50 are required", format.Detail);
+        Assert.Contains("Structure declares 4 questions, but 40 are required", format.Detail);
+        Assert.Contains("Reading declares 5 questions, but 50 are required", format.Detail);
 
         // …and publishing is refused, naming the same thing.
         var publish = await Publish(admin, program, published: true);
         Assert.Equal(HttpStatusCode.Conflict, publish.StatusCode);
-        Assert.Contains("wajib 50", await publish.Content.ReadAsStringAsync());
+        Assert.Contains("50 are required", await publish.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
 
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
         var body = await res.Content.ReadAsStringAsync();
-        Assert.Contains("Belum ada sesi", body);
+        Assert.Contains("no sessions yet", body);
     }
 
     [Fact]
@@ -351,7 +351,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         var check = Check(r, "listening_audio_present");
 
         Assert.False(check.Passed);
-        Assert.Contains("50 soal listening belum memiliki audio", check.Detail);
+        Assert.Contains("50 listening questions have no audio", check.Detail);
         Assert.False(r.Ready);
         Assert.Equal(HttpStatusCode.Conflict, (await Publish(admin, program, published: true)).StatusCode);
     }
@@ -383,7 +383,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         // The detail must name the file, and must not read like "no audio configured" — the two
         // need different actions from an admin.
         Assert.Contains(phantom, check.Detail);
-        Assert.Contains("tidak ditemukan di penyimpanan", check.Detail);
+        Assert.Contains("not found in storage", check.Detail);
         Assert.False(r.Ready);
 
         var publish = await Publish(admin, program, published: true);
@@ -406,7 +406,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.False(check.Passed);
         Assert.Contains(phantom, check.Detail);
         // Deduplicated: 50 questions share one ref, so one file is named, not fifty.
-        Assert.Contains("1 berkas audio listening tidak ditemukan", check.Detail);
+        Assert.Contains("1 listening audio files were not found", check.Detail);
         Assert.False(r.Ready);
     }
 
@@ -446,7 +446,7 @@ public class ProgramReadinessTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.True(check.Blocking);
         Assert.Contains(phantom, check.Detail);
         // Its own wording: the section recording is fine, one question points at nothing.
-        Assert.Contains("menimpa rekaman bagian", check.Detail);
+        Assert.Contains("override the section recording", check.Detail);
         Assert.False(r.Ready);
 
         var publish = await Publish(admin, program, published: true);

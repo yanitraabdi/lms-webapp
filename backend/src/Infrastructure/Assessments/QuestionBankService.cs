@@ -44,7 +44,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
         Guid actor, UpsertQuestionRequest req, CancellationToken ct = default)
     {
         if (!TryBank(req.Bank, out var bank))
-            throw new AssessmentException("Pilih bank soal.");
+            throw new AssessmentException("Choose a question bank.");
         Validate(req);
         var question = new Question { Id = Guid.CreateVersion7() };
         Apply(question, req);
@@ -59,7 +59,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     {
         Validate(req);
         var question = await db.Questions.FirstOrDefaultAsync(x => x.Id == id, ct)
-            ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
+            ?? throw new AssessmentException("Question not found.", 404);
         Apply(question, req);
         Audit(actor, "question_updated", id, new { question.Section, req.Prompt });
         await db.SaveChangesAsync(ct);
@@ -68,9 +68,9 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     public async Task MoveAsync(Guid actor, Guid id, string bank, CancellationToken ct = default)
     {
         if (!TryBank(bank, out var target))
-            throw new AssessmentException("Pilih bank soal.");
+            throw new AssessmentException("Choose a question bank.");
         var question = await db.Questions.FirstOrDefaultAsync(x => x.Id == id, ct)
-            ?? throw new AssessmentException("Soal tidak ditemukan.", 404);
+            ?? throw new AssessmentException("Question not found.", 404);
         if (question.Bank == target) return;
 
         // A test may only hold questions of its own bank; moving one out from under a test of the
@@ -80,8 +80,8 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
                 aq => aq.QuestionId == id && aq.Assessment.Kind == blockingKind, ct))
             throw new AssessmentException(
                 blockingKind == AssessmentKind.Final
-                    ? "Soal ini masih dipakai di tes akhir. Lepas dari tes tersebut terlebih dahulu."
-                    : "Soal ini masih dipakai di tes sesi. Lepas dari tes tersebut terlebih dahulu.", 409);
+                    ? "This question is still used in a final assessment. Remove it from that test first."
+                    : "This question is still used in a session test. Remove it from that test first.", 409);
 
         var from = question.Bank;
         question.Bank = target;
@@ -106,7 +106,7 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
         // A question referenced by an assessment is part of a scored history — unlink it first.
         if (await db.AssessmentQuestions.AnyAsync(aq => aq.QuestionId == id, ct))
             throw new AssessmentException(
-                "Soal masih dipakai pada satu atau lebih tes. Lepaskan dari tes tersebut dulu.", 409);
+                "This question is still used in one or more tests. Remove it from those tests first.", 409);
 
         db.Questions.Remove(question);
         Audit(actor, "question_deleted", id, new { question.Prompt });
@@ -122,15 +122,15 @@ public class QuestionBankService(AppDbContext db) : IQuestionBankService
     private static void Validate(UpsertQuestionRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Prompt))
-            throw new AssessmentException("Pertanyaan wajib diisi.");
+            throw new AssessmentException("The question text is required.");
         if (req.Choices.Count < 2)
-            throw new AssessmentException("Minimal 2 pilihan jawaban.");
+            throw new AssessmentException("At least 2 options are required.");
         if (req.Choices.Any(string.IsNullOrWhiteSpace))
-            throw new AssessmentException("Pilihan jawaban tidak boleh kosong.");
+            throw new AssessmentException("Options can't be empty.");
         if (req.Correct.Count == 0)
-            throw new AssessmentException("Tandai minimal satu jawaban benar.");
+            throw new AssessmentException("Mark at least one correct answer.");
         if (req.Correct.Any(i => i < 0 || i >= req.Choices.Count))
-            throw new AssessmentException("Indeks jawaban benar di luar jangkauan pilihan.");
+            throw new AssessmentException("A correct-answer index is outside the range of options.");
     }
 
     private static void Apply(Question q, UpsertQuestionRequest req)

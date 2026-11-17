@@ -3,15 +3,15 @@ using System.Net.Sockets;
 
 namespace Academy.Infrastructure.Email;
 
-/// <summary>Turns an SmtpException into one actionable Indonesian sentence for the admin test
+/// <summary>Turns an SmtpException into one actionable English sentence for the admin test
 /// button. Never includes the exception message verbatim — it can echo server details — and never
 /// any credential (GR-9).</summary>
 public static class SmtpErrorMessage
 {
-    private const string Auth = "Login SMTP ditolak — periksa SMTP_USERNAME dan SMTP_PASSWORD (API key Resend).";
-    private const string Sender = "Alamat pengirim ditolak — pastikan domain SMTP_FROM_ADDRESS sudah Verified di Resend.";
-    private const string Recipient = "Alamat penerima ditolak — periksa alamat email akun admin Anda atau daftar suppression di Resend.";
-    public const string Unreachable = "Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.";
+    private const string Auth = "SMTP login rejected — check SMTP_USERNAME and SMTP_PASSWORD (Resend API key).";
+    private const string Sender = "Sender address rejected — make sure the SMTP_FROM_ADDRESS domain is Verified in Resend.";
+    private const string Recipient = "Recipient address rejected — check your admin account's email address or the suppression list in Resend.";
+    public const string Unreachable = "Couldn't reach the SMTP server — check SMTP_HOST and SMTP_PORT.";
 
     public static string For(SmtpException e)
     {
@@ -36,6 +36,6 @@ public static class SmtpErrorMessage
         if (e.InnerException is SocketException or IOException || e.StatusCode == SmtpStatusCode.GeneralFailure)
             return Unreachable;
 
-        return $"Pengiriman gagal (kode SMTP {code}).";
+        return $"Sending failed (SMTP code {code}).";
     }
 }

@@ -28,9 +28,9 @@ type Row = {
 const keyOf = (r: Row) => r.tempKey ?? r.id ?? "";
 
 const KIND_LABEL: Record<PartKind, string> = {
-  LessonVideo: "Video materi",
-  Test: "Tes",
-  Discussion: "Video pembahasan",
+  LessonVideo: "Lesson video",
+  Test: "Test",
+  Discussion: "Discussion video",
 };
 
 const iconBtn =
@@ -88,7 +88,7 @@ export function SessionPartsEditor({
     let cancelled = false;
     listSessionParts(token, sessionId)
       .then((p) => { if (!cancelled) { const r = toRows(p); setRows(r); setSaved(r); } })
-      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Gagal memuat bagian."))
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Couldn't load parts."))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [token, sessionId]);
@@ -135,7 +135,7 @@ export function SessionPartsEditor({
         .map((p, j) => (rows[j]?.tempKey ? { ...p, tempKey: rows[j].tempKey } : p));
       setRows(r); setSaved(r);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan bagian.");
+      setError(e instanceof Error ? e.message : "Couldn't save parts.");
     } finally { setBusy(false); }
   }
 
@@ -145,7 +145,7 @@ export function SessionPartsEditor({
 
   function remove(i: number) {
     if (uploading.has(keyOf(rows[i])) &&
-        !confirm("Unggahan video di bagian ini akan dihentikan. Hapus bagian?")) return;
+        !confirm("The video upload in this part will be stopped. Delete the part?")) return;
     setRows((rs) => rs.filter((_, j) => j !== i));
   }
 
@@ -159,7 +159,7 @@ export function SessionPartsEditor({
         <div className="flex flex-col gap-3">
           <div>
             <Button variant="ghost" size="sm" onClick={() => setEditingTestRow(null)}>
-              Kembali ke daftar bagian
+              Back to the parts list
             </Button>
           </div>
           <GatingTestEditor
@@ -174,12 +174,12 @@ export function SessionPartsEditor({
       {/* Hidden, not unmounted, while a test is edited: unmounting would abort running uploads. */}
       <div hidden={testRow !== null}>
         <div className="flex flex-col gap-3" role="group" aria-labelledby="parts-caption">
-          <span id="parts-caption" className="text-[12px] font-bold text-ink-muted">Daftar bagian</span>
+          <span id="parts-caption" className="text-[12px] font-bold text-ink-muted">Parts list</span>
 
           {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
 
           {rows.length === 0 && (
-            <p className="text-[12.5px] text-ink-muted">Belum ada bagian.</p>
+            <p className="text-[12.5px] text-ink-muted">No parts yet.</p>
           )}
 
           <ol className="flex flex-col gap-2">
@@ -191,19 +191,19 @@ export function SessionPartsEditor({
                   <input
                     value={r.title}
                     onChange={(e) => update(i, { title: e.target.value })}
-                    aria-label={`Judul bagian ${i + 1}`}
+                    aria-label={`Part ${i + 1} title`}
                     className={inputBlockCls + " min-w-0 flex-1"}
                   />
                   <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)}
-                    aria-label="Naikkan" className={iconBtn}>↑</button>
+                    aria-label="Move up" className={iconBtn}>↑</button>
                   <button type="button" disabled={busy || i === rows.length - 1} onClick={() => move(i, 1)}
-                    aria-label="Turunkan" className={iconBtn}>↓</button>
+                    aria-label="Move down" className={iconBtn}>↓</button>
                   <button
                     type="button"
                     disabled={busy || r.hasLearnerData}
-                    title={r.hasLearnerData ? "Sudah ada progres peserta" : undefined}
+                    title={r.hasLearnerData ? "Learners already have progress here" : undefined}
                     onClick={() => remove(i)}
-                    aria-label="Hapus"
+                    aria-label="Delete"
                     className={iconBtn + " hover:text-danger"}
                   >
                     <XIcon size={14} />
@@ -213,9 +213,9 @@ export function SessionPartsEditor({
                 {r.kind === "Test" ? (
                   <div className="flex items-center gap-2 pl-7">
                     <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
-                      {r.assessmentTitle ?? (r.assessmentId ? "Tes tersimpan" : "Belum ada tes")}
+                      {r.assessmentTitle ?? (r.assessmentId ? "Test saved" : "No test yet")}
                     </span>
-                    <Button variant="neutral" size="sm" onClick={() => setEditingTestRow(i)}>Atur tes</Button>
+                    <Button variant="neutral" size="sm" onClick={() => setEditingTestRow(i)}>Set up test</Button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1 pl-7">
@@ -227,16 +227,16 @@ export function SessionPartsEditor({
                     />
                     <div className="flex flex-wrap items-center gap-2">
                       <label className="flex min-w-0 flex-1 items-center gap-2 text-[12px] text-ink-muted">
-                        ID video
+                        Video ID
                         <input
                           value={r.providerAssetId ?? ""}
                           onChange={(e) => update(i, { providerAssetId: e.target.value.trim() || undefined })}
-                          placeholder="mis. 3f1c…"
+                          placeholder="e.g. 3f1c…"
                           className={inputBlockCls + " min-w-0 flex-1 font-mono text-[12px]"}
                         />
                       </label>
                       <label className="flex items-center gap-2 text-[12px] text-ink-muted">
-                        Durasi (menit)
+                        Duration (minutes)
                         <input
                           type="number"
                           min={1}
@@ -253,18 +253,18 @@ export function SessionPartsEditor({
           </ol>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="neutral" size="sm" onClick={() => add("LessonVideo")}>+ Video materi</Button>
-            <Button variant="neutral" size="sm" onClick={() => add("Test")}>+ Tes</Button>
+            <Button variant="neutral" size="sm" onClick={() => add("LessonVideo")}>+ Lesson video</Button>
+            <Button variant="neutral" size="sm" onClick={() => add("Test")}>+ Test</Button>
             <Button variant="neutral" size="sm" disabled={last?.kind !== "Test"} onClick={() => add("Discussion")}>
-              + Video pembahasan
+              + Discussion video
             </Button>
           </div>
 
           <div className="flex items-center justify-end gap-3">
             {incomplete && (
-              <p className="text-[12.5px] font-semibold text-warning">Lengkapi video dan tes setiap bagian.</p>
+              <p className="text-[12.5px] font-semibold text-warning">Complete the video or test in every part.</p>
             )}
-            <Button size="sm" onClick={save} loading={busy} disabled={incomplete}>Simpan bagian</Button>
+            <Button size="sm" onClick={save} loading={busy} disabled={incomplete}>Save parts</Button>
           </div>
         </div>
       </div>

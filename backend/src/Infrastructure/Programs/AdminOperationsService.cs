@@ -56,10 +56,10 @@ public class AdminOperationsService(AppDbContext db) : IAdminOperationsService
     public async Task GrantEnrollmentAsync(Guid actor, GrantEnrollmentRequest req, CancellationToken ct = default)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email.Trim(), ct)
-            ?? throw new ProgramException("Pengguna dengan email tersebut tidak ditemukan.", 404);
+            ?? throw new ProgramException("No user found with that email.", 404);
 
         if (!await db.Programs.AnyAsync(p => p.Id == req.ProgramId, ct))
-            throw new ProgramException("Program tidak ditemukan.", 404);
+            throw new ProgramException("Program not found.", 404);
 
         var enrollment = await db.Enrollments
             .FirstOrDefaultAsync(e => e.UserId == user.Id && e.ProgramId == req.ProgramId, ct);
@@ -77,7 +77,7 @@ public class AdminOperationsService(AppDbContext db) : IAdminOperationsService
         }
         else if (enrollment.GrantsAccess)
         {
-            throw new ProgramException("Pengguna sudah terdaftar aktif pada program ini.", 409);
+            throw new ProgramException("This user is already actively enrolled in this program.", 409);
         }
         else if (!Domain.EnrollmentStateMachine.CanReinstate(enrollment.Status))
         {
@@ -85,7 +85,7 @@ public class AdminOperationsService(AppDbContext db) : IAdminOperationsService
             // all, so reinstatement worked only by not asking. Asking explicitly is what keeps it
             // working if the webhook's rules are ever tightened.
             throw new ProgramException(
-                $"Pendaftaran berstatus {enrollment.Status} tidak dapat diaktifkan kembali.", 409);
+                $"An enrollment with status {enrollment.Status} can't be reactivated.", 409);
         }
 
         enrollment.Status = EnrollmentStatus.Active;

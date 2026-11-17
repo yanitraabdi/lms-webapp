@@ -38,13 +38,13 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
   }
 
   async function remove(s: AdminSession) {
-    if (!confirm(`Hapus sesi "${s.title}"?`)) return;
+    if (!confirm(`Delete session "${s.title}"?`)) return;
     setBusy(true);
     try {
       await deleteSession(token, s.id);
       await qc.invalidateQueries({ queryKey: key });
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Gagal menghapus.");
+      alert(e instanceof Error ? e.message : "Couldn't delete.");
     } finally { setBusy(false); }
   }
 
@@ -52,27 +52,27 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
     <Modal
       open
       onClose={onClose}
-      title={`Sesi: ${program.name}`}
+      title={`Sessions: ${program.name}`}
       className="max-w-2xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <Button variant="neutral" size="sm" onClick={() => setAdding(true)}>+ Tambah sesi</Button>
+            <Button variant="neutral" size="sm" onClick={() => setAdding(true)}>+ Add session</Button>
             <Link
               href={`/admin/programs/${program.id}/score-bands`}
               className="text-[12.5px] font-bold text-primary hover:underline"
             >
-              Tabel konversi skor
+              Score conversion table
             </Link>
           </div>
-          <Button size="sm" onClick={onClose}>Selesai</Button>
+          <Button size="sm" onClick={onClose}>Done</Button>
         </div>
       }
     >
       {q.isPending ? (
         <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
       ) : sessions.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-muted">Belum ada sesi. Tambahkan sesi pertama.</p>
+        <p className="py-6 text-center text-sm text-ink-muted">No sessions yet. Add the first session.</p>
       ) : (
         <ol className="flex flex-col gap-2">
           {sessions.map((s, i) => (
@@ -81,7 +81,7 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13.5px] font-semibold text-ink">{s.title}</span>
                 <span className="block text-[11.5px] text-ink-subtle">
-                  {s.type}{s.durationSeconds != null && ` · ${minutesLabel(s.durationSeconds)}`}
+                  {s.type}{s.durationSeconds != null && ` · ${minutesLabel(s.durationSeconds, "min")}`}
                 </span>
               </span>
               <div className="flex shrink-0 items-center gap-1">
@@ -91,27 +91,27 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
                     onClick={() => setAttendanceFor(s.id)}
                     className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
                   >
-                    Kehadiran
+                    Attendance
                   </button>
                 )}
                 {s.type === "FinalAssessment" && (
                   <>
                     {/* Two different jobs: the editor sets the section layout (how many questions
-                        and minutes per section), "Susun soal" picks WHICH questions fill it. The
+                        and minutes per section), "Arrange questions" picks WHICH questions fill it. The
                         layout stays editable after the test is attached. */}
                     <button
                       type="button"
                       onClick={() => setTestFor({ sessionId: s.id, assessmentId: s.assessmentId ?? null, kind: "Final" })}
                       className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
                     >
-                      {s.assessmentId ? "Konfigurasi" : "Buat tes akhir"}
+                      {s.assessmentId ? "Configure" : "Create final assessment"}
                     </button>
                     {s.assessmentId && (
                       <Link
                         href={`/admin/assessments/${s.assessmentId}`}
                         className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
                       >
-                        Susun soal
+                        Arrange questions
                       </Link>
                     )}
                   </>
@@ -121,14 +121,14 @@ export function SessionManager({ token, program, onClose }: { token: string; pro
                   onClick={() => setEditing(s)}
                   className="rounded px-2 py-1 text-[11.5px] font-bold text-primary hover:bg-primary-soft"
                 >
-                  Ubah
+                  Edit
                 </button>
                 <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)}
-                  aria-label="Naikkan" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↑</button>
+                  aria-label="Move up" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↑</button>
                 <button type="button" disabled={busy || i === sessions.length - 1} onClick={() => move(i, 1)}
-                  aria-label="Turunkan" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↓</button>
+                  aria-label="Move down" className="rounded px-1.5 py-1 text-ink-muted hover:bg-surface-2 disabled:opacity-30">↓</button>
                 <button type="button" disabled={busy} onClick={() => remove(s)}
-                  aria-label="Hapus" className="rounded px-1.5 py-1 text-ink-subtle hover:text-danger disabled:opacity-30">
+                  aria-label="Delete" className="rounded px-1.5 py-1 text-ink-subtle hover:text-danger disabled:opacity-30">
                   <XIcon size={14} />
                 </button>
               </div>

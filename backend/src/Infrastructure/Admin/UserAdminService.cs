@@ -86,7 +86,7 @@ public class UserAdminService(AppDbContext db) : IUserAdminService
     {
         _ = await db.Users.FirstOrDefaultAsync(x => x.Id == userId, ct) ?? throw NotFound();
         var plan = await db.Plans.FirstOrDefaultAsync(p => p.Id == planId, ct)
-            ?? throw new AdminException("Paket tidak ditemukan.", 404);
+            ?? throw new AdminException("Plan not found.", 404);
 
         var now = DateTimeOffset.UtcNow;
         var sub = new Subscription
@@ -133,5 +133,5 @@ public class UserAdminService(AppDbContext db) : IUserAdminService
             Target = target.ToString(), Metadata = JsonSerializer.Serialize(metadata),
         });
 
-    private static AdminException NotFound() => new("Pengguna tidak ditemukan.", 404);
+    private static AdminException NotFound() => new("User not found.", 404);
 }

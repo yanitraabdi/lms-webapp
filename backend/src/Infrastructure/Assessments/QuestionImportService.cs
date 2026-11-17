@@ -41,11 +41,11 @@ public class QuestionImportService(AppDbContext db) : IQuestionImportService
         var byExternalId = existing.ToDictionary(q => q.ExternalId!, StringComparer.Ordinal);
 
         // An id already in the OTHER bank is an error, not a silent move (spec §4.6).
-        var label = (QuestionBank b) => b == QuestionBank.Simulation ? "Simulasi TOEFL" : "Tes Sesi";
+        var label = (QuestionBank b) => b == QuestionBank.Simulation ? "TOEFL simulation" : "Session test";
         var crossBank = parsed.Questions
             .Where(q => byExternalId.TryGetValue(q.ExternalId, out var e) && e.Bank != bank)
             .Select(q => new ImportError(q.RowNumber, "id",
-                $"ID {q.ExternalId} sudah ada di bank {label(byExternalId[q.ExternalId].Bank)}. Ganti ID-nya, atau impor ke bank tersebut."))
+                $"ID {q.ExternalId} already exists in the {label(byExternalId[q.ExternalId].Bank)} bank. Change the ID, or import into that bank."))
             .ToList();
         var errors = parsed.Errors.Concat(crossBank).ToList();
 

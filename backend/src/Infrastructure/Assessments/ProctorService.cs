@@ -83,7 +83,7 @@ public class ProctorService(AppDbContext db, IFinalAssessmentService finals) : I
         => ConcurrencyRetry.RunAsync(db, async () =>
         {
             var attempt = await db.Attempts.FirstOrDefaultAsync(a => a.Id == attemptId, ct)
-                ?? throw new AssessmentException("Percobaan tidak ditemukan.", 404);
+                ?? throw new AssessmentException("Attempt not found.", 404);
 
             attempt.ProctorFlagged = false;
             attempt.Reinstated = true;

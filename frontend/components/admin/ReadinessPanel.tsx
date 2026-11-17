@@ -7,7 +7,7 @@ import { getProgramReadiness, type AdminProgram } from "@/lib/programs";
 
 /** Where to go to fix each failing check. */
 const FIX: Record<string, (p: AdminProgram) => { href: string; label: string } | null> = {
-  score_bands_complete: (p) => ({ href: `/admin/programs/${p.id}/score-bands`, label: "Buka tabel konversi" }),
+  score_bands_complete: (p) => ({ href: `/admin/programs/${p.id}/score-bands`, label: "Open conversion table" }),
   gating_tests_populated: () => null,
   final_sections_populated: () => null,
   final_sections_match_itp: () => null,
@@ -29,14 +29,14 @@ export function ReadinessPanel({
     <Modal
       open
       onClose={onClose}
-      title={`Kesiapan: ${program.name}`}
+      title={`Readiness: ${program.name}`}
       className="max-w-lg"
-      footer={<div className="flex w-full justify-end"><Button size="sm" onClick={onClose}>Tutup</Button></div>}
+      footer={<div className="flex w-full justify-end"><Button size="sm" onClick={onClose}>Close</Button></div>}
     >
       {q.isPending ? (
         <div className="flex min-h-[160px] items-center justify-center"><Spinner size={22} /></div>
       ) : q.isError ? (
-        <p className="py-6 text-center text-sm text-ink-muted">Gagal memuat status kesiapan.</p>
+        <p className="py-6 text-center text-sm text-ink-muted">Couldn&apos;t load readiness status.</p>
       ) : (
         <div className="flex flex-col gap-3">
           <div
@@ -46,8 +46,8 @@ export function ReadinessPanel({
             }
           >
             {q.data.ready
-              ? "Program siap diterbitkan."
-              : "Program belum bisa diterbitkan. Lengkapi item bertanda di bawah."}
+              ? "Program is ready to publish."
+              : "Program can't be published yet. Complete the flagged items below."}
           </div>
 
           <ul className="flex flex-col gap-2">
@@ -61,7 +61,7 @@ export function ReadinessPanel({
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold text-ink">
                       {c.title}
-                      {!c.blocking && <span className="ml-1.5 text-[11px] font-normal text-ink-subtle">(tidak wajib)</span>}
+                      {!c.blocking && <span className="ml-1.5 text-[11px] font-normal text-ink-subtle">(optional)</span>}
                     </span>
                     {c.detail && <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-muted">{c.detail}</span>}
                     {fix && (

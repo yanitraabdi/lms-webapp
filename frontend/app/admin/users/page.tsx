@@ -16,8 +16,8 @@ import {
   setUserStatus,
 } from "@/lib/admin";
 
-const TIER_NAME: Record<number, string> = { 0: "Gratis", 1: "Basic", 2: "Intermediate", 3: "Advanced" };
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+const TIER_NAME: Record<number, string> = { 0: "Free", 1: "Basic", 2: "Intermediate", 3: "Advanced" };
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default function AdminUsersPage() {
   const { accessToken: token, user } = useAuth();
@@ -40,21 +40,21 @@ export default function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <PageTitle size="compact">Pengguna</PageTitle>
+      <PageTitle size="compact">Users</PageTitle>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Cari email atau nama…"
+            placeholder="Search email or name…"
             className="w-[240px] rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
           />
         </div>
         <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-sm border border-border bg-surface px-3 py-2 text-[13px] font-semibold outline-none focus:border-primary">
-          <option value="">Semua status</option>
-          <option value="Active">Aktif</option>
-          <option value="Suspended">Ditangguhkan</option>
+          <option value="">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Suspended">Suspended</option>
         </select>
       </div>
 
@@ -62,19 +62,19 @@ export default function AdminUsersPage() {
         {!token || users.isPending ? (
           <div className="flex min-h-[160px] items-center justify-center"><Spinner size={22} /></div>
         ) : users.isError ? (
-          <div className="p-6"><ErrorState title="Gagal memuat pengguna" action={<Button variant="neutral" size="sm" onClick={() => users.refetch()}>Muat ulang</Button>} /></div>
+          <div className="p-6"><ErrorState title="Couldn't load users" action={<Button variant="neutral" size="sm" onClick={() => users.refetch()}>Reload</Button>} /></div>
         ) : users.data.users.length === 0 ? (
-          <p className="px-6 py-8 text-center text-sm text-ink-muted">Tidak ada pengguna.</p>
+          <p className="px-6 py-8 text-center text-sm text-ink-muted">No users.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table min-w-[640px]">
               <thead>
                 <tr>
-                  <th>Pengguna</th>
-                  <th>Peran</th>
+                  <th>User</th>
+                  <th>Role</th>
                   <th>Status</th>
-                  <th>Paket</th>
-                  <th className="num">Aksi</th>
+                  <th>Plan</th>
+                  <th className="num">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-[13.5px]">
@@ -87,12 +87,12 @@ export default function AdminUsersPage() {
                     <td>{u.role}</td>
                     <td>
                       <Badge tone={u.status === "Active" ? "success" : "warning"} className="px-2.5 py-0.5 text-[11.5px]">
-                        {u.status === "Active" ? "Aktif" : "Ditangguhkan"}
+                        {u.status === "Active" ? "Active" : "Suspended"}
                       </Badge>
                     </td>
-                    <td className="text-ink-muted">{u.activeTier == null ? "Gratis" : TIER_NAME[num(u.activeTier)]}</td>
+                    <td className="text-ink-muted">{u.activeTier == null ? "Free" : TIER_NAME[num(u.activeTier)]}</td>
                     <td className="num">
-                      <button type="button" onClick={() => setSelected(u.id)} className="text-[12.5px] font-bold text-primary hover:underline">Kelola</button>
+                      <button type="button" onClick={() => setSelected(u.id)} className="text-[12.5px] font-bold text-primary hover:underline">Manage</button>
                     </td>
                   </tr>
                 ))}
@@ -126,7 +126,7 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
       await qc.invalidateQueries({ queryKey: ["admin-user", userId] });
       await qc.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal.");
+      setError(e instanceof Error ? e.message : "Failed.");
     } finally {
       setBusy(false);
     }
@@ -136,7 +136,7 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
   const paid = (plans.data ?? []).filter((p) => num(p.tierLevel) >= 1);
 
   return (
-    <Modal open onClose={onClose} title="Kelola pengguna" className="max-w-lg">
+    <Modal open onClose={onClose} title="Manage user" className="max-w-lg">
       {detail.isPending || !d ? (
         <div className="flex min-h-[160px] items-center justify-center"><Spinner size={20} /></div>
       ) : (
@@ -144,32 +144,32 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
           {error && <p className="rounded-base bg-danger-soft px-3 py-2 text-[12.5px] text-danger">{error}</p>}
           <div>
             <div className="text-base font-extrabold">{d.name}</div>
-            <div className="text-[12.5px] text-ink-muted">{d.email} · bergabung {fmtDate(d.createdAt)}</div>
+            <div className="text-[12.5px] text-ink-muted">{d.email} · joined {fmtDate(d.createdAt)}</div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 rounded-base bg-surface-2 p-3 text-[12.5px]">
-            <Fact label="Peran" value={d.role} />
-            <Fact label="Status" value={d.status === "Active" ? "Aktif" : "Ditangguhkan"} />
-            <Fact label="Paket" value={d.planName ?? "Gratis"} />
-            <Fact label="Langganan" value={d.subscriptionStatus ?? "Tidak ada"} />
-            <Fact label="Modul selesai" value={String(num(d.completedModules))} />
-            <Fact label="Sertifikat" value={String(num(d.certificateCount))} />
+            <Fact label="Role" value={d.role} />
+            <Fact label="Status" value={d.status === "Active" ? "Active" : "Suspended"} />
+            <Fact label="Plan" value={d.planName ?? "Free"} />
+            <Fact label="Subscription" value={d.subscriptionStatus ?? "None"} />
+            <Fact label="Modules completed" value={String(num(d.completedModules))} />
+            <Fact label="Certificates" value={String(num(d.certificateCount))} />
           </div>
 
           {/* status */}
           <div className="flex items-center justify-between gap-2 border-t border-surface-2 pt-3">
-            <span className="text-[13px] font-bold">Status akun</span>
+            <span className="text-[13px] font-bold">Account status</span>
             {d.status === "Active" ? (
-              <Button size="sm" variant="neutral" className="border-[#F1C9C9] text-danger" loading={busy} onClick={() => act(() => setUserStatus(token, userId, "Suspended"))}>Tangguhkan</Button>
+              <Button size="sm" variant="neutral" className="border-[#F1C9C9] text-danger" loading={busy} onClick={() => act(() => setUserStatus(token, userId, "Suspended"))}>Suspend</Button>
             ) : (
-              <Button size="sm" loading={busy} onClick={() => act(() => setUserStatus(token, userId, "Active"))}>Aktifkan</Button>
+              <Button size="sm" loading={busy} onClick={() => act(() => setUserStatus(token, userId, "Active"))}>Activate</Button>
             )}
           </div>
 
           {/* role (superadmin) */}
           {isSuper && (
             <div className="flex items-center justify-between gap-2 border-t border-surface-2 pt-3">
-              <span className="text-[13px] font-bold">Peran</span>
+              <span className="text-[13px] font-bold">Role</span>
               <select
                 value={d.role}
                 disabled={busy}
@@ -185,16 +185,16 @@ function UserDetail({ token, userId, isSuper, onClose }: { token: string; userId
 
           {/* grant / revoke */}
           <div className="flex flex-col gap-2 border-t border-surface-2 pt-3">
-            <span className="text-[13px] font-bold">Beri / cabut paket (komplimen)</span>
+            <span className="text-[13px] font-bold">Grant / revoke plan (complimentary)</span>
             <div className="flex flex-wrap items-center gap-2">
               <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="rounded-sm border border-border bg-surface px-3 py-1.5 text-[13px] outline-none focus:border-primary">
-                <option value="">Pilih paket…</option>
+                <option value="">Select a plan…</option>
                 {paid.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <input type="number" min={1} value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-20 rounded-sm border border-border bg-surface px-2 py-1.5 text-[13px] outline-none focus:border-primary" />
-              <span className="text-[12px] text-ink-muted">hari</span>
-              <Button size="sm" disabled={!planId || busy} onClick={() => act(() => grantPlan(token, userId, planId, days))}>Beri</Button>
-              <Button size="sm" variant="neutral" disabled={busy} onClick={() => act(() => revokePlan(token, userId))}>Cabut</Button>
+              <span className="text-[12px] text-ink-muted">days</span>
+              <Button size="sm" disabled={!planId || busy} onClick={() => act(() => grantPlan(token, userId, planId, days))}>Grant</Button>
+              <Button size="sm" variant="neutral" disabled={busy} onClick={() => act(() => revokePlan(token, userId))}>Revoke</Button>
             </div>
           </div>
         </div>

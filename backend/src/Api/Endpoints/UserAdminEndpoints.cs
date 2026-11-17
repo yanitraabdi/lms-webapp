@@ -25,7 +25,7 @@ public static class UserAdminEndpoints
             Guid id, SetUserStatusRequest r, ClaimsPrincipal u, IUserAdminService s, CancellationToken ct) =>
         {
             if (!Enum.TryParse<UserStatus>(r.Status, true, out var st) || st == UserStatus.Deleted)
-                return TypedResults.BadRequest("Status tidak valid.");
+                return TypedResults.BadRequest("Invalid status.");
             await s.SetStatusAsync(u.UserId(), id, st, ct);
             return TypedResults.NoContent();
         });
@@ -35,7 +35,7 @@ public static class UserAdminEndpoints
             Guid id, SetUserRoleRequest r, ClaimsPrincipal u, IUserAdminService s, CancellationToken ct) =>
         {
             if (!Enum.TryParse<UserRole>(r.Role, true, out var role))
-                return TypedResults.BadRequest("Peran tidak valid.");
+                return TypedResults.BadRequest("Invalid role.");
             await s.SetRoleAsync(u.UserId(), id, role, ct);
             return TypedResults.NoContent();
         }).RequireAuthorization("SuperAdmin");
