@@ -30,13 +30,13 @@ export function SectionComposer({
             (complete ? "bg-success-soft text-success" : "bg-warning-soft text-warning")
           }
         >
-          {selected.length} / {required} soal
+          {selected.length} / {required} questions
         </span>
       </div>
       {onAudioChange && (
         <div className="mb-4 flex flex-col gap-1">
-          <span className="text-[12px] font-bold text-ink-muted">Rekaman satu bagian (opsional)</span>
-          <p className="text-[12px] text-ink-subtle">Dipakai untuk soal yang tidak punya audio sendiri.</p>
+          <span className="text-[12px] font-bold text-ink-muted">Whole-section recording (optional)</span>
+          <p className="text-[12px] text-ink-subtle">Used for questions that have no audio of their own.</p>
           <AudioUpload token={token} value={audioRef ?? null} onChange={onAudioChange} />
         </div>
       )}

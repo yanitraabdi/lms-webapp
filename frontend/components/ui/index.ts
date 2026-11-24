@@ -3,6 +3,7 @@ export { Button, type ButtonProps } from "./Button";
 export { Badge, TagChip, type BadgeProps, type Tier, type Status, type Promo, type Tone } from "./Badge";
 export { Card, type CardProps } from "./Card";
 export { Spinner } from "./Spinner";
+export { UiLocaleProvider, useUiStrings, type UiLocale } from "./locale";
 export { Input, type InputProps } from "./Input";
 export { Field, type FieldProps } from "./Field";
 export { Checkbox, type CheckboxProps } from "./Checkbox";

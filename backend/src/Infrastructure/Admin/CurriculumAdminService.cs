@@ -110,7 +110,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task<AdminModuleDetailDto> GetModuleAsync(Guid id, CancellationToken ct = default)
     {
-        var m = await db.Modules.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw NotFound("Modul");
+        var m = await db.Modules.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw NotFound("Module");
         var tagIds = await db.ModuleTags.Where(mt => mt.ModuleId == id).Select(mt => mt.TagId).ToListAsync(ct);
         return Map(m, tagIds);
     }
@@ -130,7 +130,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task UpdateModuleAsync(Guid actor, Guid id, UpsertModuleRequest req, CancellationToken ct = default)
     {
-        var m = await db.Modules.FindAsync([id], ct) ?? throw NotFound("Modul");
+        var m = await db.Modules.FindAsync([id], ct) ?? throw NotFound("Module");
         var wasPublished = m.Status == ModuleStatus.Published;
         Apply(m, req);
         if (req.Published && !wasPublished && m.PublishedAt is null) m.PublishedAt = DateTimeOffset.UtcNow;
@@ -143,7 +143,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task DeleteModuleAsync(Guid actor, Guid id, CancellationToken ct = default)
     {
-        var m = await db.Modules.FindAsync([id], ct) ?? throw NotFound("Modul");
+        var m = await db.Modules.FindAsync([id], ct) ?? throw NotFound("Module");
         db.Modules.Remove(m);
         Audit(actor, "module_deleted", id, new { m.Title });
         await SaveGuardedAsync(ct);
@@ -168,7 +168,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task UpdateCategoryAsync(Guid actor, Guid id, UpsertCategoryRequest req, CancellationToken ct = default)
     {
-        var c = await db.Categories.FindAsync([id], ct) ?? throw NotFound("Kategori");
+        var c = await db.Categories.FindAsync([id], ct) ?? throw NotFound("Category");
         c.Name = req.Name.Trim();
         c.Slug = Slug(req.Slug, req.Name);
         Audit(actor, "category_updated", id, new { c.Name });
@@ -177,7 +177,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task DeleteCategoryAsync(Guid actor, Guid id, CancellationToken ct = default)
     {
-        var c = await db.Categories.FindAsync([id], ct) ?? throw NotFound("Kategori");
+        var c = await db.Categories.FindAsync([id], ct) ?? throw NotFound("Category");
         db.Categories.Remove(c);
         Audit(actor, "category_deleted", id, new { c.Name });
         await SaveGuardedAsync(ct);
@@ -231,7 +231,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task UpdateResourceAsync(Guid actor, Guid id, UpsertResourceRequest req, CancellationToken ct = default)
     {
-        var r = await db.Resources.FindAsync([id], ct) ?? throw NotFound("Materi");
+        var r = await db.Resources.FindAsync([id], ct) ?? throw NotFound("Resource");
         r.Type = ParseType(req.Type);
         r.Ref = req.Ref.Trim();
         r.Title = req.Title.Trim();
@@ -241,7 +241,7 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
 
     public async Task DeleteResourceAsync(Guid actor, Guid id, CancellationToken ct = default)
     {
-        var r = await db.Resources.FindAsync([id], ct) ?? throw NotFound("Materi");
+        var r = await db.Resources.FindAsync([id], ct) ?? throw NotFound("Resource");
         db.Resources.Remove(r);
         Audit(actor, "resource_deleted", id, new { r.Title });
         await SaveAsync(ct);
@@ -289,18 +289,18 @@ public class CurriculumAdminService(AppDbContext db, IContentRevalidator revalid
             Target = target.ToString(), Metadata = JsonSerializer.Serialize(metadata),
         });
 
-    private static AdminException NotFound(string what) => new($"{what} tidak ditemukan.", 404);
+    private static AdminException NotFound(string what) => new($"{what} not found.", 404);
 
     private async Task SaveAsync(CancellationToken ct)
     {
         try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { throw new AdminException("Gagal menyimpan — slug mungkin sudah dipakai.", 409); }
+        catch (DbUpdateException) { throw new AdminException("Couldn't save — the slug may already be in use.", 409); }
     }
 
     private async Task SaveGuardedAsync(CancellationToken ct)
     {
         try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { throw new AdminException("Tidak bisa dihapus karena masih ada data terkait (mis. progres atau sertifikat).", 409); }
+        catch (DbUpdateException) { throw new AdminException("Can't be deleted because related data still exists (e.g. progress or certificates).", 409); }
     }
 
     private Task Revalidate(CancellationToken ct, string? moduleSlug = null)

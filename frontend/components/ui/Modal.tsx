@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { XIcon } from "./icons";
+import { useUiStrings } from "./locale";
 
 export interface ModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ export interface ModalProps {
 const openStack: symbol[] = [];
 
 export function Modal({ open, onClose, title, icon, children, footer, className }: ModalProps) {
+  const t = useUiStrings();
   // Read through a ref so a new onClose each render does not re-register (and re-stack) the modal.
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; });
@@ -63,7 +65,7 @@ export function Modal({ open, onClose, title, icon, children, footer, className 
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label={t.close}
             className="ml-auto rounded-sm p-1 text-ink-subtle hover:bg-surface-2"
           >
             <XIcon size={18} />

@@ -87,9 +87,9 @@ public class VideoLibraryTests
     }
 
     [Theory]
-    [InlineData(HttpStatusCode.Unauthorized, "Bunny menolak kunci API. Periksa BUNNY_API_KEY.")]
-    [InlineData(HttpStatusCode.Forbidden, "Bunny menolak kunci API. Periksa BUNNY_API_KEY.")]
-    [InlineData(HttpStatusCode.InternalServerError, "Bunny membalas 500. Coba lagi.")]
+    [InlineData(HttpStatusCode.Unauthorized, "Bunny rejected the API key. Check BUNNY_API_KEY.")]
+    [InlineData(HttpStatusCode.Forbidden, "Bunny rejected the API key. Check BUNNY_API_KEY.")]
+    [InlineData(HttpStatusCode.InternalServerError, "Bunny responded with 500. Try again.")]
     public async Task Bunny_refusing_the_create_is_a_502_with_a_reason(HttpStatusCode code, string message)
     {
         var e = await Assert.ThrowsAsync<ProgramException>(
@@ -104,7 +104,7 @@ public class VideoLibraryTests
         var e = await Assert.ThrowsAsync<ProgramException>(
             () => Library(new ThrowingHandler()).CreateUploadAsync("Sesi 9"));
         Assert.Equal(502, e.StatusCode);
-        Assert.Equal("Bunny tidak dapat dihubungi. Coba lagi.", e.Message);
+        Assert.Equal("Couldn't reach Bunny. Try again.", e.Message);
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class VideoLibraryTests
         var lib = new UnavailableVideoLibrary("dev");
         var e = await Assert.ThrowsAsync<ProgramException>(() => lib.CreateUploadAsync("x"));
         Assert.Equal(409, e.StatusCode);
-        Assert.Equal("Unggah video hanya tersedia saat Bunny aktif.", e.Message);
+        Assert.Equal("Video upload is only available when Bunny is active.", e.Message);
         Assert.Equal(409, Assert.Throws<ProgramException>(() => lib.RenewUpload("6f1d2c3b-0000-4000-8000-0000000000aa")).StatusCode);
     }
 
@@ -175,8 +175,8 @@ public class VideoLibraryTests
         var page = await Library(new StubHandler(HttpStatusCode.Unauthorized, "")).ListAsync(null, 1);
 
         Assert.Empty(page.Items);
-        Assert.Contains("kunci API", page.Unavailable);
-        Assert.Contains("pustaka", page.Unavailable);
+        Assert.Contains("API key", page.Unavailable);
+        Assert.Contains("library", page.Unavailable);
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class VideoLibraryEndpointTests(AuthApiFactory factory) : IClassFixture<A
     {
         var res = await Post("/api/admin/video-library/uploads", await Token(UserRole.Admin), new { title });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("Judul video wajib diisi (maksimal 200 karakter).", await res.Content.ReadAsStringAsync());
+        Assert.Contains("Video title is required (200 characters max).", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public class VideoLibraryEndpointTests(AuthApiFactory factory) : IClassFixture<A
     {
         var res = await Post("/api/admin/video-library/uploads", await Token(UserRole.Admin), new { title = "Sesi 9" });
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
-        Assert.Contains("Unggah video hanya tersedia saat Bunny aktif.", await res.Content.ReadAsStringAsync());
+        Assert.Contains("Video upload is only available when Bunny is active.", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public class VideoLibraryEndpointTests(AuthApiFactory factory) : IClassFixture<A
         var token = await Token(UserRole.Admin);
         var bad = await Post("/api/admin/video-library/uploads/not-a-guid/ticket", token, null);
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
-        Assert.Contains("ID video tidak valid.", await bad.Content.ReadAsStringAsync());
+        Assert.Contains("Invalid video ID.", await bad.Content.ReadAsStringAsync());
 
         var ok = await Post($"/api/admin/video-library/uploads/{Guid.NewGuid()}/ticket", token, null);
         Assert.Equal(HttpStatusCode.Conflict, ok.StatusCode);

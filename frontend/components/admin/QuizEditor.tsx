@@ -43,7 +43,7 @@ export function QuizEditor({
           setQuestions([emptyQuestion()]);
         }
       })
-      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Gagal memuat kuis."))
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Couldn't load quiz."))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [open, token, moduleId]);
@@ -84,21 +84,21 @@ export function QuizEditor({
       await upsertQuiz(token, moduleId, payload);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan kuis.");
+      setError(e instanceof Error ? e.message : "Couldn't save quiz.");
     } finally {
       setBusy(false);
     }
   }
 
   async function destroy() {
-    if (!confirm("Hapus kuis untuk modul ini?")) return;
+    if (!confirm("Delete the quiz for this module?")) return;
     setBusy(true);
     setError(null);
     try {
       await deleteAdminQuiz(token, moduleId);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menghapus kuis.");
+      setError(e instanceof Error ? e.message : "Couldn't delete quiz.");
     } finally {
       setBusy(false);
     }
@@ -108,16 +108,16 @@ export function QuizEditor({
     <Modal
       open={open}
       onClose={onClose}
-      title={`Kuis — ${moduleTitle}`}
+      title={`Quiz — ${moduleTitle}`}
       className="max-w-2xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
           {existing ? (
-            <Button variant="danger" size="sm" onClick={destroy} loading={busy}>Hapus kuis</Button>
+            <Button variant="danger" size="sm" onClick={destroy} loading={busy}>Delete quiz</Button>
           ) : <span />}
           <div className="flex gap-2">
-            <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-            <Button size="sm" onClick={save} loading={busy} disabled={!valid || loading}>Simpan</Button>
+            <Button variant="neutral" size="sm" onClick={onClose}>Cancel</Button>
+            <Button size="sm" onClick={save} loading={busy} disabled={!valid || loading}>Save</Button>
           </div>
         </div>
       }
@@ -130,11 +130,11 @@ export function QuizEditor({
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             <label className="flex items-center gap-2 text-[13px] font-semibold">
-              <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Kuis aktif" />
-              Aktif (gerbang penyelesaian)
+              <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Quiz active" />
+              Active (completion gate)
             </label>
             <label className="flex items-center gap-2 text-[13px] font-semibold">
-              Skor lulus
+              Passing score
               <input
                 type="number"
                 min={1}
@@ -154,11 +154,11 @@ export function QuizEditor({
                 <input
                   value={q.prompt}
                   onChange={(e) => patch(qi, { prompt: e.target.value })}
-                  placeholder="Pertanyaan"
+                  placeholder="Question"
                   className="flex-1 rounded-sm border border-border bg-surface px-3 py-2 text-[13.5px] font-semibold outline-none focus:border-primary"
                 />
                 {questions.length > 1 && (
-                  <button type="button" onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))} aria-label="Hapus pertanyaan" className="mt-1.5 text-ink-subtle hover:text-danger">
+                  <button type="button" onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))} aria-label="Delete question" className="mt-1.5 text-ink-subtle hover:text-danger">
                     <XIcon size={16} />
                   </button>
                 )}
@@ -172,32 +172,32 @@ export function QuizEditor({
                       name={`correct-${qi}`}
                       checked={q.correctIndex === ci}
                       onChange={() => patch(qi, { correctIndex: ci })}
-                      aria-label="Jawaban benar"
+                      aria-label="Correct answer"
                       className="accent-primary"
                     />
                     <input
                       value={c}
                       onChange={(e) => patchChoice(qi, ci, e.target.value)}
-                      placeholder={`Pilihan ${ci + 1}`}
+                      placeholder={`Option ${ci + 1}`}
                       className="flex-1 rounded-sm border border-border bg-surface px-2.5 py-1.5 text-[13px] outline-none focus:border-primary"
                     />
                     {q.choices.length > 2 && (
-                      <button type="button" onClick={() => removeChoice(qi, ci)} aria-label="Hapus pilihan" className="text-ink-subtle hover:text-danger">
+                      <button type="button" onClick={() => removeChoice(qi, ci)} aria-label="Delete option" className="text-ink-subtle hover:text-danger">
                         <XIcon size={14} />
                       </button>
                     )}
                   </div>
                 ))}
                 <button type="button" onClick={() => addChoice(qi)} className="self-start text-[12px] font-bold text-primary hover:underline">
-                  + Tambah pilihan
+                  + Add option
                 </button>
-                <span className="text-[11.5px] text-ink-subtle">Tandai radio di pilihan yang benar.</span>
+                <span className="text-[11.5px] text-ink-subtle">Select the radio next to the correct option.</span>
               </div>
             </div>
           ))}
 
           <Button variant="neutral" size="sm" onClick={() => setQuestions((qs) => [...qs, emptyQuestion()])} className="self-start">
-            + Tambah pertanyaan
+            + Add question
           </Button>
         </div>
       )}

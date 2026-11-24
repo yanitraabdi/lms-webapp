@@ -41,13 +41,13 @@ export default function AdminModulesPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-ink-subtle">Terbitkan/sembunyikan modul dengan cepat. Edit lengkap ada di Kurikulum.</p>
+        <p className="text-xs text-ink-subtle">Quickly publish or hide modules. Full editing is in Curriculum.</p>
         <div className="relative">
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Cari modul…"
+            placeholder="Search modules…"
             className="w-[220px] rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
           />
         </div>
@@ -57,19 +57,19 @@ export default function AdminModulesPage() {
         {!token || modules.isPending ? (
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : modules.isError ? (
-          <div className="p-6"><ErrorState title="Gagal memuat modul" action={<Button variant="neutral" size="sm" onClick={() => modules.refetch()}>Muat ulang</Button>} /></div>
+          <div className="p-6"><ErrorState title="Couldn't load modules" action={<Button variant="neutral" size="sm" onClick={() => modules.refetch()}>Reload</Button>} /></div>
         ) : modules.data.length === 0 ? (
-          <p className="px-6 py-8 text-center text-sm text-ink-muted">Tidak ada modul.</p>
+          <p className="px-6 py-8 text-center text-sm text-ink-muted">No modules.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] border-collapse">
               <thead>
                 <tr className="bg-surface-2 text-left text-xs font-bold text-ink-muted">
-                  <th className="px-5 py-3">Modul</th>
+                  <th className="px-5 py-3">Module</th>
                   <th className="px-3 py-3">Level</th>
                   <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Kuis</th>
-                  <th className="px-5 py-3 text-right">Publikasi</th>
+                  <th className="px-3 py-3">Quiz</th>
+                  <th className="px-5 py-3 text-right">Publish</th>
                 </tr>
               </thead>
               <tbody className="text-[13.5px]">
@@ -80,10 +80,10 @@ export default function AdminModulesPage() {
                       <Badge tier={TIER_BADGE[num(m.levelTier)]} className="px-2 py-0.5 text-[10.5px]">{m.levelName}</Badge>
                     </td>
                     <td className="px-3 py-3.5">
-                      <Badge tone={m.published ? "success" : "neutral"} className="px-2.5 py-0.5 text-[11.5px]">{m.published ? "Terbit" : "Draf"}</Badge>
+                      <Badge tone={m.published ? "success" : "neutral"} className="px-2.5 py-0.5 text-[11.5px]">{m.published ? "Published" : "Draft"}</Badge>
                     </td>
                     <td className="px-3 py-3.5">
-                      <Button variant="neutral" size="sm" onClick={() => setQuizFor(m)}>Kelola</Button>
+                      <Button variant="neutral" size="sm" onClick={() => setQuizFor(m)}>Manage</Button>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end">
@@ -91,7 +91,7 @@ export default function AdminModulesPage() {
                           type="button"
                           role="switch"
                           aria-checked={m.published}
-                          aria-label={m.published ? "Sembunyikan" : "Terbitkan"}
+                          aria-label={m.published ? "Hide" : "Publish"}
                           onClick={() => toggle(m)}
                           className={"relative h-[26px] w-[46px] rounded-full transition-colors " + (m.published ? "bg-primary" : "bg-[#C9D4E2]")}
                         >

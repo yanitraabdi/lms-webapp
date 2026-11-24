@@ -20,10 +20,10 @@ public class AttendanceService(AppDbContext db, ISessionCompletionService comple
             .Where(s => s.Id == sessionId)
             .Select(s => new { s.Id, s.ProgramId, s.Title, s.Type, s.ScheduledAt, s.LiveMode, s.JoinUrl, s.Location })
             .FirstOrDefaultAsync(ct)
-            ?? throw new ProgramException("Sesi tidak ditemukan.", 404);
+            ?? throw new ProgramException("Session not found.", 404);
 
         if (session.Type != SessionType.Live)
-            throw new ProgramException("Sesi ini bukan sesi live.", 400);
+            throw new ProgramException("This is not a live session.", 400);
 
         // Roster = everyone with access to the program. Enrollment has no User navigation,
         // so join explicitly rather than relying on one.
@@ -65,9 +65,9 @@ public class AttendanceService(AppDbContext db, ISessionCompletionService comple
         Guid actor, Guid sessionId, IReadOnlyList<Guid> userIds, bool attended, CancellationToken ct = default)
     {
         var session = await db.ProgramSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct)
-            ?? throw new ProgramException("Sesi tidak ditemukan.", 404);
+            ?? throw new ProgramException("Session not found.", 404);
         if (session.Type != SessionType.Live)
-            throw new ProgramException("Kehadiran hanya berlaku untuk sesi live.", 400);
+            throw new ProgramException("Attendance only applies to live sessions.", 400);
         if (userIds.Count == 0) return;
 
         var existing = await db.LiveAttendances

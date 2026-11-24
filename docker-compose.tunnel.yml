@@ -8,7 +8,7 @@
 #   • Only the frontend is published to the host (for a host-level cloudflared). Postgres and the
 #     API stay internal to the compose network (a containerized cloudflared can still reach the
 #     frontend at `frontend:3000` by joining network `academy_default`).
-#   • API runs in Production mode; the admin password comes from ADMIN_PASSWORD (no well-known default).
+#   • API runs in Production mode; the first admin's password comes from ADMIN_PASSWORD (first start only; no well-known default).
 #
 # Run:   docker compose -f docker-compose.tunnel.yml up -d --build
 # Bind:  point your Cloudflare tunnel ingress at  http://localhost:${FRONTEND_PORT:-3001}
@@ -42,8 +42,10 @@ services:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-academy};Username=${POSTGRES_USER:-academy};Password=${POSTGRES_PASSWORD:-academy}"
       RunMigrations: "true"
       SeedSampleData: "true"
-      # Strong SuperAdmin password (no well-known default). Required — set ADMIN_PASSWORD in .env.
-      DevAdmin__Password: "${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}"
+      # SuperAdmin password, used ONLY when a new database has no admin yet (no well-known default in
+      # Production: the API refuses to start without it then). Once the admin exists, change the
+      # password in the app (Profil & tagihan) and remove ADMIN_PASSWORD from .env.
+      DevAdmin__Password: "${ADMIN_PASSWORD:-}"
       # On-demand ISR revalidation: API → Next over the compose network.
       Revalidate__FrontendUrl: "http://frontend:3000"
       Revalidate__Secret: "${REVALIDATE_SECRET:-dev-revalidate-secret}"

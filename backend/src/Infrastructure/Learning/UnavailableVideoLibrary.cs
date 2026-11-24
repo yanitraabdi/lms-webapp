@@ -10,7 +10,7 @@ public class UnavailableVideoLibrary(string reason) : IVideoLibrary
     public Task<VideoLibraryPageDto> ListAsync(string? search, int page, CancellationToken ct = default)
         => Task.FromResult(new VideoLibraryPageDto([], 1, 0, reason));
 
-    private const string NotActive = "Unggah video hanya tersedia saat Bunny aktif.";
+    private const string NotActive = "Video upload is only available when Bunny is active.";
 
     public Task<UploadTicketDto> CreateUploadAsync(string title, CancellationToken ct = default)
         => throw new ProgramException(NotActive, 409);

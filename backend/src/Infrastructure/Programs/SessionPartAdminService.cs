@@ -32,11 +32,11 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
         Guid actor, Guid sessionId, SaveSessionPartsRequest req, CancellationToken ct = default)
     {
         var session = await db.ProgramSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct)
-            ?? throw new ProgramException("Sesi tidak ditemukan.", 404);
+            ?? throw new ProgramException("Session not found.", 404);
         if (session.Type != SessionType.Video)
-            throw new ProgramException("Hanya sesi video yang memiliki bagian.", 400);
+            throw new ProgramException("Only video sessions have parts.", 400);
         if (req.Parts.Count == 0)
-            throw new ProgramException("Sesi video harus memiliki minimal satu bagian.", 400);
+            throw new ProgramException("A video session must have at least one part.", 400);
 
         var inputs = req.Parts.Select(Parse).ToList();
         await ValidateShapeAsync(sessionId, inputs, ct);
@@ -44,14 +44,14 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
         var existing = await db.SessionParts.Where(p => p.SessionId == sessionId).ToListAsync(ct);
         var byId = existing.ToDictionary(p => p.Id);
         if (inputs.Any(i => i.Id is Guid id && !byId.ContainsKey(id)))
-            throw new ProgramException("Bagian tidak dikenal untuk sesi ini.", 400);
+            throw new ProgramException("Unknown part for this session.", 400);
 
         var keptIds = inputs.Where(i => i.Id != null).Select(i => i.Id!.Value).ToHashSet();
         foreach (var gone in existing.Where(p => !keptIds.Contains(p.Id)))
         {
             if (await HasLearnerDataAsync(gone, ct))
                 throw new ProgramException(
-                    $"Bagian \"{gone.Title}\" tidak bisa dihapus karena sudah memiliki progres peserta.", 409);
+                    $"Part \"{gone.Title}\" can't be deleted because learners already have progress on it.", 409);
             db.SessionParts.Remove(gone);
         }
 
@@ -65,7 +65,7 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
                 if ((part.Kind != input.Kind || part.AssessmentId != input.AssessmentId)
                     && await HasLearnerDataAsync(part, ct))
                     throw new ProgramException(
-                        $"Jenis atau tes bagian \"{part.Title}\" tidak bisa diubah karena sudah memiliki progres peserta.", 409);
+                        $"The type or test of part \"{part.Title}\" can't be changed because learners already have progress on it.", 409);
             }
             else
             {
@@ -95,7 +95,7 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
         {
             // Another session took this test between the check and the save. Any OTHER db error
             // propagates — it must not be reported as "already used".
-            throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
+            throw new ProgramException("This test is already used in another session.", 409);
         }
         // The public syllabus shows each session's parts (landing spec §3) — refresh it now rather
         // than up to 5 minutes later. Best-effort, as in ProgramAdminService.
@@ -110,9 +110,9 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
     private static Input Parse(SessionPartInput r)
     {
         if (!Enum.TryParse<SessionPartKind>(r.Kind, true, out var kind))
-            throw new ProgramException("Jenis bagian tidak dikenal.", 400);
+            throw new ProgramException("Unknown part type.", 400);
         if (string.IsNullOrWhiteSpace(r.Title))
-            throw new ProgramException("Judul bagian wajib diisi.", 400);
+            throw new ProgramException("Part title is required.", 400);
         // Fields that don't belong to the kind are dropped here so no later check sees them.
         var isTest = kind == SessionPartKind.Test;
         return new Input(r.Id, kind, r.Title.Trim(),
@@ -127,7 +127,7 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
             var p = inputs[i];
             if (p.Kind == SessionPartKind.Discussion
                 && (i == 0 || inputs[i - 1].Kind != SessionPartKind.Test))
-                throw new ProgramException("Video pembahasan harus tepat setelah sebuah tes.", 400);
+                throw new ProgramException("A discussion video must come right after a test.", 400);
 
             if (p.Kind != SessionPartKind.Test)
             {
@@ -138,17 +138,17 @@ public class SessionPartAdminService(AppDbContext db, VideoOptions video, IConte
             }
 
             if (p.AssessmentId is not Guid aid)
-                throw new ProgramException("Bagian tes harus memakai tes sesi (bukan tes akhir).", 400);
+                throw new ProgramException("A test part must use a session test (not a final assessment).", 400);
             var kind = await db.Assessments.Where(a => a.Id == aid).Select(a => (AssessmentKind?)a.Kind).FirstOrDefaultAsync(ct);
             if (kind != AssessmentKind.Gating)
-                throw new ProgramException("Bagian tes harus memakai tes sesi (bukan tes akhir).", 400);
+                throw new ProgramException("A test part must use a session test (not a final assessment).", 400);
             if (await db.SessionParts.AnyAsync(x => x.AssessmentId == aid && x.SessionId != sessionId, ct))
-                throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
+                throw new ProgramException("This test is already used in another session.", 409);
         }
 
         var tests = inputs.Where(i => i.AssessmentId != null).Select(i => i.AssessmentId!.Value).ToList();
         if (tests.Count != tests.Distinct().Count())
-            throw new ProgramException("Satu tes hanya boleh dipakai di satu bagian.", 400);
+            throw new ProgramException("A test can be used in only one part.", 400);
     }
 
     private async Task<bool> HasLearnerDataAsync(SessionPart p, CancellationToken ct)

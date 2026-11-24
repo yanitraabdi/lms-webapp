@@ -71,7 +71,7 @@ public class MediaUploadEndpointTests(AuthApiFactory factory) : IClassFixture<Au
     {
         var res = await Upload(await AdminToken(), Form([1, 2, 3], "video/mp4", "movie.mp4"));
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("Format audio", await res.Content.ReadAsStringAsync());
+        Assert.Contains("Unsupported audio format", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class MediaUploadEndpointTests(AuthApiFactory factory) : IClassFixture<Au
         var res = await Upload(await AdminToken(), Form([], "audio/mpeg", "empty.mp3"));
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         // Assert the message too: a bare 400 would also be satisfied by a binding failure.
-        Assert.Contains("Berkas audio kosong", await res.Content.ReadAsStringAsync());
+        Assert.Contains("The audio file is empty", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class MediaUploadEndpointTests(AuthApiFactory factory) : IClassFixture<Au
         var res = await client.SendAsync(req);
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("Berkas audio terlalu besar. Maksimum 1 KB.", await res.Content.ReadAsStringAsync());
+        Assert.Contains("The audio file is too large. Maximum 1 KB.", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]

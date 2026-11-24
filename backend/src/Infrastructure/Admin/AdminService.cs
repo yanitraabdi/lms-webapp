@@ -28,7 +28,7 @@ public class AdminService(AppDbContext db, IContentRevalidator revalidator) : IA
     {
         var m = await db.Modules.Include(x => x.Track).ThenInclude(t => t.Level)
             .FirstOrDefaultAsync(x => x.Id == moduleId, ct)
-            ?? throw new AdminException("Modul tidak ditemukan.", 404);
+            ?? throw new AdminException("Module not found.", 404);
 
         m.Status = published ? ModuleStatus.Published : ModuleStatus.Draft;
         if (published && m.PublishedAt is null) m.PublishedAt = DateTimeOffset.UtcNow;
@@ -58,7 +58,7 @@ public class AdminService(AppDbContext db, IContentRevalidator revalidator) : IA
             var plan = plans.FirstOrDefault(p => p.Id == item.PlanId);
             if (plan is null) continue;
             if (item.PriceMonthly < 0 || item.PriceAnnual < 0)
-                throw new AdminException("Harga tidak boleh negatif.");
+                throw new AdminException("Price can't be negative.");
 
             // Grandfathering (GR-8): editing plans.price affects NEW subscribers immediately;
             // existing subscribers keep subscriptions.price_locked_idr until renewal.

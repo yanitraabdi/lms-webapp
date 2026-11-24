@@ -107,17 +107,17 @@ export function VideoPicker({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Cari judul video…"
-            aria-label="Cari video di pustaka"
+            placeholder="Search video titles…"
+            aria-label="Search videos in the library"
             className={inputBlockCls}
           />
           <div className="max-h-56 overflow-y-auto rounded-base border border-border">
             {q.isPending ? (
               <div className="flex min-h-[80px] items-center justify-center"><Spinner size={18} /></div>
             ) : q.isError ? (
-              <p className="px-3 py-3 text-[12.5px] text-danger">Daftar video gagal dimuat.</p>
+              <p className="px-3 py-3 text-[12.5px] text-danger">Couldn&apos;t load the video list.</p>
             ) : (q.data?.items.length ?? 0) === 0 ? (
-              <p className="px-3 py-3 text-[12.5px] text-ink-muted">Tidak ada video yang cocok.</p>
+              <p className="px-3 py-3 text-[12.5px] text-ink-muted">No matching videos.</p>
             ) : (
               <ul>
                 {q.data!.items.map((v) => (
@@ -149,12 +149,12 @@ function VideoRow({
 }) {
   const ready = video.status === "Finished";
   const note = ready
-    ? minutesLabel(video.lengthSeconds)
+    ? minutesLabel(video.lengthSeconds, "min")
     : video.status === "Error" || video.status === "UploadFailed"
-      ? "Gagal diproses"
+      ? "Processing failed"
       : video.status === "Created" && !uploading
-        ? "Unggahan tidak selesai"
-        : `Masih diproses (${num(video.encodeProgress)}%)`;
+        ? "Upload not finished"
+        : `Still processing (${num(video.encodeProgress)}%)`;
 
   return (
     <li>
@@ -168,7 +168,7 @@ function VideoRow({
         }
       >
         <span className="min-w-0 truncate">{video.title || video.id}</span>
-        <span className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-ink-subtle">{selected ? <><CheckIcon size={12} />Terpilih</> : note}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-ink-subtle">{selected ? <><CheckIcon size={12} />Selected</> : note}</span>
       </button>
     </li>
   );
@@ -291,7 +291,7 @@ function VideoUploader({
         // second 401/403 in a row still ends the upload instead of looping.
         onChunkComplete: () => { renewed.current = false; },
         onSuccess: () => {
-          finish(`“${name}” terunggah. Video bisa dipilih setelah Bunny selesai memprosesnya.`);
+          finish(`“${name}” uploaded. You can pick the video once Bunny has finished processing it.`);
           onUploaded(ticket.videoId, name);
         },
         onError: async (err) => {
@@ -309,7 +309,7 @@ function VideoUploader({
               setError(e instanceof Error ? e.message : null);
             }
           }
-          if (uploadRef.current === upload) finish("Unggahan terputus. Pilih file yang sama untuk melanjutkan.");
+          if (uploadRef.current === upload) finish("Upload interrupted. Choose the same file to resume.");
         },
       });
       uploadRef.current = upload;
@@ -319,7 +319,7 @@ function VideoUploader({
       setPhase("uploading");
       upload.start();
     } catch (e) {
-      if (alive.current) setError(e instanceof Error ? e.message : "Operasi gagal.");
+      if (alive.current) setError(e instanceof Error ? e.message : "Operation failed.");
     } finally {
       if (alive.current) setStarting(false);
     }
@@ -350,7 +350,7 @@ function VideoUploader({
       {phase === "idle" && (
         <div>
           <Button variant="neutral" size="sm" onClick={() => fileInput.current?.click()}>
-            Unggah video baru
+            Upload new video
           </Button>
         </div>
       )}
@@ -363,19 +363,19 @@ function VideoUploader({
             onChange={(e) => setTitle(e.target.value)}
             maxLength={200}
             readOnly={previous !== null}
-            aria-label="Judul video"
+            aria-label="Video title"
             aria-describedby={previous ? hintId : undefined}
             className={inputBlockCls}
           />
           {previous && (
             <span id={hintId} className="text-[11.5px] text-ink-subtle">
-              Melanjutkan unggahan sebelumnya.
+              Resuming the previous upload.
             </span>
           )}
           <div className="flex gap-2">
-            <Button size="sm" disabled={!titleOk} loading={starting} onClick={start}>Mulai unggah</Button>
+            <Button size="sm" disabled={!titleOk} loading={starting} onClick={start}>Start upload</Button>
             <Button variant="neutral" size="sm" disabled={starting} onClick={() => { setPhase("idle"); setFile(null); }}>
-              Batal
+              Cancel
             </Button>
           </div>
         </div>
@@ -386,14 +386,14 @@ function VideoUploader({
           <progress
             max={progress.total || 1}
             value={progress.sent}
-            aria-label="Progres unggah video"
+            aria-label="Video upload progress"
             className="h-2 w-full"
           />
           <div className="flex items-center justify-between gap-3">
             <span className="text-[12.5px] text-ink-muted">
-              Mengunggah {pct}% · {mb(progress.sent)} dari {mb(progress.total)}
+              Uploading {pct}% · {mb(progress.sent)} of {mb(progress.total)}
             </span>
-            <Button variant="neutral" size="sm" onClick={stop}>Hentikan unggahan</Button>
+            <Button variant="neutral" size="sm" onClick={stop}>Stop upload</Button>
           </div>
         </div>
       )}

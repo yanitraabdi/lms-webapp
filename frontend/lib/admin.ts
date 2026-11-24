@@ -23,7 +23,7 @@ async function problem(res: Response, fallback: string): Promise<Error> {
 export async function getAdminModules(token: string, search?: string): Promise<AdminModule[]> {
   const q = search ? `?search=${encodeURIComponent(search)}` : "";
   const res = await fetch(`${API}/api/admin/modules${q}`, { headers: auth(token), cache: "no-store" });
-  if (!res.ok) throw await problem(res, "Gagal memuat modul.");
+  if (!res.ok) throw await problem(res, "Couldn't load modules.");
   return res.json();
 }
 
@@ -33,12 +33,12 @@ export async function setModulePublished(token: string, moduleId: string, publis
     headers: auth(token),
     body: JSON.stringify({ published }),
   });
-  if (!res.ok) throw await problem(res, "Gagal memperbarui status.");
+  if (!res.ok) throw await problem(res, "Couldn't update status.");
 }
 
 export async function getAdminPlans(token: string): Promise<AdminPlan[]> {
   const res = await fetch(`${API}/api/admin/plans`, { headers: auth(token), cache: "no-store" });
-  if (!res.ok) throw await problem(res, "Gagal memuat paket.");
+  if (!res.ok) throw await problem(res, "Couldn't load plans.");
   return res.json();
 }
 
@@ -54,7 +54,7 @@ export async function updatePlanPrices(token: string, items: PlanPriceUpdate[]):
     headers: auth(token),
     body: JSON.stringify({ items }),
   });
-  if (!res.ok) throw await problem(res, "Gagal menyimpan harga.");
+  if (!res.ok) throw await problem(res, "Couldn't save prices.");
 }
 
 export function num(v: number | string): number {
@@ -93,7 +93,7 @@ async function api<T>(method: string, path: string, token: string, body?: unknow
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
   }, token);
-  if (!res.ok) throw await problem(res, "Operasi gagal.");
+  if (!res.ok) throw await problem(res, "Operation failed.");
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
@@ -162,7 +162,7 @@ export interface UpsertQuiz { passThreshold: number; isActive: boolean; question
 export async function getAdminQuiz(t: string, moduleId: string): Promise<AdminQuiz | null> {
   const res = await fetch(`${API}/api/admin/modules/${moduleId}/quiz`, { headers: auth(t), cache: "no-store" });
   if (res.status === 204) return null;
-  if (!res.ok) throw await problem(res, "Gagal memuat kuis.");
+  if (!res.ok) throw await problem(res, "Couldn't load quiz.");
   return res.json();
 }
 export const upsertQuiz = (t: string, moduleId: string, b: UpsertQuiz) => api<void>("PUT", `/api/admin/modules/${moduleId}/quiz`, t, b);

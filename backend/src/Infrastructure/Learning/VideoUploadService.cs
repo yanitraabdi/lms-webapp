@@ -12,7 +12,7 @@ public class VideoUploadService(IVideoLibrary library, AppDbContext db) : IVideo
     {
         var clean = title?.Trim() ?? "";
         if (clean.Length is 0 or > 200)
-            throw new ProgramException("Judul video wajib diisi (maksimal 200 karakter).", 400);
+            throw new ProgramException("Video title is required (200 characters max).", 400);
 
         var ticket = await library.CreateUploadAsync(clean, ct);
         db.AuditLogs.Add(new AuditLog
@@ -27,7 +27,7 @@ public class VideoUploadService(IVideoLibrary library, AppDbContext db) : IVideo
     public UploadTicketDto Renew(string videoId)
     {
         if (!Guid.TryParseExact(videoId, "D", out _))
-            throw new ProgramException("ID video tidak valid.", 400);
+            throw new ProgramException("Invalid video ID.", 400);
         return library.RenewUpload(videoId);
     }
 }

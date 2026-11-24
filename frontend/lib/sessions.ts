@@ -96,7 +96,7 @@ export const getAttemptResult = (t: string, attemptId: string) =>
 
 export const QUESTION_BANKS = ["Simulation", "SessionTest"] as const;
 export type QuestionBankName = (typeof QUESTION_BANKS)[number];
-export const BANK_LABEL: Record<QuestionBankName, string> = { Simulation: "Simulasi TOEFL", SessionTest: "Tes Sesi" };
+export const BANK_LABEL: Record<QuestionBankName, string> = { Simulation: "TOEFL simulation", SessionTest: "Session test" };
 
 export const listQuestions = (t: string, q: { bank?: string; section?: string; search?: string } = {}) => {
   const p = new URLSearchParams();
@@ -163,7 +163,7 @@ export async function downloadImportTemplate(token: string): Promise<void> {
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
-  a.download = "inverta-bank-soal-template.xlsx";
+  a.download = "inverta-question-bank-template.xlsx";
   document.body.appendChild(a);
   a.click();
   a.remove();

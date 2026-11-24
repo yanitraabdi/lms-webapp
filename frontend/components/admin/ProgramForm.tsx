@@ -30,7 +30,7 @@ export function ProgramForm({ token, program, onClose }: { token: string; progra
       else await createProgram(token, body);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan.");
+      setError(e instanceof Error ? e.message : "Couldn't save.");
       setBusy(false);
     }
   }
@@ -39,37 +39,37 @@ export function ProgramForm({ token, program, onClose }: { token: string; progra
     <Modal
       open
       onClose={onClose}
-      title={program ? `Edit: ${program.name}` : "Program baru"}
+      title={program ? `Edit: ${program.name}` : "New program"}
       className="max-w-xl"
       footer={
         <div className="flex w-full justify-end gap-2">
-          <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-          <Button size="sm" onClick={save} loading={busy} disabled={!name.trim() || !description.trim()}>Simpan</Button>
+          <Button variant="neutral" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={save} loading={busy} disabled={!name.trim() || !description.trim()}>Save</Button>
         </div>
       }
     >
       <div className="flex flex-col gap-3">
         {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
-        <Field label="Nama program"><input value={name} onChange={(e) => setName(e.target.value)} className={inputBlockCls} /></Field>
-        <Field label="Slug (opsional)"><input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="otomatis dari nama" className={inputBlockCls} /></Field>
-        <Field label="Ringkasan"><input value={summary} onChange={(e) => setSummary(e.target.value)} className={inputBlockCls} /></Field>
-        <Field label="Deskripsi">
+        <Field label="Program name"><input value={name} onChange={(e) => setName(e.target.value)} className={inputBlockCls} /></Field>
+        <Field label="Slug (optional)"><input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="auto-generated from name" className={inputBlockCls} /></Field>
+        <Field label="Summary"><input value={summary} onChange={(e) => setSummary(e.target.value)} className={inputBlockCls} /></Field>
+        <Field label="Description">
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputBlockCls} />
         </Field>
-        <Field label="Harga (IDR)">
+        <Field label="Price (IDR)">
           <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className={inputBlockCls} />
         </Field>
         {/* Publishing is gated on content readiness, and a brand-new program can never be ready,
-            so the create path has no publish control — publish from Edit once "Periksa" is green. */}
+            so the create path has no publish control — publish from Edit once "Check" is green. */}
         {program ? (
           <label className="flex items-center gap-2 text-[13px] font-semibold">
             <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="accent-primary" />
-            Terbitkan (tampil di halaman publik)
+            Publish (shown on the public page)
           </label>
         ) : (
           <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
-            Program baru tersimpan sebagai draf. Lengkapi sesi, tes, dan tabel konversi skor,
-            lalu terbitkan lewat Edit.
+            A new program is saved as a draft. Complete the sessions, tests and score conversion
+            table, then publish from Edit.
           </p>
         )}
       </div>

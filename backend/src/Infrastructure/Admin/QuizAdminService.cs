@@ -20,7 +20,7 @@ public class QuizAdminService(AppDbContext db) : IQuizAdminService
     public async Task UpsertAsync(Guid actor, Guid moduleId, UpsertQuizRequest req, CancellationToken ct = default)
     {
         _ = await db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId, ct)
-            ?? throw new AdminException("Modul tidak ditemukan.", 404);
+            ?? throw new AdminException("Module not found.", 404);
 
         var quiz = await db.Quizzes.FirstOrDefaultAsync(q => q.ModuleId == moduleId, ct);
         if (quiz is null)
@@ -56,7 +56,7 @@ public class QuizAdminService(AppDbContext db) : IQuizAdminService
         db.Quizzes.Remove(quiz);
         db.AuditLogs.Add(new AuditLog { Id = Guid.CreateVersion7(), ActorUserId = actor, Action = "quiz_deleted", Target = moduleId.ToString(), Metadata = "{}" });
         try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { throw new AdminException("Tidak bisa dihapus karena sudah ada percobaan kuis.", 409); }
+        catch (DbUpdateException) { throw new AdminException("Can't be deleted because quiz attempts already exist.", 409); }
     }
 
     private static List<string> Parse(string json)

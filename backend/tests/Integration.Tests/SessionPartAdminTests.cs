@@ -112,7 +112,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
     {
         var c = await EnrolledLearner();
         await AssertError(await PutParts(c.Admin, c.Session1), HttpStatusCode.BadRequest,
-            "Sesi video harus memiliki minimal satu bagian.");
+            "A video session must have at least one part.");
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var c = await EnrolledLearner();
         var l = await Lesson1(c.Session1);
         await AssertError(await PutParts(c.Admin, c.Session1, Lesson(l), Disc()), HttpStatusCode.BadRequest,
-            "Video pembahasan harus tepat setelah sebuah tes.");
+            "A discussion video must come right after a test.");
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var c = await EnrolledLearner();
         var a1 = (await NewAssessment()).Id;
         await AssertError(await PutParts(c.Admin, c.Session1, Test(a1), Disc(), Disc()), HttpStatusCode.BadRequest,
-            "Video pembahasan harus tepat setelah sebuah tes.");
+            "A discussion video must come right after a test.");
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var c = await EnrolledLearner();
         var f = (await NewAssessment(AssessmentKind.Final)).Id;
         await AssertError(await PutParts(c.Admin, c.Session1, Test(f)), HttpStatusCode.BadRequest,
-            "Bagian tes harus memakai tes sesi (bukan tes akhir).");
+            "A test part must use a session test (not a final assessment).");
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var c = await EnrolledLearner();
         var a1 = (await NewAssessment()).Id;
         await AssertError(await PutParts(c.Admin, c.Session1, Test(a1), Test(a1)), HttpStatusCode.BadRequest,
-            "Satu tes hanya boleh dipakai di satu bagian.");
+            "A test can be used in only one part.");
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var a1 = (await NewAssessment()).Id;
         (await PutParts(c.Admin, c.Session1, Test(a1))).EnsureSuccessStatusCode();
         await AssertError(await PutParts(c.Admin, c.Session2, Test(a1)), HttpStatusCode.Conflict,
-            "Tes ini sudah dipakai di sesi lain.");
+            "This test is already used in another session.");
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         });
 
         await AssertError(await PutParts(c.Admin, c.Session1, Test(a1)), HttpStatusCode.Conflict,
-            "tidak bisa dihapus karena sudah memiliki progres peserta");
+            "can't be deleted because learners already have progress on it");
 
         var res = await PutParts(c.Admin, c.Session1,
             new { id = (Guid?)l, kind = "LessonVideo", title = "Judul baru", providerAssetId = "video-baru", durationSeconds = 70, assessmentId = (Guid?)null },
@@ -223,7 +223,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
         var a1 = (await NewAssessment()).Id;
         await AssertError(await PutParts(c.Admin, c.Session1, Test(a1),
                 new { id = (Guid?)l, kind = "Discussion", title = "x", providerAssetId = "sample", durationSeconds = 60, assessmentId = (Guid?)null }),
-            HttpStatusCode.Conflict, "tidak bisa diubah karena sudah memiliki progres peserta");
+            HttpStatusCode.Conflict, "can't be changed because learners already have progress on it");
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             await db.SaveChangesAsync();
         });
         await AssertError(await PutParts(c.Admin, c.Session1, Lesson(parts[0].Id), Test(a2, parts[1].Id)),
-            HttpStatusCode.Conflict, "tidak bisa diubah karena sudah memiliki progres peserta");
+            HttpStatusCode.Conflict, "can't be changed because learners already have progress on it");
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public class SessionPartAdminTests(AuthApiFactory factory) : IClassFixture<AuthA
             joinUrl = (string?)null, location = (string?)null, assessmentId = (Guid?)null,
         });
         await AssertError(await PutParts(c.Admin, live.Id, Lesson(null)), HttpStatusCode.BadRequest,
-            "Hanya sesi video yang memiliki bagian.");
+            "Only video sessions have parts.");
     }
 
     [Fact]

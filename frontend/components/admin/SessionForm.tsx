@@ -12,9 +12,9 @@ import {
 export type SessionKind = "Video" | "Live" | "FinalAssessment";
 
 const TYPE_LABEL: Record<SessionKind, string> = {
-  Video: "Video & tes (beberapa bagian)",
-  Live: "Sesi Live",
-  FinalAssessment: "Tes Akhir",
+  Video: "Video & test (multiple parts)",
+  Live: "Live session",
+  FinalAssessment: "Final assessment",
 };
 
 /** ISO instant → the local "YYYY-MM-DDTHH:mm" a datetime-local input expects. */
@@ -59,8 +59,8 @@ export function SessionForm({
   function close() {
     // A running upload is the bigger loss, so its warning wins when both apply.
     if (partsUploading) {
-      if (!confirm("Unggahan video sedang berjalan dan akan dihentikan. Tutup?")) return;
-    } else if (partsDirty && !confirm("Perubahan pada daftar bagian belum disimpan. Tutup tanpa menyimpan?")) {
+      if (!confirm("A video upload is in progress and will be stopped. Close?")) return;
+    } else if (partsDirty && !confirm("Changes to the parts list are not saved. Close without saving?")) {
       return;
     }
     onClose();
@@ -94,7 +94,7 @@ export function SessionForm({
       onSaved?.();
       close();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan sesi.");
+      setError(e instanceof Error ? e.message : "Couldn't save session.");
       setBusy(false);
     }
   }
@@ -103,22 +103,22 @@ export function SessionForm({
     <Modal
       open
       onClose={close}
-      title={editing ? "Ubah sesi" : "Sesi baru"}
+      title={editing ? "Edit session" : "New session"}
       className={type === "Video" && editing ? "max-h-[92vh] max-w-2xl overflow-y-auto" : "max-w-lg"}
       footer={
         <div className="flex w-full justify-end gap-2">
-          <Button variant="neutral" size="sm" onClick={close}>Batal</Button>
-          <Button size="sm" onClick={save} loading={busy} disabled={!title.trim()}>Simpan</Button>
+          <Button variant="neutral" size="sm" onClick={close}>Cancel</Button>
+          <Button size="sm" onClick={save} loading={busy} disabled={!title.trim()}>Save</Button>
         </div>
       }
     >
       <div className="flex flex-col gap-3">
         {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
 
-        <Field label="Tipe sesi">
+        <Field label="Session type">
           {editing ? (
             <p className="rounded-sm bg-surface-2 px-3 py-2 text-[13.5px] text-ink-muted">
-              {TYPE_LABEL[type]}: tipe tidak dapat diubah setelah sesi dibuat.
+              {TYPE_LABEL[type]}: the type can&apos;t be changed after the session is created.
             </p>
           ) : (
             <select value={type} onChange={(e) => setType(e.target.value as SessionKind)} className={inputBlockCls}>
@@ -129,7 +129,7 @@ export function SessionForm({
           )}
         </Field>
 
-        <Field label="Judul">
+        <Field label="Title">
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputBlockCls} />
         </Field>
 
@@ -138,16 +138,16 @@ export function SessionForm({
             onUploadingChange={setPartsUploading} />
         ) : (
           <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
-            Simpan sesi terlebih dahulu, lalu tambahkan video dan tes pada daftar bagian.
+            Save the session first, then add videos and tests in the parts list.
           </p>
         ))}
 
         {type === "Live" && (
           <>
-            <Field label="Jadwal">
+            <Field label="Schedule">
               <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className={inputBlockCls} />
             </Field>
-            <Field label="Tautan Zoom">
+            <Field label="Zoom link">
               <input value={joinUrl} onChange={(e) => setJoinUrl(e.target.value)} className={inputBlockCls} />
             </Field>
           </>
@@ -155,8 +155,8 @@ export function SessionForm({
 
         {type === "FinalAssessment" && (
           <p className="rounded-base bg-surface-2 px-3 py-2 text-[12.5px] text-ink-muted">
-            Setelah sesi tersimpan, gunakan tombol “Buat tes akhir” pada baris sesi untuk
-            menyusun bagian dan soalnya.
+            After the session is saved, use the “Create final assessment” button on the session row to
+            arrange its sections and questions.
           </p>
         )}
       </div>

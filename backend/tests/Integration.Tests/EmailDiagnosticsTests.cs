@@ -60,7 +60,7 @@ public class EmailDiagnosticsTests(AuthApiFactory factory) : IClassFixture<AuthA
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var dto = (await res.Content.ReadFromJsonAsync<EmailTestResultDto>(Json))!;
         Assert.False(dto.Sent);
-        Assert.Equal("Mode dev — email hanya ditulis ke log API, tidak benar-benar dikirim.", dto.Message);
+        Assert.Equal("Dev mode — email is only written to the API log, not actually sent.", dto.Message);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class EmailDiagnosticsTests(AuthApiFactory factory) : IClassFixture<AuthA
         var ex = await Assert.ThrowsAsync<AdminException>(() => svc.SendTestAsync(id));
 
         Assert.Equal(502, ex.StatusCode);
-        Assert.Equal("Alamat pengirim ditolak — pastikan domain SMTP_FROM_ADDRESS sudah Verified di Resend.", ex.Message);
+        Assert.Equal("Sender address rejected — make sure the SMTP_FROM_ADDRESS domain is Verified in Resend.", ex.Message);
         Assert.DoesNotContain("re_secret", ex.Message);
     }
 
@@ -91,7 +91,7 @@ public class EmailDiagnosticsTests(AuthApiFactory factory) : IClassFixture<AuthA
         var r = await svc.SendTestAsync(id);
 
         Assert.True(r.Sent);
-        Assert.Equal($"Email uji terkirim ke {email}. Periksa kotak masuk (dan folder spam).", r.Message);
+        Assert.Equal($"Test email sent to {email}. Check the inbox (and the spam folder).", r.Message);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class EmailDiagnosticsTests(AuthApiFactory factory) : IClassFixture<AuthA
         var ex = await Assert.ThrowsAsync<AdminException>(() => svc.SendTestAsync(id));
 
         Assert.Equal(502, ex.StatusCode);
-        Assert.Equal("Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.", ex.Message);
+        Assert.Equal("Couldn't reach the SMTP server — check SMTP_HOST and SMTP_PORT.", ex.Message);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class EmailDiagnosticsTests(AuthApiFactory factory) : IClassFixture<AuthA
         var ex = await Assert.ThrowsAsync<AdminException>(() => svc.SendTestAsync(id));
 
         Assert.Equal(502, ex.StatusCode);
-        Assert.Equal("Server SMTP tidak dapat dihubungi — periksa SMTP_HOST dan SMTP_PORT.", ex.Message);
+        Assert.Equal("Couldn't reach the SMTP server — check SMTP_HOST and SMTP_PORT.", ex.Message);
     }
 
     private Task<HttpResponseMessage> Send(HttpMethod m, string url, string token) =>

@@ -139,7 +139,7 @@ public class QuestionImportApiTests(AuthApiFactory factory) : IClassFixture<Auth
         var res = await Post(url, await AdminToken(), SheetIn(bank, $"{Id("R")}|Reading|Q|X|Y|A"));
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("Pilih bank soal tujuan impor.", await res.Content.ReadAsStringAsync());
+        Assert.Contains("Choose the destination question bank for the import.", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class QuestionImportApiTests(AuthApiFactory factory) : IClassFixture<Auth
         var first = await Post("/api/admin/questions/import", token, SheetIn("Simulation", $"{id}|Reading|Original|X|Y|A"));
         Assert.True((await first.Content.ReadFromJsonAsync<Result>(Json))!.Committed);
 
-        var expected = $"ID {id} sudah ada di bank Simulasi TOEFL. Ganti ID-nya, atau impor ke bank tersebut.";
+        var expected = $"ID {id} already exists in the TOEFL simulation bank. Change the ID, or import into that bank.";
         foreach (var url in new[] { "/api/admin/questions/import/preview", "/api/admin/questions/import" })
         {
             var res = await Post(url, token, SheetIn("SessionTest", $"{id}|Reading|Changed|X|Y|A"));

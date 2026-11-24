@@ -145,7 +145,7 @@ public static class QuestionImportParser
         foreach (var column in RequiredColumns)
             if (!present.Contains(column))
                 errors.Add(new ImportError(1, column,
-                    $"Kolom wajib '{column}' tidak ada pada sheet Questions. Gunakan template yang disediakan."));
+                    $"Required column '{column}' is missing from the Questions sheet. Use the provided template."));
 
         // A missing column fails every row for one reason. Report it once, at the header.
         if (errors.Count > 0) return new ImportParseResult([], errors);
@@ -163,8 +163,8 @@ public static class QuestionImportParser
                 // required column above).
                 blankPassages.Add(passage.PassageId);
                 errors.Add(new ImportError(passage.RowNumber, "text",
-                    $"Passage '{passage.PassageId}' pada sheet Passages tidak memiliki teks. " +
-                    "Isi teks passage-nya, atau hapus barisnya jika belum siap."));
+                    $"Passage '{passage.PassageId}' on the Passages sheet has no text. " +
+                    "Fill in the passage text, or delete the row if it isn't ready."));
                 continue;
             }
 
@@ -208,12 +208,12 @@ public static class QuestionImportParser
         var id = Cell(row, "id");
 
         if (id.Length == 0)
-            errors.Add(new ImportError(row.RowNumber, "id", "Kolom id wajib diisi. Contoh: L01, S14, R07."));
+            errors.Add(new ImportError(row.RowNumber, "id", "The id column is required. Examples: L01, S14, R07."));
         else if (id.Length > MaxExternalIdLength)
             errors.Add(new ImportError(row.RowNumber, "id",
-                $"Id terlalu panjang (maksimum {MaxExternalIdLength} karakter)."));
+                $"Id is too long (maximum {MaxExternalIdLength} characters)."));
         else if (seen.TryGetValue(id, out var first))
-            errors.Add(new ImportError(row.RowNumber, "id", $"Id '{id}' sudah dipakai pada baris {first}."));
+            errors.Add(new ImportError(row.RowNumber, "id", $"Id '{id}' is already used on row {first}."));
         else
             seen[id] = row.RowNumber;
 
@@ -233,7 +233,7 @@ public static class QuestionImportParser
             return section;
 
         errors.Add(new ImportError(row.RowNumber, "section",
-            $"Bagian '{text}' tidak dikenal. Gunakan salah satu: {string.Join(", ", Enum.GetNames<QuestionSection>())}."));
+            $"Unknown section '{text}'. Use one of: {string.Join(", ", Enum.GetNames<QuestionSection>())}."));
         return QuestionSection.General;
     }
 
@@ -241,7 +241,7 @@ public static class QuestionImportParser
     {
         var prompt = Cell(row, "prompt");
         if (prompt.Length == 0)
-            errors.Add(new ImportError(row.RowNumber, "prompt", "Pertanyaan wajib diisi."));
+            errors.Add(new ImportError(row.RowNumber, "prompt", "The question text is required."));
         return prompt;
     }
 
@@ -261,7 +261,7 @@ public static class QuestionImportParser
                 // surviving choice? Both readings are defensible, which is exactly why neither is
                 // safe to guess on an exam.
                 errors.Add(new ImportError(row.RowNumber, "choice_b",
-                    "Pilihan jawaban harus berurutan mulai choice_a, tanpa kolom kosong di tengah."));
+                    "Options must be filled in order starting with choice_a, with no empty columns in between."));
                 return choices;
             }
 
@@ -269,7 +269,7 @@ public static class QuestionImportParser
         }
 
         if (choices.Count < 2)
-            errors.Add(new ImportError(row.RowNumber, "choice_b", "Minimal 2 pilihan jawaban."));
+            errors.Add(new ImportError(row.RowNumber, "choice_b", "At least 2 options are required."));
 
         return choices;
     }
@@ -286,7 +286,7 @@ public static class QuestionImportParser
         if (answer.Length != 1 || answer[0] < 'A' || answer[0] > 'D')
         {
             errors.Add(new ImportError(row.RowNumber, "answer",
-                "Jawaban harus satu huruf: A, B, C, atau D."));
+                "The answer must be a single letter: A, B, C, or D."));
             return -1;
         }
 
@@ -298,7 +298,7 @@ public static class QuestionImportParser
         if (choicesValid && index >= choices.Count)
         {
             errors.Add(new ImportError(row.RowNumber, "answer",
-                $"Jawaban '{answer}' menunjuk pilihan yang kosong."));
+                $"Answer '{answer}' points to an empty option."));
             return -1;
         }
 
@@ -318,7 +318,7 @@ public static class QuestionImportParser
         if (blankPassages.Contains(passageId)) return null;
 
         errors.Add(new ImportError(row.RowNumber, "passage_id",
-            $"passage_id '{passageId}' tidak ada pada sheet Passages."));
+            $"passage_id '{passageId}' does not exist on the Passages sheet."));
         return null;
     }
 
@@ -333,7 +333,7 @@ public static class QuestionImportParser
         var key = AudioKey.FromFilename(filename);
         if (key is null)
             errors.Add(new ImportError(row.RowNumber, "audio_file",
-                $"Nama berkas audio '{filename}' tidak valid. Gunakan nama seperti L01.mp3."));
+                $"Audio file name '{filename}' is not valid. Use a name like L01.mp3."));
 
         return key;
     }

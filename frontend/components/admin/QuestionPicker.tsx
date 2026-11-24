@@ -41,7 +41,7 @@ export function QuestionPicker({
   );
 
   function release(id: string) {
-    if (confirm("Lepas soal ini dari tes? Soal dari bank lain tidak bisa ditambahkan kembali.")) toggle(id);
+    if (confirm("Remove this question from the test? Questions from another bank can't be added back.")) toggle(id);
   }
 
   return (
@@ -53,7 +53,7 @@ export function QuestionPicker({
             onChange={(e) => setFilter(e.target.value)}
             className="rounded-sm border border-border bg-surface px-2.5 py-2 text-[13px] outline-none focus:border-primary"
           >
-            <option value="">Semua bagian</option>
+            <option value="">All sections</option>
             {QUESTION_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
@@ -62,11 +62,11 @@ export function QuestionPicker({
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Cari soal…"
+            placeholder="Search questions…"
             className="w-full rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
           />
         </div>
-        <span className="shrink-0 text-[12px] font-bold text-ink-muted">{selected.length} dipilih</span>
+        <span className="shrink-0 text-[12px] font-bold text-ink-muted">{selected.length} selected</span>
       </div>
 
       {foreign.length > 0 && (
@@ -76,19 +76,19 @@ export function QuestionPicker({
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-ink">{x.prompt}</span>
                 <span className="block text-[11px] text-ink-subtle">
-                  {x.section} · {x.choices.length} pilihan
+                  {x.section} · {x.choices.length} options
                   <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 font-bold text-warning">
-                    {x.bank === "Simulation" ? "dari bank simulasi" : "dari bank tes sesi"}
+                    {x.bank === "Simulation" ? "from the simulation bank" : "from the session test bank"}
                   </span>
                 </span>
               </span>
               <button
                 type="button"
-                aria-label={`Lepas soal dari tes: ${x.prompt.slice(0, 60)}`}
+                aria-label={`Remove question from test: ${x.prompt.slice(0, 60)}`}
                 onClick={() => release(x.id)}
                 className="shrink-0 rounded-sm border border-border px-2.5 py-1 text-[12px] font-bold text-ink hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               >
-                Lepas
+                Remove
               </button>
             </li>
           ))}
@@ -101,12 +101,12 @@ export function QuestionPicker({
         // A failed bank query is NOT an empty bank — saying "add some questions first" here
         // sends the operator off to author content that already exists.
         <ErrorState
-          title="Bank soal gagal dimuat"
-          message="Coba muat ulang halaman. Soal yang sudah ada tidak hilang."
+          title="Couldn't load the question bank"
+          message="Try reloading the page. Existing questions are not lost."
         />
       ) : (q.data ?? []).length === 0 ? (
         <p className="py-6 text-center text-sm text-ink-muted">
-          Tidak ada soal. Tambahkan di halaman Bank Soal terlebih dahulu.
+          No questions. Add some on the Question bank page first.
         </p>
       ) : (
         <ul className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
@@ -125,8 +125,8 @@ export function QuestionPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold text-ink">{item.prompt}</span>
                     <span className="block text-[11px] text-ink-subtle">
-                      {item.section} · {item.choices.length} pilihan
-                      {on && ` · urutan ${order}`}
+                      {item.section} · {item.choices.length} options
+                      {on && ` · position ${order}`}
                     </span>
                   </span>
                 </label>

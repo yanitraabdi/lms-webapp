@@ -26,14 +26,14 @@ public class ScoreBandAdminService(AppDbContext db) : IScoreBandAdminService
         Guid actor, Guid programId, UpsertScoreBandsRequest req, CancellationToken ct = default)
     {
         if (!await db.Programs.AnyAsync(p => p.Id == programId, ct))
-            throw new AssessmentException("Program tidak ditemukan.", 404);
+            throw new AssessmentException("Program not found.", 404);
 
         foreach (var b in req.Bands)
         {
             if (!Enum.TryParse<QuestionSection>(b.Section, true, out _))
-                throw new AssessmentException($"Bagian '{b.Section}' tidak dikenal.");
+                throw new AssessmentException($"Unknown section '{b.Section}'.");
             if (b.MinRaw > b.MaxRaw)
-                throw new AssessmentException($"Rentang {b.MinRaw}–{b.MaxRaw} tidak valid.");
+                throw new AssessmentException($"Invalid range {b.MinRaw}–{b.MaxRaw}.");
         }
 
         // Overlapping ranges would make conversion ambiguous — reject rather than pick one.
@@ -43,7 +43,7 @@ public class ScoreBandAdminService(AppDbContext db) : IScoreBandAdminService
             for (var i = 1; i < ordered.Count; i++)
                 if (ordered[i].MinRaw <= ordered[i - 1].MaxRaw)
                     throw new AssessmentException(
-                        $"Rentang skor bagian {group.Key} tumpang tindih di sekitar {ordered[i].MinRaw}.");
+                        $"Score ranges for section {group.Key} overlap around {ordered[i].MinRaw}.");
         }
 
         var existing = await db.ScoreBandMappings.Where(b => b.ProgramId == programId).ToListAsync(ct);

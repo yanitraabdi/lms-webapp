@@ -43,7 +43,7 @@ public class ProgramAdminService(
         // than running the full check against a program that does not exist yet.
         if (req.Published)
             throw new ProgramException(
-                "Program baru harus dibuat sebagai draf. Terbitkan setelah kontennya lengkap.", 409);
+                "A new program must be created as a draft. Publish it once its content is complete.", 409);
 
         var slug = await UniqueSlugAsync(req.Slug ?? Slugify(req.Name), null, ct);
         var program = new Domain.Entities.Program
@@ -67,7 +67,7 @@ public class ProgramAdminService(
     public async Task UpdateAsync(Guid actor, Guid id, UpsertProgramRequest req, CancellationToken ct = default)
     {
         var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == id, ct)
-            ?? throw new ProgramException("Program tidak ditemukan.", 404);
+            ?? throw new ProgramException("Program not found.", 404);
 
         // Only the draft->published TRANSITION is gated. Editing an already-published program
         // (including re-saving it with published:true unchanged) stays free, or an admin could
@@ -79,7 +79,7 @@ public class ProgramAdminService(
             var readiness = await GetReadinessAsync(id, ct);
             if (!readiness.Ready)
                 throw new ProgramException(
-                    "Program belum siap diterbitkan. " + string.Join(" ",
+                    "The program isn't ready to publish. " + string.Join(" ",
                         readiness.Checks.Where(c => c.Blocking && !c.Passed)
                                         .Select(c => c.Detail ?? c.Title)), 409);
         }
@@ -105,7 +105,7 @@ public class ProgramAdminService(
 
         // Enrollments are financial/retained (GR-7) — never cascade them away.
         if (await db.Enrollments.AnyAsync(e => e.ProgramId == id, ct))
-            throw new ProgramException("Program tidak bisa dihapus karena sudah memiliki pendaftar. Arsipkan saja.", 409);
+            throw new ProgramException("This program can't be deleted because it already has enrollments. Archive it instead.", 409);
 
         db.Programs.Remove(program);
         Audit(actor, "program_deleted", id, new { program.Name });
@@ -125,7 +125,7 @@ public class ProgramAdminService(
         Guid actor, Guid programId, UpsertSessionRequest req, CancellationToken ct = default)
     {
         if (!await db.Programs.AnyAsync(p => p.Id == programId, ct))
-            throw new ProgramException("Program tidak ditemukan.", 404);
+            throw new ProgramException("Program not found.", 404);
 
         var session = new ProgramSession { Id = Guid.CreateVersion7(), ProgramId = programId };
         ApplySession(session, req);
@@ -166,7 +166,7 @@ public class ProgramAdminService(
     public async Task UpdateSessionAsync(Guid actor, Guid sessionId, UpsertSessionRequest req, CancellationToken ct = default)
     {
         var session = await db.ProgramSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct)
-            ?? throw new ProgramException("Sesi tidak ditemukan.", 404);
+            ?? throw new ProgramException("Session not found.", 404);
 
         // An edit owns the session's CONTENT. Three fields have their own endpoints and are kept as
         // stored, whatever the request says. Taking them from the request is what made this unsafe:
@@ -209,7 +209,7 @@ public class ProgramAdminService(
         // Learner records are retained (GR-7); a session referenced by them cannot be removed.
         if (await db.SessionCompletions.AnyAsync(c => c.SessionId == sessionId, ct)
             || await db.WatchProgress.AnyAsync(w => w.SessionId == sessionId, ct))
-            throw new ProgramException("Sesi tidak bisa dihapus karena sudah memiliki progres peserta.", 409);
+            throw new ProgramException("This session can't be deleted because learners already have progress on it.", 409);
 
         var programId = session.ProgramId;
         db.ProgramSessions.Remove(session);
@@ -224,7 +224,7 @@ public class ProgramAdminService(
         var byId = sessions.ToDictionary(s => s.Id);
 
         if (req.SessionIdsInOrder.Count != sessions.Count || req.SessionIdsInOrder.Any(id => !byId.ContainsKey(id)))
-            throw new ProgramException("Daftar urutan harus memuat tepat semua sesi program ini.", 400);
+            throw new ProgramException("The order list must contain exactly all sessions of this program.", 400);
 
         // Two-phase write: the UNIQUE(program_id, order_index) index would trip on a direct swap.
         for (var i = 0; i < req.SessionIdsInOrder.Count; i++)
@@ -249,7 +249,7 @@ public class ProgramAdminService(
         Guid actor, Guid programId, UpsertBatchRequest req, CancellationToken ct = default)
     {
         if (!await db.Programs.AnyAsync(p => p.Id == programId, ct))
-            throw new ProgramException("Program tidak ditemukan.", 404);
+            throw new ProgramException("Program not found.", 404);
 
         var batch = new ProgramBatch
         {
@@ -268,7 +268,7 @@ public class ProgramAdminService(
     public async Task UpdateBatchAsync(Guid actor, Guid batchId, UpsertBatchRequest req, CancellationToken ct = default)
     {
         var batch = await db.ProgramBatches.FirstOrDefaultAsync(b => b.Id == batchId, ct)
-            ?? throw new ProgramException("Batch tidak ditemukan.", 404);
+            ?? throw new ProgramException("Batch not found.", 404);
         batch.Name = req.Name.Trim();
         batch.StartDate = req.StartDate;
         batch.Status = ParseEnum(req.Status, batch.Status);
@@ -290,7 +290,7 @@ public class ProgramAdminService(
     public async Task<ProgramReadinessDto> GetReadinessAsync(Guid programId, CancellationToken ct = default)
     {
         var program = await db.Programs.FirstOrDefaultAsync(p => p.Id == programId, ct)
-            ?? throw new ProgramException("Program tidak ditemukan.", 404);
+            ?? throw new ProgramException("Program not found.", 404);
 
         var sessions = await db.ProgramSessions
             .Where(s => s.ProgramId == programId)
@@ -299,15 +299,15 @@ public class ProgramAdminService(
 
         var checks = new List<ReadinessCheckDto>
         {
-            new("has_sessions", "Program memiliki sesi", sessions.Count > 0, true,
-                sessions.Count == 0 ? "Belum ada sesi pada program ini." : null),
+            new("has_sessions", "Program has sessions", sessions.Count > 0, true,
+                sessions.Count == 0 ? "This program has no sessions yet." : null),
         };
 
         var emptyVideo = await db.ProgramSessions
             .Where(s => s.ProgramId == programId && s.Type == SessionType.Video && !s.Parts.Any())
             .Select(s => s.Title).ToListAsync(ct);
-        checks.Add(new("video_sessions_have_parts", "Setiap sesi video memiliki bagian", emptyVideo.Count == 0, true,
-            emptyVideo.Count > 0 ? $"Sesi tanpa bagian: {string.Join(", ", emptyVideo)}." : null));
+        checks.Add(new("video_sessions_have_parts", "Every video session has parts", emptyVideo.Count == 0, true,
+            emptyVideo.Count > 0 ? $"Sessions without parts: {string.Join(", ", emptyVideo)}." : null));
 
         // Every attached assessment must actually have questions — on the session (live/final) or on
         // a Test part (video, since 2026-10-05).
@@ -321,14 +321,14 @@ public class ProgramAdminService(
                      .Select(s => new { s.Title, s.AssessmentId }).Concat(partTests))
             if (!await db.AssessmentQuestions.AnyAsync(q => q.AssessmentId == t.AssessmentId, ct))
                 empty.Add(t.Title);
-        checks.Add(new("gating_tests_populated", "Semua tes memiliki soal", empty.Count == 0, true,
-            empty.Count > 0 ? $"Tes tanpa soal: {string.Join(", ", empty)}." : null));
+        checks.Add(new("gating_tests_populated", "All tests have questions", empty.Count == 0, true,
+            empty.Count > 0 ? $"Tests without questions: {string.Join(", ", empty)}." : null));
 
         var final = sessions.FirstOrDefault(s => s.Type == SessionType.FinalAssessment);
         var finalAssessmentId = final?.AssessmentId;
-        checks.Add(new("final_assessment_present", "Tes akhir terpasang", finalAssessmentId is not null, true,
-            final is null ? "Belum ada sesi tes akhir."
-            : finalAssessmentId is null ? "Sesi tes akhir belum memiliki tes." : null));
+        checks.Add(new("final_assessment_present", "Final assessment attached", finalAssessmentId is not null, true,
+            final is null ? "There is no final assessment session yet."
+            : finalAssessmentId is null ? "The final assessment session has no test yet." : null));
 
         var finalConfig = finalAssessmentId is Guid fid
             ? AssessmentService.ParseConfig(
@@ -340,8 +340,8 @@ public class ProgramAdminService(
         checks.Add(await ListeningAudioCheckAsync(finalAssessmentId, finalConfig, ct));
         checks.Add(await ScoreBandsCheckAsync(programId, ct));
 
-        checks.Add(new("price_set", "Harga sudah diisi", program.PriceIdr > 0, false,
-            program.PriceIdr > 0 ? null : "Harga masih 0."));
+        checks.Add(new("price_set", "Price is set", program.PriceIdr > 0, false,
+            program.PriceIdr > 0 ? null : "The price is still 0."));
 
         return new ProgramReadinessDto(checks.All(c => !c.Blocking || c.Passed), checks);
     }
@@ -355,12 +355,12 @@ public class ProgramAdminService(
     private static ReadinessCheckDto FinalFormatCheck(AssessmentConfig? config)
     {
         const string key = "final_sections_match_itp";
-        const string title = "Format tes akhir sesuai TOEFL ITP";
+        const string title = "Final assessment matches the TOEFL ITP format";
 
         if (config is null)
-            return new(key, title, false, true, "Tes akhir belum terpasang.");
+            return new(key, title, false, true, "No final assessment is attached yet.");
         if (config.Sections.Count == 0)
-            return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");
+            return new(key, title, false, true, "The final assessment has no section configuration yet.");
 
         var required = new[]
         {
@@ -374,21 +374,21 @@ public class ProgramAdminService(
         {
             var declared = config.Sections.Where(s => s.Section == section).ToList();
             if (declared.Count == 0)
-                problems.Add($"{section} belum ada (wajib {questions} soal)");
+                problems.Add($"{section} is missing ({questions} questions required)");
             else if (declared.Count > 1)
-                problems.Add($"{section} tercantum {declared.Count} kali (wajib sekali, {questions} soal)");
+                problems.Add($"{section} is listed {declared.Count} times (must be listed once, with {questions} questions)");
             else if (declared[0].Questions != questions)
-                problems.Add($"{section} tertulis {declared[0].Questions} soal, wajib {questions}");
+                problems.Add($"{section} declares {declared[0].Questions} questions, but {questions} are required");
         }
         foreach (var extra in config.Sections.Select(s => s.Section)
                      .Where(s => !required.Any(r => r.Section == s)).Distinct())
-            problems.Add($"{extra} bukan bagian TOEFL ITP");
+            problems.Add($"{extra} is not a TOEFL ITP section");
 
         return new(key, title, problems.Count == 0, true,
             problems.Count > 0
-                ? $"Format TOEFL ITP wajib {ToeflScoring.ListeningQuestions} Listening / "
-                  + $"{ToeflScoring.StructureQuestions} Structure / {ToeflScoring.ReadingQuestions} Reading soal. "
-                  + $"Perbaiki di “Konfigurasi” tes akhir: {string.Join("; ", problems)}."
+                ? $"The TOEFL ITP format requires {ToeflScoring.ListeningQuestions} Listening / "
+                  + $"{ToeflScoring.StructureQuestions} Structure / {ToeflScoring.ReadingQuestions} Reading questions. "
+                  + $"Fix this in the final assessment's “Configuration”: {string.Join("; ", problems)}."
                 : null);
     }
 
@@ -397,13 +397,13 @@ public class ProgramAdminService(
         Guid? assessmentId, AssessmentConfig? config, CancellationToken ct)
     {
         const string key = "final_sections_populated";
-        const string title = "Bagian tes akhir lengkap";
+        const string title = "Final assessment sections are complete";
 
         if (assessmentId is not Guid id || config is null)
-            return new(key, title, false, true, "Tes akhir belum terpasang.");
+            return new(key, title, false, true, "No final assessment is attached yet.");
 
         if (config.Sections.Count == 0)
-            return new(key, title, false, true, "Tes akhir belum memiliki konfigurasi bagian.");
+            return new(key, title, false, true, "The final assessment has no section configuration yet.");
 
         var problems = new List<string>();
         foreach (var section in config.Sections)
@@ -415,7 +415,7 @@ public class ProgramAdminService(
         }
 
         return new(key, title, problems.Count == 0, true,
-            problems.Count > 0 ? $"Jumlah soal belum sesuai: {string.Join(", ", problems)}." : null);
+            problems.Count > 0 ? $"Question counts don't match: {string.Join(", ", problems)}." : null);
     }
 
     /// <summary>
@@ -440,10 +440,10 @@ public class ProgramAdminService(
         Guid? assessmentId, AssessmentConfig? config, CancellationToken ct)
     {
         const string key = "listening_audio_present";
-        const string title = "Audio listening tersedia";
+        const string title = "Listening audio available";
 
         if (assessmentId is not Guid id || config is null)
-            return new(key, title, false, true, "Tes akhir belum terpasang.");
+            return new(key, title, false, true, "No final assessment is attached yet.");
 
         var listening = config.Sections.FirstOrDefault(s => s.Section == QuestionSection.Listening);
         if (listening is null)
@@ -473,9 +473,9 @@ public class ProgramAdminService(
         if (hasSectionRef)
         {
             if (!await StoredAsync(listening.AudioRef!, ct))
-                problems.Add($"Rekaman satu bagian listening tidak ditemukan di penyimpanan: {listening.AudioRef}. Unggah ulang rekamannya.");
+                problems.Add($"The listening section's recording was not found in storage: {listening.AudioRef}. Upload the recording again.");
             if (unreachable.Count > 0)
-                problems.Add($"{unreachable.Count} soal listening menimpa rekaman bagian dengan audio yang tidak ditemukan di penyimpanan: {Describe(unreachable)}. Unggah ulang audio soal tersebut, atau kosongkan agar memakai rekaman bagian.");
+                problems.Add($"{unreachable.Count} listening questions override the section recording with audio that was not found in storage: {Describe(unreachable)}. Upload that audio again, or clear it to use the section recording.");
         }
         else
         {
@@ -484,9 +484,9 @@ public class ProgramAdminService(
                                  && q.Question.Section == QuestionSection.Listening
                                  && (q.Question.AudioRef == null || q.Question.AudioRef == ""), ct);
             if (missing > 0)
-                problems.Add($"{missing} soal listening belum memiliki audio. Unggah audio per soal, atau satu rekaman untuk seluruh bagian.");
+                problems.Add($"{missing} listening questions have no audio. Upload audio per question, or one recording for the whole section.");
             if (unreachable.Count > 0)
-                problems.Add($"{unreachable.Count} berkas audio listening tidak ditemukan di penyimpanan: {Describe(unreachable)}. Unggah ulang audionya.");
+                problems.Add($"{unreachable.Count} listening audio files were not found in storage: {Describe(unreachable)}. Upload the audio again.");
         }
 
         return new(key, title, problems.Count == 0, true,
@@ -508,7 +508,7 @@ public class ProgramAdminService(
     private async Task<ReadinessCheckDto> ScoreBandsCheckAsync(Guid programId, CancellationToken ct)
     {
         const string key = "score_bands_complete";
-        const string title = "Tabel konversi skor lengkap";
+        const string title = "Score conversion table complete";
 
         var bands = await db.ScoreBandMappings
             .Where(b => b.ProgramId == programId)
@@ -516,7 +516,7 @@ public class ProgramAdminService(
             .ToListAsync(ct);
 
         if (bands.Count == 0)
-            return new(key, title, false, true, "Tabel konversi skor belum diisi.");
+            return new(key, title, false, true, "The score conversion table is empty.");
 
         var problems = new List<string>();
         foreach (var (section, maxRaw, scaledMax) in new[]
@@ -532,17 +532,17 @@ public class ProgramAdminService(
                 .Where(raw => !rows.Any(r => raw >= r.MinRaw && raw <= r.MaxRaw))
                 .ToList();
             if (missing.Count > 0)
-                problems.Add($"{section}: skor {Describe(missing)} belum dipetakan");
+                problems.Add($"{section}: raw scores {Describe(missing)} are not mapped");
 
             var duplicated = Enumerable.Range(0, maxRaw + 1)
                 .Where(raw => rows.Count(r => raw >= r.MinRaw && raw <= r.MaxRaw) > 1)
                 .ToList();
             if (duplicated.Count > 0)
-                problems.Add($"{section}: skor {Describe(duplicated)} dipetakan lebih dari sekali");
+                problems.Add($"{section}: raw scores {Describe(duplicated)} are mapped more than once");
 
             var outOfRange = rows.Count(r => !ToeflScoring.IsValidScaled(r.ScaledScore, scaledMax));
             if (outOfRange > 0)
-                problems.Add($"{section}: {outOfRange} nilai skala di luar {ToeflScoring.ScaledMin}-{scaledMax}");
+                problems.Add($"{section}: {outOfRange} scaled values outside {ToeflScoring.ScaledMin}-{scaledMax}");
         }
 
         return new(key, title, problems.Count == 0, true,
@@ -550,17 +550,17 @@ public class ProgramAdminService(
     }
 
     private static string Describe(List<int> missing) =>
-        missing.Count <= 5 ? string.Join(", ", missing) : $"{missing[0]}-{missing[^1]} ({missing.Count} nilai)";
+        missing.Count <= 5 ? string.Join(", ", missing) : $"{missing[0]}-{missing[^1]} ({missing.Count} values)";
 
     // ---------------------------------------------------------------- enrollment support
 
     public async Task RevokeEnrollmentAsync(Guid actor, Guid enrollmentId, CancellationToken ct = default)
     {
         var enrollment = await db.Enrollments.FirstOrDefaultAsync(e => e.Id == enrollmentId, ct)
-            ?? throw new ProgramException("Pendaftaran tidak ditemukan.", 404);
+            ?? throw new ProgramException("Enrollment not found.", 404);
 
         if (!Domain.EnrollmentStateMachine.CanTransition(enrollment.Status, EnrollmentStatus.Revoked))
-            throw new ProgramException($"Status {enrollment.Status} tidak bisa dicabut.", 409);
+            throw new ProgramException($"An enrollment with status {enrollment.Status} can't be revoked.", 409);
 
         enrollment.Status = EnrollmentStatus.Revoked;   // access only — no learner data is deleted (GR-7)
         Audit(actor, "enrollment_revoked", enrollmentId, new { enrollment.UserId, enrollment.ProgramId });
@@ -611,7 +611,7 @@ public class ProgramAdminService(
         if (!video.IsBunny || type != SessionType.Video) return;
         if (!Guid.TryParseExact(assetId, "D", out _))
             throw new ProgramException(
-                "Sesi video memerlukan ID video Bunny yang valid. Pilih video dari pustaka.", 400);
+                "A video session needs a valid Bunny video ID. Pick a video from the library.", 400);
     }
 
     private async Task SaveSessionsAsync(Guid programId, CancellationToken ct)
@@ -622,11 +622,11 @@ public class ProgramAdminService(
         }
         catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex, DbErrors.SessionPartAssessmentIndex))
         {
-            throw new ProgramException("Tes ini sudah dipakai di sesi lain.", 409);
+            throw new ProgramException("This test is already used in another session.", 409);
         }
         catch (DbUpdateException)
         {
-            throw new ProgramException("Urutan sesi bentrok. Muat ulang lalu coba lagi.", 409);
+            throw new ProgramException("Session order conflict. Reload and try again.", 409);
         }
         var slug = await db.Programs.Where(p => p.Id == programId).Select(p => p.Slug).FirstOrDefaultAsync(ct);
         if (slug is not null) await RevalidateAsync(slug, ct);

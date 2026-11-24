@@ -27,7 +27,7 @@ public static class QuestionImportEndpoints
             .WithTags("AdminQuestionImport");
 
         g.MapGet("/import/template", FileContentHttpResult (IQuestionImportService s) =>
-            TypedResults.File(s.BuildTemplate(), XlsxContentType, "inverta-bank-soal-template.xlsx"));
+            TypedResults.File(s.BuildTemplate(), XlsxContentType, "inverta-question-bank-template.xlsx"));
 
         g.MapPost("/import/preview",
                 async Task<Results<Ok<ImportResultDto>, ProblemHttpResult>> (
@@ -62,9 +62,9 @@ public static class QuestionImportEndpoints
         Enum.TryParse(bank, true, out target) && Enum.IsDefined(target);
 
     private static ProblemHttpResult NoBank() =>
-        TypedResults.Problem(title: "Pilih bank soal tujuan impor.", statusCode: 400);
+        TypedResults.Problem(title: "Choose the destination question bank for the import.", statusCode: 400);
 
     private static ProblemHttpResult? TooLarge(IFormFile file) => file.Length > MaxWorkbookBytes
-        ? TypedResults.Problem(title: "Berkas terlalu besar. Maksimum 5 MB.", statusCode: 400)
+        ? TypedResults.Problem(title: "File is too large. Maximum 5 MB.", statusCode: 400)
         : null;
 }

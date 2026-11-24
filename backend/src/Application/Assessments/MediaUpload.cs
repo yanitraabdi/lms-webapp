@@ -13,16 +13,16 @@ public static class MediaUpload
         ["audio/ogg"] = ".ogg",
     };
 
-    /// <summary>Null when acceptable; otherwise the reason, in Bahasa Indonesia.</summary>
+    /// <summary>Null when acceptable; otherwise the reason, in English.</summary>
     public static string? Validate(string? contentType, long length, long maxBytes)
     {
         var type = Normalize(contentType);
         if (type is null || !Accepted.ContainsKey(type))
-            return "Format audio tidak didukung. Gunakan MP3, M4A, WAV, atau OGG.";
+            return "Unsupported audio format. Use MP3, M4A, WAV, or OGG.";
         if (length <= 0)
-            return "Berkas audio kosong.";
+            return "The audio file is empty.";
         if (length > maxBytes)
-            return $"Berkas audio terlalu besar. Maksimum {Describe(maxBytes)}.";
+            return $"The audio file is too large. Maximum {Describe(maxBytes)}.";
         return null;
     }
 

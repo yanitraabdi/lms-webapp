@@ -20,7 +20,7 @@ export function AudioUpload({
       const { key } = await uploadAudio(token, file);
       onChange(key);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Unggah audio gagal.");
+      setErr(e instanceof Error ? e.message : "Audio upload failed.");
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -38,7 +38,7 @@ export function AudioUpload({
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void pick(f); }}
         />
         <Button size="sm" variant="secondary" disabled={busy} onClick={() => input.current?.click()}>
-          {busy ? "Mengunggah…" : value ? "Ganti audio" : "Unggah audio"}
+          {busy ? "Uploading…" : value ? "Replace audio" : "Upload audio"}
         </Button>
         {value && (
           <button
@@ -46,12 +46,12 @@ export function AudioUpload({
             onClick={() => onChange(null)}
             className="text-[12.5px] font-bold text-danger hover:underline"
           >
-            Hapus
+            Delete
           </button>
         )}
       </div>
       {value && <p className="truncate text-[12px] text-ink-muted">{value}</p>}
-      {!value && <p className="text-[12px] text-ink-subtle">Belum ada audio. MP3, M4A, WAV, atau OGG.</p>}
+      {!value && <p className="text-[12px] text-ink-subtle">No audio yet. MP3, M4A, WAV or OGG.</p>}
       {err && <p className="text-[12px] text-danger">{err}</p>}
     </div>
   );

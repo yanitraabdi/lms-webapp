@@ -21,7 +21,7 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
 
     private readonly HttpClient _client = factory.CreateClient();
     private const string Pw = "Password123";
-    private const string OtherBank = "Soal dari bank lain tidak bisa dipakai di tes ini.";
+    private const string OtherBank = "Questions from another bank can't be used in this test.";
 
     [Fact]
     public async Task Creating_a_question_without_a_bank_is_refused()
@@ -32,7 +32,7 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
             section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = new[] { 0 },
         });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("Pilih bank soal.", await res.Content.ReadAsStringAsync());
+        Assert.Contains("Choose a question bank.", await res.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -44,12 +44,12 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
             bank = "99", section = "Reading", prompt = "Q", choices = new[] { "a", "b" }, correct = new[] { 0 },
         });
         Assert.Equal(HttpStatusCode.BadRequest, create.StatusCode);
-        Assert.Contains("Pilih bank soal.", await create.Content.ReadAsStringAsync());
+        Assert.Contains("Choose a question bank.", await create.Content.ReadAsStringAsync());
 
         var q = await NewQuestion(admin, "SessionTest");
         var move = await Move(admin, q.Id, "99");
         Assert.Equal(HttpStatusCode.BadRequest, move.StatusCode);
-        Assert.Contains("Pilih bank soal.", await move.Content.ReadAsStringAsync());
+        Assert.Contains("Choose a question bank.", await move.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
 
         var res = await Authed(HttpMethod.Put, $"/api/admin/assessments/{a}", admin, Body("Final"));
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Contains("Jenis tes tidak bisa diubah setelah tes memiliki soal.", await res.Content.ReadAsStringAsync());
+        Assert.Contains("The test type can't be changed once the test has questions.", await res.Content.ReadAsStringAsync());
         Assert.Equal("Gating", (await WithDbResult(db => db.Assessments.Where(x => x.Id == a).Select(x => x.Kind.ToString()).FirstAsync())));
 
         var same = await Authed(HttpMethod.Put, $"/api/admin/assessments/{a}", admin, Body("Gating"));
@@ -143,13 +143,13 @@ public class QuestionBankRulesTests(AuthApiFactory factory) : IClassFixture<Auth
         await Attach(await NewAssessment(admin, "Final"), sim.Id);
         var r1 = await Move(admin, sim.Id, "SessionTest");
         Assert.Equal(HttpStatusCode.Conflict, r1.StatusCode);
-        Assert.Contains("tes akhir", await r1.Content.ReadAsStringAsync());
+        Assert.Contains("final assessment", await r1.Content.ReadAsStringAsync());
 
         var ses = await NewQuestion(admin, "SessionTest");
         await Attach(await NewAssessment(admin, "Gating"), ses.Id);
         var r2 = await Move(admin, ses.Id, "Simulation");
         Assert.Equal(HttpStatusCode.Conflict, r2.StatusCode);
-        Assert.Contains("tes sesi", await r2.Content.ReadAsStringAsync());
+        Assert.Contains("session test", await r2.Content.ReadAsStringAsync());
     }
 
     [Fact]

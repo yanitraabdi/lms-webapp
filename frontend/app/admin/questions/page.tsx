@@ -59,31 +59,31 @@ function QuestionBank() {
   }
 
   async function remove(q: AdminQuestion) {
-    if (!token || !confirm(`Hapus soal "${q.prompt.slice(0, 50)}…"?`)) return;
+    if (!token || !confirm(`Delete question "${q.prompt.slice(0, 50)}…"?`)) return;
     setPageError(null);
     try {
       await deleteQuestion(token, q.id);
       refresh();
     } catch (e) {
-      setPageError(e instanceof Error ? e.message : "Gagal menghapus.");
+      setPageError(e instanceof Error ? e.message : "Couldn't delete.");
     }
   }
 
   async function move(q: AdminQuestion) {
-    if (!token || !confirm(`Pindahkan soal ini ke bank ${BANK_LABEL[other]}?`)) return;
+    if (!token || !confirm(`Move this question to the ${BANK_LABEL[other]} bank?`)) return;
     setPageError(null);
     try {
       await moveQuestion(token, q.id, other);
       refresh();
     } catch (e) {
-      setPageError(e instanceof Error ? e.message : "Gagal memindahkan soal.");
+      setPageError(e instanceof Error ? e.message : "Couldn't move the question.");
     }
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <PageTitle size="compact">Bank Soal</PageTitle>
-      <div role="group" aria-label="Bank soal" className="flex flex-wrap gap-2">
+      <PageTitle size="compact">Question bank</PageTitle>
+      <div role="group" aria-label="Question bank" className="flex flex-wrap gap-2">
         {QUESTION_BANKS.map((b) => (
           <button
             key={b}
@@ -105,16 +105,16 @@ function QuestionBank() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-ink-muted">
-          Bank soal untuk tes sesi dan tes akhir. Soal disusun menjadi tes di halaman Program.
+          Question bank for session tests and the final assessment. Questions are composed into tests on the Program page.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            aria-label="Bagian"
+            aria-label="Section"
             value={section}
             onChange={(e) => setSection(e.target.value)}
             className="rounded-sm border border-border bg-surface px-2.5 py-2 text-[13px] outline-none focus:border-primary"
           >
-            <option value="">Semua bagian</option>
+            <option value="">All sections</option>
             {QUESTION_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <div className="relative">
@@ -122,7 +122,7 @@ function QuestionBank() {
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Cari soal…"
+              placeholder="Search questions…"
               className="w-[200px] rounded-sm border border-border bg-surface py-2 pl-8 pr-3 text-[13px] outline-none focus:border-primary"
             />
           </div>
@@ -130,9 +130,9 @@ function QuestionBank() {
             href="/admin/questions/import"
             className="rounded-sm border border-border px-3 py-2 text-[13px] font-bold text-ink hover:bg-surface-2"
           >
-            Impor massal
+            Bulk import
           </Link>
-          <Button size="sm" onClick={() => setCreating(true)}>+ Soal baru</Button>
+          <Button size="sm" onClick={() => setCreating(true)}>+ New question</Button>
         </div>
       </div>
 
@@ -141,33 +141,33 @@ function QuestionBank() {
           <div className="flex min-h-[140px] items-center justify-center"><Spinner size={20} /></div>
         ) : questions.isError ? (
           <div className="p-6">
-            <ErrorState title="Gagal memuat bank soal"
-              action={<Button variant="neutral" size="sm" onClick={() => questions.refetch()}>Muat ulang</Button>} />
+            <ErrorState title="Couldn't load the question bank"
+              action={<Button variant="neutral" size="sm" onClick={() => questions.refetch()}>Reload</Button>} />
           </div>
         ) : questions.data.length === 0 && !section && !search ? (
           <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
-            <p className="text-sm text-ink-muted">Belum ada soal di bank {BANK_LABEL[bank]}.</p>
+            <p className="text-sm text-ink-muted">No questions in the {BANK_LABEL[bank]} bank yet.</p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => setCreating(true)}>Tambah soal</Button>
+              <Button size="sm" onClick={() => setCreating(true)}>Add question</Button>
               <Link
                 href="/admin/questions/import"
                 className="rounded-sm border border-border px-3 py-2 text-[13px] font-bold text-ink hover:bg-surface-2"
               >
-                Impor dari Excel
+                Import from Excel
               </Link>
             </div>
           </div>
         ) : questions.data.length === 0 ? (
-          <p className="px-6 py-8 text-center text-sm text-ink-muted">Belum ada soal.</p>
+          <p className="px-6 py-8 text-center text-sm text-ink-muted">No questions yet.</p>
         ) : (
           <table className="data-table min-w-[640px]">
             <thead>
               <tr>
-                <th>Pertanyaan</th>
-                <th>Bagian</th>
-                <th>Pilihan</th>
-                <th>Dipakai</th>
-                <th className="num">Aksi</th>
+                <th>Question</th>
+                <th>Section</th>
+                <th>Options</th>
+                <th>Used in</th>
+                <th className="num">Actions</th>
               </tr>
             </thead>
             <tbody className="text-[13.5px]">
@@ -176,7 +176,7 @@ function QuestionBank() {
                   <td className="max-w-[380px]">
                     <div className="truncate font-semibold">{q.prompt}</div>
                     <div className="truncate text-[11.5px] text-ink-muted">
-                      Jawaban benar: {q.correct.map((i) => q.choices[num(i)] ?? "?").join(", ")}
+                      Correct answer: {q.correct.map((i) => q.choices[num(i)] ?? "?").join(", ")}
                     </div>
                   </td>
                   <td>
@@ -187,11 +187,11 @@ function QuestionBank() {
                   <td>
                     <div className="flex justify-end gap-2">
                       <Button variant="neutral" size="sm" onClick={() => setEditing(q)}>Edit</Button>
-                      <Button variant="neutral" size="sm" onClick={() => move(q)}>Pindahkan ke bank lain</Button>
+                      <Button variant="neutral" size="sm" onClick={() => move(q)}>Move to other bank</Button>
                       <button
                         type="button"
                         onClick={() => remove(q)}
-                        aria-label="Hapus soal"
+                        aria-label="Delete question"
                         className="rounded px-1.5 text-ink-subtle hover:text-danger"
                       >
                         <XIcon size={15} />
@@ -253,7 +253,7 @@ function QuestionForm({
       else await createQuestion(token, { ...body, bank });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan soal.");
+      setError(e instanceof Error ? e.message : "Couldn't save the question.");
       setBusy(false);
     }
   }
@@ -262,12 +262,12 @@ function QuestionForm({
     <Modal
       open
       onClose={onClose}
-      title={question ? "Edit soal" : "Soal baru"}
+      title={question ? "Edit question" : "New question"}
       className="max-w-xl"
       footer={
         <div className="flex w-full justify-end gap-2">
-          <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-          <Button size="sm" onClick={save} loading={busy} disabled={!valid}>Simpan</Button>
+          <Button variant="neutral" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={save} loading={busy} disabled={!valid}>Save</Button>
         </div>
       }
     >
@@ -279,14 +279,14 @@ function QuestionForm({
         </p>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] font-bold text-ink-muted">Bagian</span>
+          <span className="text-[12px] font-bold text-ink-muted">Section</span>
           <select value={section} onChange={(e) => setSection(e.target.value)} className={inputCls}>
             {QUESTION_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] font-bold text-ink-muted">Pertanyaan</span>
+          <span className="text-[12px] font-bold text-ink-muted">Question</span>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} className={inputCls} />
         </label>
 
@@ -298,12 +298,12 @@ function QuestionForm({
         )}
 
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] font-bold text-ink-muted">Teks bacaan (opsional)</span>
+          <span className="text-[12px] font-bold text-ink-muted">Reading passage (optional)</span>
           <textarea value={passage} onChange={(e) => setPassage(e.target.value)} rows={2} className={inputCls} />
         </label>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-bold text-ink-muted">Pilihan jawaban (tandai yang benar)</span>
+          <span className="text-[12px] font-bold text-ink-muted">Answer options (mark the correct one)</span>
           {choices.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
               <input
@@ -311,13 +311,13 @@ function QuestionForm({
                 name="correct"
                 checked={correct === i}
                 onChange={() => setCorrect(i)}
-                aria-label={`Pilihan ${i + 1} benar`}
+                aria-label={`Option ${i + 1} is correct`}
                 className="accent-primary"
               />
               <input
                 value={c}
                 onChange={(e) => setChoices((cs) => cs.map((x, j) => (j === i ? e.target.value : x)))}
-                placeholder={`Pilihan ${i + 1}`}
+                placeholder={`Option ${i + 1}`}
                 className={inputCls}
               />
               {choices.length > 2 && (
@@ -327,7 +327,7 @@ function QuestionForm({
                     setChoices((cs) => cs.filter((_, j) => j !== i));
                     if (correct >= choices.length - 1) setCorrect(0);
                   }}
-                  aria-label="Hapus pilihan"
+                  aria-label="Delete option"
                   className="text-ink-subtle hover:text-danger"
                 >
                   <XIcon size={14} />
@@ -340,7 +340,7 @@ function QuestionForm({
             onClick={() => setChoices((cs) => [...cs, ""])}
             className="self-start text-[12px] font-bold text-primary hover:underline"
           >
-            + Tambah pilihan
+            + Add option
           </button>
         </div>
       </div>

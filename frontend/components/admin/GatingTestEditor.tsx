@@ -49,7 +49,7 @@ export function GatingTestEditor({
 }) {
   const isFinal = kind === "Final";
   const [loading, setLoading] = useState(!!assessmentId);
-  const [title, setTitle] = useState(isFinal ? "Simulasi TOEFL ITP: Tes Akhir" : "Tes sesi");
+  const [title, setTitle] = useState(isFinal ? "TOEFL ITP simulation: Final assessment" : "Session test");
   const [passThreshold, setPassThreshold] = useState(1);
   const [retakeCap, setRetakeCap] = useState(isFinal ? "1" : "");   // blank = unlimited
   const [selected, setSelected] = useState<string[]>([]);
@@ -94,16 +94,16 @@ export function GatingTestEditor({
           }));
           const stray = saved
             .filter((s) => !DEFAULT_SECTIONS.some((d) => d.section === s.section))
-            .map((s) => s.section ?? "tanpa nama");
+            .map((s) => s.section ?? "unnamed");
           if (stray.length) {
             setError(
-              `Konfigurasi memuat bagian di luar format TOEFL ITP (${stray.join(", ")}). ` +
-              "Bagian tersebut akan dihapus jika tes ini disimpan."
+              `The configuration contains sections outside the TOEFL ITP format (${stray.join(", ")}). ` +
+              "Those sections will be removed if this test is saved."
             );
           }
         }
       })
-      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Gagal memuat tes."))
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Couldn't load test."))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [token, assessmentId]);
@@ -161,7 +161,7 @@ export function GatingTestEditor({
       onSaved?.(id);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menyimpan tes.");
+      setError(e instanceof Error ? e.message : "Couldn't save test.");
       setBusy(false);
     }
   }
@@ -172,19 +172,19 @@ export function GatingTestEditor({
     try {
       setAudioRef((await uploadAudio(token, file)).key);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unggah audio gagal.");
+      setError(e instanceof Error ? e.message : "Audio upload failed.");
     } finally { setUploading(false); }
   }
 
   async function detach() {
     if (!sessionId) return;
-    if (!confirm("Lepas tes dari sesi ini?\n\nTes dan percobaan peserta tidak dihapus.")) return;
+    if (!confirm("Detach the test from this session?\n\nThe test and learners' attempts are not deleted.")) return;
     setBusy(true);
     try {
       await attachAssessment(token, sessionId, null);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal melepas tes.");
+      setError(e instanceof Error ? e.message : "Couldn't detach test.");
       setBusy(false);
     }
   }
@@ -192,11 +192,11 @@ export function GatingTestEditor({
   const footer = (
     <div className="flex w-full items-center justify-between gap-2">
       {assessmentId && sessionId
-        ? <Button variant="neutral" size="sm" onClick={detach} loading={busy}>Lepas dari sesi</Button>
+        ? <Button variant="neutral" size="sm" onClick={detach} loading={busy}>Detach from session</Button>
         : <span />}
       <div className="flex gap-2">
-        <Button variant="neutral" size="sm" onClick={onClose}>Batal</Button>
-        <Button size="sm" onClick={save} loading={busy} disabled={!valid}>Simpan</Button>
+        <Button variant="neutral" size="sm" onClick={onClose}>Cancel</Button>
+        <Button size="sm" onClick={save} loading={busy} disabled={!valid}>Save</Button>
       </div>
     </div>
   );
@@ -208,14 +208,14 @@ export function GatingTestEditor({
       {error && <div className="rounded-base bg-danger-soft px-3 py-2 text-[13px] font-semibold text-danger">{error}</div>}
 
       <label className="flex flex-col gap-1">
-        <span className="text-[12px] font-bold text-ink-muted">Judul</span>
+        <span className="text-[12px] font-bold text-ink-muted">Title</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
       </label>
 
       <div className="flex flex-wrap gap-4">
         {!isFinal && (
           <label className="flex flex-col gap-1">
-            <span className="text-[12px] font-bold text-ink-muted">Skor lulus</span>
+            <span className="text-[12px] font-bold text-ink-muted">Passing score</span>
             <input
               type="number" min={1} max={Math.max(1, selected.length)} value={passThreshold}
               onChange={(e) => setPassThreshold(Number(e.target.value) || 1)}
@@ -227,9 +227,9 @@ export function GatingTestEditor({
             assessment, which is one sitting by default, exposes this. */}
         {isFinal && (
           <label className="flex flex-col gap-1">
-            <span className="text-[12px] font-bold text-ink-muted">Batas percobaan</span>
+            <span className="text-[12px] font-bold text-ink-muted">Attempt limit</span>
             <input
-              type="number" min={1} value={retakeCap} placeholder="tanpa batas"
+              type="number" min={1} value={retakeCap} placeholder="no limit"
               onChange={(e) => setRetakeCap(e.target.value)}
               className={inputCls + " w-36"}
             />
@@ -239,28 +239,28 @@ export function GatingTestEditor({
 
       {!isFinal && (
         <p className="text-[12.5px] text-ink-muted">
-          Peserta dapat mengulang tes ini sampai lulus.
+          Learners can retake this test until they pass.
         </p>
       )}
 
       {!isFinal && (
         <>
-          <Field label="Audio tes (satu rekaman untuk semua soal)">
+          <Field label="Test audio (one recording for all questions)">
             <input
               type="file" accept="audio/*" disabled={uploading}
               onChange={(e) => { void pickAudio(e.target.files?.[0]); e.target.value = ""; }}
               className={inputBlockCls + " focus-visible:ring-[3px] focus-visible:ring-primary-soft"}
             />
           </Field>
-          {uploading && <p className="text-[12.5px] text-ink-muted">Mengunggah audio…</p>}
+          {uploading && <p className="text-[12.5px] text-ink-muted">Uploading audio…</p>}
           {audioRef && (
             <div className="flex items-center gap-2 text-[13px] text-ink">
               <span className="min-w-0 flex-1 truncate">{audioRef.split("/").pop()}</span>
-              <Button variant="neutral" size="sm" onClick={() => setAudioRef(null)}>Hapus audio</Button>
+              <Button variant="neutral" size="sm" onClick={() => setAudioRef(null)}>Remove audio</Button>
             </div>
           )}
           {audioRef && (
-            <Field label="Batas putar audio per percobaan">
+            <Field label="Audio play limit per attempt">
               <input
                 type="number" min={1} value={playLimit}
                 onChange={(e) => setPlayLimit(e.target.value)}
@@ -269,42 +269,42 @@ export function GatingTestEditor({
             </Field>
           )}
           {!playLimitOk && (
-            <p className="text-[12.5px] font-semibold text-danger">Batas putar minimal 1.</p>
+            <p className="text-[12.5px] font-semibold text-danger">Play limit must be at least 1.</p>
           )}
-          <Field label="Video pembahasan terbuka setelah … kali gagal">
+          <Field label="Discussion video unlocks after … failed attempts">
             <input
               type="number" min={1} value={discussionAfter}
               onChange={(e) => setDiscussionAfter(e.target.value)}
               className={inputBlockCls}
             />
           </Field>
-          <p className="text-[12.5px] text-ink-muted">Kosongkan agar pembahasan hanya terbuka setelah lulus.</p>
+          <p className="text-[12.5px] text-ink-muted">Leave blank to unlock the discussion only after a pass.</p>
           {!discussionOk && (
-            <p className="text-[12.5px] font-semibold text-danger">Isi minimal 1, atau kosongkan.</p>
+            <p className="text-[12.5px] font-semibold text-danger">Enter at least 1, or leave blank.</p>
           )}
         </>
       )}
 
       {!capOk && (
         <p className="text-[12.5px] font-semibold text-danger">
-          Batas percobaan minimal 1. Kosongkan untuk tanpa batas.
+          Attempt limit must be at least 1. Leave blank for no limit.
         </p>
       )}
 
       {!isFinal && selected.length > 0 && passThreshold > selected.length && (
         <p className="text-[12.5px] font-semibold text-danger">
-          Skor lulus tidak boleh melebihi jumlah soal ({selected.length}).
+          Passing score can&apos;t exceed the number of questions ({selected.length}).
         </p>
       )}
 
       {isFinal ? (
         <div className="flex flex-col gap-2">
-          <span className="text-[12px] font-bold text-ink-muted">Bagian tes</span>
+          <span className="text-[12px] font-bold text-ink-muted">Test sections</span>
           {sections.map((s, i) => (
             <div key={s.section} className="flex flex-wrap items-center gap-3 rounded-base border border-border px-3.5 py-2.5">
               <span className="w-24 text-[13.5px] font-semibold text-ink">{s.section}</span>
               <label className="flex items-center gap-1.5 text-[12px] font-bold text-ink-muted">
-                Jumlah soal
+                Number of questions
                 <input
                   type="number" min={1} value={s.questions}
                   onChange={(e) => setSections((rows) => rows.map((r, j) =>
@@ -313,7 +313,7 @@ export function GatingTestEditor({
                 />
               </label>
               <label className="flex items-center gap-1.5 text-[12px] font-bold text-ink-muted">
-                Menit
+                Minutes
                 <input
                   type="number" min={1} value={s.minutes}
                   onChange={(e) => setSections((rows) => rows.map((r, j) =>
@@ -325,19 +325,19 @@ export function GatingTestEditor({
           ))}
           {itpMismatch.length > 0 && (
             <p className="text-[12.5px] font-semibold text-warning">
-              Format TOEFL ITP wajib{" "}
-              {DEFAULT_SECTIONS.map((d) => `${d.questions} ${d.section}`).join(" / ")} soal.
-              Program tidak bisa diterbitkan selama jumlahnya berbeda.
+              The TOEFL ITP format requires{" "}
+              {DEFAULT_SECTIONS.map((d) => `${d.questions} ${d.section}`).join(" / ")} questions.
+              The program can&apos;t be published while the counts differ.
             </p>
           )}
           <p className="text-[12.5px] text-ink-muted">
-            Soal untuk tiap bagian dipilih di halaman “Susun soal” setelah tes akhir tersimpan.
-            Proktoring dan batas pemutaran audio aktif untuk tes akhir.
+            Questions for each section are chosen on the “Arrange questions” page after the final assessment is saved.
+            Proctoring and the audio play limit are on for the final assessment.
           </p>
         </div>
       ) : (
         <div>
-          <span className="text-[12px] font-bold text-ink-muted">Soal</span>
+          <span className="text-[12px] font-bold text-ink-muted">Questions</span>
           <div className="mt-1">
             <QuestionPicker token={token} bank="SessionTest" attached={attachedQuestions} selected={selected} onChange={setSelected} />
           </div>
@@ -359,7 +359,7 @@ export function GatingTestEditor({
     <Modal
       open
       onClose={onClose}
-      title={isFinal ? "Tes akhir" : "Tes sesi"}
+      title={isFinal ? "Final assessment" : "Session test"}
       className="max-w-2xl"
       footer={footer}
     >

@@ -36,11 +36,11 @@ public class BunnyVideoLibrary(HttpClient http, VideoOptions options) : IVideoLi
 
             if (res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
                 return Unavailable(
-                    "Bunny menolak kunci API. Gunakan kunci API milik pustaka video (Stream → pustaka → API), " +
-                    "bukan kunci akun atau kunci token. Sementara itu, isi ID video secara manual.");
+                    "Bunny rejected the API key. Use the video library's own API key (Stream → library → API), " +
+                    "not the account key or a token key. In the meantime, enter the video ID manually.");
 
             if (!res.IsSuccessStatusCode)
-                return Unavailable($"Bunny membalas {(int)res.StatusCode}. Coba lagi, atau isi ID video secara manual.");
+                return Unavailable($"Bunny responded with {(int)res.StatusCode}. Try again, or enter the video ID manually.");
 
             var body = await res.Content.ReadFromJsonAsync<BunnyPage>(Json, ct) ?? new BunnyPage();
             return new VideoLibraryPageDto(
@@ -50,11 +50,11 @@ public class BunnyVideoLibrary(HttpClient http, VideoOptions options) : IVideoLi
         }
         catch (Exception e) when ((e is JsonException or NotSupportedException) && !ct.IsCancellationRequested)
         {
-            return Unavailable("Bunny mengirim balasan yang tidak dapat dibaca. Coba lagi, atau isi ID video secara manual.");
+            return Unavailable("Bunny sent a response that couldn't be read. Try again, or enter the video ID manually.");
         }
         catch (Exception e) when ((e is HttpRequestException or TaskCanceledException) && !ct.IsCancellationRequested)
         {
-            return Unavailable("Bunny tidak dapat dihubungi. Coba lagi, atau isi ID video secara manual.");
+            return Unavailable("Couldn't reach Bunny. Try again, or enter the video ID manually.");
         }
     }
 
@@ -68,19 +68,19 @@ public class BunnyVideoLibrary(HttpClient http, VideoOptions options) : IVideoLi
         {
             using var res = await http.SendAsync(req, ct);
             if (res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                throw new ProgramException("Bunny menolak kunci API. Periksa BUNNY_API_KEY.", 502);
+                throw new ProgramException("Bunny rejected the API key. Check BUNNY_API_KEY.", 502);
             if (!res.IsSuccessStatusCode)
-                throw new ProgramException($"Bunny membalas {(int)res.StatusCode}. Coba lagi.", 502);
+                throw new ProgramException($"Bunny responded with {(int)res.StatusCode}. Try again.", 502);
 
             var video = await res.Content.ReadFromJsonAsync<BunnyVideo>(Json, ct);
             if (video is null || string.IsNullOrWhiteSpace(video.Guid))
-                throw new ProgramException("Bunny tidak dapat dihubungi. Coba lagi.", 502);
+                throw new ProgramException("Couldn't reach Bunny. Try again.", 502);
             return RenewUpload(video.Guid);
         }
         catch (Exception e) when ((e is HttpRequestException or TaskCanceledException or JsonException or NotSupportedException)
                                   && !ct.IsCancellationRequested)
         {
-            throw new ProgramException("Bunny tidak dapat dihubungi. Coba lagi.", 502);
+            throw new ProgramException("Couldn't reach Bunny. Try again.", 502);
         }
     }
 
