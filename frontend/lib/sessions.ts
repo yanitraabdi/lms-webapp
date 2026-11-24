@@ -138,7 +138,7 @@ export async function uploadAudio(t: string, file: File): Promise<{ key: string 
     body: form,
     cache: "no-store",
   });
-  if (!res.ok) throw await problem(res, "Unggah audio gagal.");
+  if (!res.ok) throw await problem(res, "Audio upload failed.");
   return await res.json();
 }
 
@@ -159,7 +159,7 @@ async function upload<T>(path: string, token: string, form: FormData, fallback: 
 
 export async function downloadImportTemplate(token: string): Promise<void> {
   const res = await apiFetch(`${API}/api/admin/questions/import/template`, {}, token);
-  if (!res.ok) throw await problem(res, "Gagal mengunduh template.");
+  if (!res.ok) throw await problem(res, "Couldn't download the template.");
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
@@ -174,20 +174,20 @@ export function previewQuestionImport(token: string, file: File, bank: QuestionB
   const form = new FormData();
   form.append("file", file);
   form.append("bank", bank);
-  return upload<ImportResult>("/api/admin/questions/import/preview", token, form, "Gagal membaca berkas.");
+  return upload<ImportResult>("/api/admin/questions/import/preview", token, form, "Couldn't read the file.");
 }
 
 export function commitQuestionImport(token: string, file: File, bank: QuestionBankName): Promise<ImportResult> {
   const form = new FormData();
   form.append("file", file);
   form.append("bank", bank);
-  return upload<ImportResult>("/api/admin/questions/import", token, form, "Gagal mengimpor soal.");
+  return upload<ImportResult>("/api/admin/questions/import", token, form, "Couldn't import the questions.");
 }
 
 export function uploadAudioBulk(token: string, files: File[]): Promise<BulkAudioResult> {
   const form = new FormData();
   for (const file of files) form.append("files", file);
-  return upload<BulkAudioResult>("/api/admin/media/audio/bulk", token, form, "Gagal mengunggah audio.");
+  return upload<BulkAudioResult>("/api/admin/media/audio/bulk", token, form, "Couldn't upload the audio.");
 }
 
 export const QUESTION_SECTIONS = ["Listening", "Reading", "Vocabulary", "Structure", "General"] as const;
